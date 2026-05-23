@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("QuizGenAI")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+860e921c35c335c3071d994ca1ef5fb8e37c84d7")]
 [assembly: System.Reflection.AssemblyProductAttribute("QuizGenAI")]
 [assembly: System.Reflection.AssemblyTitleAttribute("QuizGenAI")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
