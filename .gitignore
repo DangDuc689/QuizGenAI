@@ -1,5 +1,5 @@
 .vs/
 
 # Bỏ qua các thư mục build và file tạm của .NET
-[Bb]in/
-[Ob]j/
+obj/
+bin/
