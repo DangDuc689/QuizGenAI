@@ -1,0 +1,42 @@
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-on-secondary-fixed border-b border-slate-200 dark:border-outline-variant w-full top-0 sticky z-30 h-16 px-6 flex justify-between items-center shadow-sm">
+    
+    <!-- Left side: Mobile Hamburger & Search -->
+    <div class="flex items-center gap-4">
+        
+        <!-- Mobile Menu Button (Hamburger) -->
+        <button id="sidebar-toggle" class="md:hidden text-on-surface-variant hover:bg-slate-100 dark:hover:bg-secondary-container p-2 rounded-full transition-transform active:scale-95 flex items-center justify-center">
+            <span class="material-symbols-outlined">menu</span>
+        </button>
+        
+        <!-- Desktop Search Bar -->
+        <div class="hidden sm:flex bg-slate-100 dark:bg-surface-container rounded-full px-4 py-2 items-center gap-2 border border-slate-200 dark:border-outline-variant focus-within:border-primary dark:focus-within:border-primary-fixed-dim transition-colors w-64 shadow-inner">
+            <span class="material-symbols-outlined text-outline" style="font-size: 20px;">search</span>
+            <input class="bg-transparent border-none outline-none text-body font-body text-on-surface w-full focus:ring-0 p-0 placeholder-slate-400" placeholder="Tìm kiếm..." type="text">
+        </div>
+        
+    </div>
+    
+    <!-- Right side: Notifications, Dark mode, User profile -->
+    <div class="flex items-center gap-2">
+        
+        <!-- Dark Mode Toggle Button -->
+        <button id="dark-mode-toggle" class="text-on-surface-variant hover:bg-slate-100 dark:hover:bg-secondary-container rounded-full p-2 active:scale-95 transition-transform flex items-center justify-center cursor-pointer" title="Chuyển chế độ sáng/tối">
+            <!-- Icon will be dynamic based on JS state (dark_mode or light_mode) -->
+            <span class="material-symbols-outlined" id="dark-mode-icon">dark_mode</span>
+        </button>
+        
+        <!-- Notifications button with red badge -->
+        <button class="text-on-surface-variant hover:bg-slate-100 dark:hover:bg-secondary-container rounded-full p-2 active:scale-95 transition-transform flex items-center justify-center relative cursor-pointer" title="Thông báo">
+            <span class="material-symbols-outlined">notifications</span>
+            <span class="absolute top-2 right-2 w-2 h-2 bg-danger rounded-full ring-2 ring-white dark:ring-on-secondary-fixed"></span>
+        </button>
+        
+        <!-- User Avatar Profile with border -->
+        <div class="ml-4 pl-4 border-l border-slate-200 dark:border-outline-variant flex items-center">
+            <img alt="User Avatar" class="w-8 h-8 rounded-full border border-slate-200 dark:border-outline-variant cursor-pointer object-cover shadow-sm hover:scale-105 active:scale-95 transition-all duration-200" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaiTHZMv26jPfF1m6XzNT09HCTTfgcy4QchmzeZi448IJZcDoOEcKyDMwyw7GexPyfBVNo2qFVYVCcXI9ipF74rpDYre5ZuL2aacXnznuPVIOBJsNMDtP-XTFtGpWj-VxguOy2_MrQTBL5ER6PxkHZKzeeJpm6g7OSzaXIXsk3Nco4hLuWu85jhz2fDwK5psviN-opBxHQdL_PEHK38FIMRoWLnnbbaJyrvEJtluzNndKyQyzDlNoivhDlHHhkh6XupXH0WtfsyII">
+        </div>
+        
+    </div>
+    
+</header>
