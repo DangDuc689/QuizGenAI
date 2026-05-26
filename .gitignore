@@ -1,1 +1,8 @@
 .vs/
+
+# Bỏ qua các thư mục build và file tạm của .NET
+obj/
+bin/
+
+*.user
+
