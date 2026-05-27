@@ -1,0 +1,154 @@
+﻿@{
+    ViewData["Title"] = "Thêm tài liệu mới";
+}
+
+<div class="documents-page">
+    <div class="documents-header">
+        <a asp-controller="Documents" asp-action="Index" class="back-icon-button" title="Quay lại">
+            <span class="material-symbols-outlined">arrow_back</span>
+        </a>
+
+        <div>
+            <h1>Thêm tài liệu mới</h1>
+            <p>
+                Tải lên tài liệu học tập để lưu trữ, quản lý và sử dụng cho việc tạo bộ câu hỏi sau này.
+            </p>
+        </div>
+    </div>
+
+    <div class="document-form-card">
+        <form>
+            <div class="document-fields">
+                <div class="document-field">
+                    <label class="document-label">Tên tài liệu</label>
+                    <input type="text"
+                           class="document-control"
+                           placeholder="Nhập tên tài liệu..." />
+                </div>
+
+                <div class="document-field">
+                    <label class="document-label">Mô tả ngắn</label>
+                    <textarea class="document-control"
+                              rows="3"
+                              placeholder="Mô tả tóm tắt về nội dung tài liệu này..."></textarea>
+                </div>
+            </div>
+
+            <div class="document-tabs">
+                <div class="tab-header">
+                    <button type="button" class="tab-btn active" data-tab="paste">
+                        <span class="material-symbols-outlined">edit_note</span>
+                        Dán văn bản
+                    </button>
+
+                    <button type="button" class="tab-btn" data-tab="upload">
+                        <span class="material-symbols-outlined">upload_file</span>
+                        Tải file lên
+                    </button>
+
+                    <button type="button" class="tab-btn" data-tab="url">
+                        <span class="material-symbols-outlined">link</span>
+                        Nhập link URL
+                    </button>
+                </div>
+
+                <div class="tab-content-box">
+                    <div class="tab-panel active" id="tab-paste">
+                        <div class="textarea-wrapper">
+                            <textarea id="documentContent"
+                                      class="document-content-textarea"
+                                      maxlength="50000"
+                                      placeholder="Dán nội dung tài liệu của bạn vào đây..."></textarea>
+
+                            <div class="char-counter">
+                                <span id="charCount">0</span>/50,000 ký tự
+                            </div>
+                        </div>
+
+                        <div class="ai-note">
+                            <span class="material-symbols-outlined">info</span>
+                            <span>
+                                AI sẽ tự động phân tích và tạo câu hỏi từ văn bản này.
+                                Hãy chắc chắn nội dung rõ ràng và có tính giáo dục.
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="tab-panel" id="tab-upload">
+                        <div class="upload-box">
+                            <div class="upload-icon">
+                                <span class="material-symbols-outlined">cloud_upload</span>
+                            </div>
+
+                            <h3>Kéo và thả file tại đây</h3>
+                            <p>Hỗ trợ định dạng PDF, DOCX tối đa 10MB</p>
+
+                            <label class="btn-upload">
+                                Chọn file từ máy tính
+                                <input type="file" hidden accept=".pdf,.doc,.docx,.txt" />
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="tab-panel" id="tab-url">
+                        <div class="url-input-row">
+                            <div class="url-input-wrapper">
+                                <span class="material-symbols-outlined">link</span>
+                                <input type="url"
+                                       class="document-control url-control"
+                                       placeholder="https://..." />
+                            </div>
+
+                            <button type="button" class="btn-get-content">
+                                Lấy nội dung
+                            </button>
+                        </div>
+
+                        <p class="url-hint">
+                            Nhập link bài báo, blog hoặc tài liệu trực tuyến để AI trích xuất nội dung.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a asp-controller="Documents" asp-action="Index" class="btn-cancel">
+                    Hủy bỏ
+                </a>
+
+                <button type="button" class="btn-save-document">
+                    Lưu tài liệu
+                    <span class="material-symbols-outlined">save</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const tabButtons = document.querySelectorAll(".tab-btn");
+        const tabPanels = document.querySelectorAll(".tab-panel");
+
+        tabButtons.forEach(button => {
+            button.addEventListener("click", () => {
+                const selectedTab = button.getAttribute("data-tab");
+
+                tabButtons.forEach(btn => btn.classList.remove("active"));
+                tabPanels.forEach(panel => panel.classList.remove("active"));
+
+                button.classList.add("active");
+                document.getElementById(`tab-${selectedTab}`).classList.add("active");
+            });
+        });
+
+        const documentContent = document.getElementById("documentContent");
+        const charCount = document.getElementById("charCount");
+
+        if (documentContent && charCount) {
+            documentContent.addEventListener("input", () => {
+                charCount.textContent = documentContent.value.length.toLocaleString();
+            });
+        }
+    </script>
+}

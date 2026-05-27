@@ -1,0 +1,128 @@
+﻿@{
+    ViewData["Title"] = "Tài liệu";
+}
+
+<div class="documents-index-page">
+    <div class="documents-index-header">
+        <h1>Tài liệu</h1>
+    </div>
+
+    <div class="documents-toolbar">
+        <div class="document-search-box">
+            <span class="material-symbols-outlined">search</span>
+            <input type="text" placeholder="Tìm kiếm tài liệu..." />
+        </div>
+
+        <div class="document-filter-group">
+            <button type="button" class="document-filter active">
+                Tất cả
+            </button>
+
+            <button type="button" class="document-filter">
+                <span class="material-symbols-outlined">picture_as_pdf</span>
+                PDF
+            </button>
+
+            <button type="button" class="document-filter">
+                <span class="material-symbols-outlined">description</span>
+                DOCX
+            </button>
+
+            <button type="button" class="document-filter">
+                <span class="material-symbols-outlined">link</span>
+                URL
+            </button>
+        </div>
+
+        <a asp-controller="Documents" asp-action="Create" class="btn-add-document">
+            <span class="material-symbols-outlined">add</span>
+            Thêm tài liệu
+        </a>
+    </div>
+
+    <div class="document-card-grid">
+        <div class="document-card">
+            <button type="button" class="document-more-btn">
+                <span class="material-symbols-outlined">more_vert</span>
+            </button>
+
+            <div class="document-type-icon pdf">
+                <span class="material-symbols-outlined">picture_as_pdf</span>
+            </div>
+
+            <h2>Lịch sử Thế giới Hiện đại - Chương 1 đến 3</h2>
+
+            <div class="document-meta">
+                <span>
+                    <span class="material-symbols-outlined">calendar_today</span>
+                    12/10/2023
+                </span>
+
+                <span>
+                    <span class="material-symbols-outlined">description</span>
+                    45 trang
+                </span>
+            </div>
+
+            <button type="button" class="btn-create-quiz">
+                Tạo đề
+            </button>
+        </div>
+
+        <div class="document-card">
+            <button type="button" class="document-more-btn">
+                <span class="material-symbols-outlined">more_vert</span>
+            </button>
+
+            <div class="document-type-icon docx">
+                <span class="material-symbols-outlined">description</span>
+            </div>
+
+            <h2>Ghi chú Sinh học Tế bào - Bài giảng Thầy Hùng</h2>
+
+            <div class="document-meta">
+                <span>
+                    <span class="material-symbols-outlined">calendar_today</span>
+                    10/10/2023
+                </span>
+
+                <span>
+                    <span class="material-symbols-outlined">description</span>
+                    12 trang
+                </span>
+            </div>
+
+            <button type="button" class="btn-create-quiz">
+                Tạo đề
+            </button>
+        </div>
+
+        <div class="document-card">
+            <button type="button" class="document-more-btn">
+                <span class="material-symbols-outlined">more_vert</span>
+            </button>
+
+            <div class="document-type-icon url">
+                <span class="material-symbols-outlined">link</span>
+            </div>
+
+            <h2>Bài báo: Ứng dụng AI trong Giáo dục (Wikipedia)</h2>
+
+            <div class="document-meta">
+                <span>
+                    <span class="material-symbols-outlined">calendar_today</span>
+                    05/10/2023
+                </span>
+
+                <span>
+                    <span class="material-symbols-outlined">public</span>
+                    Nguồn ngoài
+                </span>
+            </div>
+
+            <button type="button" class="btn-create-quiz">
+                Tạo đề
+            </button>
+        </div>
+    </div>
+</div>
