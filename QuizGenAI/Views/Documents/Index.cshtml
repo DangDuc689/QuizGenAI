@@ -99,8 +99,16 @@
                         </span>
 
                         <span>
-                            <span class="material-symbols-outlined">description</span>
-                            @(document.PageCount.HasValue ? $"{document.PageCount} trang" : "Chưa rõ")
+                            @if (document.SourceType == QuizGenAI.Models.DocumentSourceType.URL)
+                            {
+                                <span class="material-symbols-outlined">public</span>
+                                <text>Nguồn ngoài</text>
+                            }
+                            else
+                            {
+                                <span class="material-symbols-outlined">description</span>
+                                <text>@(document.PageCount > 0 ? document.PageCount : 1) trang</text>
+                            }
                         </span>
                     </div>
 

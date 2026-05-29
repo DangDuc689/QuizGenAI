@@ -1340,3 +1340,148 @@ main:has(.documents-page) {
         grid-template-columns: 1fr;
     }
 }
+/* MODULE TÀI LIỆU - DOCUMENT DETAIL PAGE */
+.btn-open-document {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    background: #0b49d1;
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+    .btn-open-document:hover {
+        color: #fff;
+        filter: brightness(0.95);
+    }
+
+.stitch-placeholder-image .material-symbols-outlined {
+    font-size: 36px;
+    color: #64748b;
+}
+
+.stitch-placeholder-image p {
+    margin: 8px 0 0;
+    color: #64748b;
+    font-weight: 600;
+}
+.stitch-file-preview-empty {
+    width: 100%;
+    min-height: 150px;
+    padding: 24px;
+    border: 1px dashed #b7c7ff;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #f8fbff 0%, #f3f0ff 100%);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.stitch-file-preview-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    background: #e8efff;
+    color: #0b49d1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+    .stitch-file-preview-icon .material-symbols-outlined {
+        font-size: 32px;
+    }
+
+.stitch-file-preview-content {
+    flex: 1;
+    min-width: 0;
+}
+
+    .stitch-file-preview-content h4 {
+        margin: 0 0 6px;
+        font-size: 16px;
+        font-weight: 800;
+        color: #07133f;
+    }
+
+    .stitch-file-preview-content p {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.5;
+        color: #64748b;
+    }
+
+.stitch-file-size {
+    display: inline-flex;
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #0b49d1;
+}
+
+.btn-open-document {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 140px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #0b49d1;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    text-decoration: none;
+    box-shadow: 0 12px 24px rgba(11, 73, 209, 0.22);
+    white-space: nowrap;
+}
+
+    .btn-open-document:hover {
+        color: #fff;
+        filter: brightness(0.96);
+        transform: translateY(-1px);
+    }
+
+    .btn-open-document .material-symbols-outlined {
+        font-size: 20px;
+    }
+
+@media (max-width: 768px) {
+    .stitch-file-preview-empty {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .btn-open-document {
+        width: 100%;
+    }
+}
+.stitch-file-badge.pdf {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.stitch-file-badge.word {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.stitch-file-badge.url {
+    background: #eef3f8;
+    color: #3f6f91;
+}
+
+.stitch-file-badge.excel {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.stitch-file-badge.text {
+    background: #ede9fe;
+    color: #6d28d9;
+}

@@ -21,6 +21,14 @@
     };
 
     var mainTopic = Model.Title;
+    var badgeClass = Model.SourceType switch
+    {
+        QuizGenAI.Models.DocumentSourceType.PDF => "pdf",
+        QuizGenAI.Models.DocumentSourceType.Word => "word",
+        QuizGenAI.Models.DocumentSourceType.URL => "url",
+        QuizGenAI.Models.DocumentSourceType.Excel => "excel",
+        _ => "text"
+    };
 
 }
 
@@ -58,7 +66,7 @@
                 <h1>@Model.Title</h1>
 
                 <div class="stitch-document-meta">
-                    <span class="stitch-file-badge">
+                    <span class="stitch-file-badge @badgeClass">
                         <span class="material-symbols-outlined">description</span>
                         @Model.SourceType
                     </span>
@@ -113,12 +121,39 @@
                         </p>
                     }
 
-                    @if (Model.SourceType == QuizGenAI.Models.DocumentSourceType.PDF 
+                    @if (Model.SourceType == QuizGenAI.Models.DocumentSourceType.PDF
                       || Model.SourceType == QuizGenAI.Models.DocumentSourceType.Word
                       || Model.SourceType == QuizGenAI.Models.DocumentSourceType.Excel)
                     {
-                        <div class="stitch-placeholder-image">
-                            [Khu vực xem trước tài liệu]
+                        <div class="stitch-file-preview-empty">
+                            <div class="stitch-file-preview-icon">
+                                <span class="material-symbols-outlined">draft</span>
+                            </div>
+
+                            <div class="stitch-file-preview-content">
+                                <h4>Chưa hỗ trợ xem trước trực tiếp</h4>
+                                <p>
+                                    Tài liệu đã được tải lên thành công. Bạn có thể mở hoặc tải file gốc để xem nội dung.
+                                </p>
+
+                                @if ((Model.FileSizeBytes ?? 0) > 0)
+                                {
+                                    <span class="stitch-file-size">
+                                        Dung lượng: @(((Model.FileSizeBytes ?? 0) / 1024.0).ToString("0.##")) KB
+                                    </span>
+                                }
+                            </div>
+
+                            @if (!string.IsNullOrWhiteSpace(Model.FilePath))
+                            {
+                                <a href="@Model.FilePath"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="btn-open-document">
+                                    <span class="material-symbols-outlined">open_in_new</span>
+                                    Mở / tải file
+                                </a>
+                            }
                         </div>
                     }
                 </div>

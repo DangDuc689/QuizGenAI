@@ -17,16 +17,24 @@
     </div>
 
     <div class="document-form-card">
-        <form asp-controller="Documents" asp-action="Create" method="post">
+        <form asp-controller="Documents"
+              asp-action="Create"
+              method="post"
+              enctype="multipart/form-data">
+
             @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
             <input type="hidden" id="SourceType" name="SourceType" value="PastedText" />
+
             <div class="document-fields">
                 <div class="document-field">
                     <label class="document-label">Tên tài liệu</label>
                     <input type="text"
                            name="Title"
                            class="document-control"
-                           placeholder="Nhập tên tài liệu..." 
+                           placeholder="Nhập tên tài liệu..."
                            required />
                 </div>
 
@@ -88,10 +96,19 @@
                             <h3>Kéo và thả file tại đây</h3>
                             <p>Hỗ trợ định dạng PDF, DOCX tối đa 10MB</p>
 
-                            <label class="btn-upload">
-                                Chọn file từ máy tính
-                                <input type="file" hidden accept=".pdf,.doc,.docx,.txt" />
-                            </label>
+                            <div class="upload-action">
+                                <label class="btn-upload" for="UploadedFile">
+                                    Chọn file từ máy tính
+                                </label>
+
+                                <input type="file"
+                                       id="UploadedFile"
+                                       name="UploadedFile"
+                                       accept=".pdf,.docx,.xlsx"
+                                       hidden />
+
+                                <p id="selectedFileName" class="selected-file-name"></p>
+                            </div>
                         </div>
                     </div>
 
@@ -136,6 +153,10 @@
         const tabButtons = document.querySelectorAll(".tab-btn");
         const tabPanels = document.querySelectorAll(".tab-panel");
         const sourceTypeInput = document.getElementById("SourceType");
+        const fileInput = document.getElementById("UploadedFile");
+        const selectedFileName = document.getElementById("selectedFileName");
+        const documentContent = document.getElementById("documentContent");
+        const charCount = document.getElementById("charCount");
 
         tabButtons.forEach(button => {
             button.addEventListener("click", () => {
@@ -159,12 +180,23 @@
             });
         });
 
-        const documentContent = document.getElementById("documentContent");
-        const charCount = document.getElementById("charCount");
-
         if (documentContent && charCount) {
             documentContent.addEventListener("input", () => {
                 charCount.textContent = documentContent.value.length.toLocaleString();
+            });
+        }
+
+        if (fileInput && selectedFileName) {
+            fileInput.addEventListener("change", function () {
+                if (sourceTypeInput) {
+                    sourceTypeInput.value = "File";
+                }
+
+                if (this.files && this.files.length > 0) {
+                    selectedFileName.textContent = `Đã chọn: ${this.files[0].name}`;
+                } else {
+                    selectedFileName.textContent = "";
+                }
             });
         }
     </script>

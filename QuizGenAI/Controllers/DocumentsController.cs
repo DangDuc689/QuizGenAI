@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using DocumentFormat.OpenXml.Bibliography;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuizGenAI.Models;
@@ -58,7 +59,8 @@ namespace QuizGenAI.Controllers
             string Title,
             string? ExtractedText,
             string? SourceUrl,
-            string SourceType)
+            string SourceType,
+            IFormFile? UploadedFile)
         {
             ViewData["ActivePage"] = "Documents";
 
@@ -78,6 +80,24 @@ namespace QuizGenAI.Controllers
             {
                 ModelState.AddModelError("SourceUrl", "Vui lòng nhập đường dẫn URL.");
                 return View();
+            }
+
+            if (SourceType == "File" && (UploadedFile == null || UploadedFile.Length == 0))
+            {
+                ModelState.AddModelError("UploadedFile", "Vui lòng chọn file tài liệu.");
+                return View();
+            }
+
+            if (SourceType == "File" && UploadedFile != null)
+            {
+                var allowedExtensions = new[] { ".pdf", ".docx", ".xlsx" };
+                var fileExtension = Path.GetExtension(UploadedFile.FileName).ToLowerInvariant();
+
+                if (!allowedExtensions.Contains(fileExtension))
+                {
+                    ModelState.AddModelError("UploadedFile", "Chỉ hỗ trợ file PDF, DOCX hoặc XLSX.");
+                    return View();
+                }
             }
 
             var devEmail = "lean@quizgen.local";
@@ -117,8 +137,43 @@ namespace QuizGenAI.Controllers
             var documentSourceType = SourceType switch
             {
                 "URL" => DocumentSourceType.URL,
+                "File" when UploadedFile != null
+                    && Path.GetExtension(UploadedFile.FileName).Equals(".pdf", StringComparison.OrdinalIgnoreCase)
+                    => DocumentSourceType.PDF,
+                "File" when UploadedFile != null
+                    && Path.GetExtension(UploadedFile.FileName).Equals(".docx", StringComparison.OrdinalIgnoreCase)
+                    => DocumentSourceType.Word,
+                "File" when UploadedFile != null
+                    && Path.GetExtension(UploadedFile.FileName).Equals(".xlsx", StringComparison.OrdinalIgnoreCase)
+                    => DocumentSourceType.Excel,
                 _ => DocumentSourceType.PastedText
             };
+
+            string? filePath = null;
+            long fileSizeBytes = 0;
+
+            if (SourceType == "File" && UploadedFile != null)
+            {
+                var uploadsFolder = Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "wwwroot",
+                    "uploads",
+                    "documents");
+
+                Directory.CreateDirectory(uploadsFolder);
+
+                var fileExtension = Path.GetExtension(UploadedFile.FileName);
+                var safeFileName = $"{Guid.NewGuid()}{fileExtension}";
+                var fullPath = Path.Combine(uploadsFolder, safeFileName);
+
+                using (var stream = new FileStream(fullPath, FileMode.Create))
+                {
+                    await UploadedFile.CopyToAsync(stream);
+                }
+
+                filePath = $"/uploads/documents/{safeFileName}";
+                fileSizeBytes = UploadedFile.Length;
+            }
 
             var document = new Document
             {
@@ -126,13 +181,14 @@ namespace QuizGenAI.Controllers
                 SourceType = documentSourceType,
                 ExtractedText = documentSourceType == DocumentSourceType.PastedText
                     ? ExtractedText?.Trim()
-                    : SourceUrl?.Trim(),
+                    : null,
                 SourceUrl = documentSourceType == DocumentSourceType.URL
                     ? SourceUrl?.Trim()
                     : null,
+                FilePath = filePath,
                 CreatedAt = DateTime.Now,
-                PageCount = 0,
-                FileSizeBytes = 0,
+                PageCount = documentSourceType == DocumentSourceType.PDF || documentSourceType == DocumentSourceType.Word? 1: 0,
+                FileSizeBytes = fileSizeBytes,
                 UserId = userId
             };
 
