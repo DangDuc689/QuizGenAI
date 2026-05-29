@@ -1,8 +1,8 @@
 ﻿@model QuizGenAI.Models.Document
 
-
 @{
     ViewData["Title"] = "Chi tiết tài liệu";
+
     var textLength = Model.ExtractedText?.Length ?? 0;
 
     var estimatedQuestions = textLength switch
@@ -21,6 +21,7 @@
     };
 
     var mainTopic = Model.Title;
+
     var badgeClass = Model.SourceType switch
     {
         QuizGenAI.Models.DocumentSourceType.PDF => "pdf",
@@ -29,7 +30,6 @@
         QuizGenAI.Models.DocumentSourceType.Excel => "excel",
         _ => "text"
     };
-
 }
 
 <div class="document-detail-page stitch-detail-page">
@@ -89,9 +89,30 @@
                     <span class="material-symbols-outlined">zoom_in</span>
                 </div>
 
-                <button type="button" class="stitch-download-btn">
-                    <span class="material-symbols-outlined">download</span>
-                </button>
+                @if (!string.IsNullOrWhiteSpace(Model.FilePath))
+                {
+                    <a href="@Model.FilePath"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="stitch-download-btn">
+                        <span class="material-symbols-outlined">download</span>
+                    </a>
+                }
+                else if (!string.IsNullOrWhiteSpace(Model.SourceUrl))
+                {
+                    <a href="@Model.SourceUrl"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="stitch-download-btn">
+                        <span class="material-symbols-outlined">open_in_new</span>
+                    </a>
+                }
+                else
+                {
+                    <button type="button" class="stitch-download-btn">
+                        <span class="material-symbols-outlined">download</span>
+                    </button>
+                }
             </div>
 
             <div class="stitch-document-viewer">
@@ -102,28 +123,25 @@
 
                     @if (Model.SourceType == QuizGenAI.Models.DocumentSourceType.URL && !string.IsNullOrWhiteSpace(Model.SourceUrl))
                     {
-                        <p>
-                            <a href="@Model.SourceUrl" target="_blank" rel="noopener noreferrer">
-                                @Model.SourceUrl
-                            </a>
-                        </p>
+                        <div class="stitch-document-text">
+                            <p>Tài liệu này được lưu từ nguồn URL bên ngoài.</p>
+
+                            <p>
+                                <a href="@Model.SourceUrl" target="_blank" rel="noopener noreferrer">
+                                    @Model.SourceUrl
+                                </a>
+                            </p>
+                        </div>
                     }
                     else if (!string.IsNullOrWhiteSpace(Model.ExtractedText))
                     {
-                        <p class="stitch-document-text">
+                        <div class="stitch-document-text">
                             @Model.ExtractedText
-                        </p>
+                        </div>
                     }
-                    else
-                    {
-                        <p class="text-muted">
-                            Tài liệu này chưa có nội dung văn bản để hiển thị.
-                        </p>
-                    }
-
-                    @if (Model.SourceType == QuizGenAI.Models.DocumentSourceType.PDF
-                      || Model.SourceType == QuizGenAI.Models.DocumentSourceType.Word
-                      || Model.SourceType == QuizGenAI.Models.DocumentSourceType.Excel)
+                    else if (Model.SourceType == QuizGenAI.Models.DocumentSourceType.PDF
+                          || Model.SourceType == QuizGenAI.Models.DocumentSourceType.Word
+                          || Model.SourceType == QuizGenAI.Models.DocumentSourceType.Excel)
                     {
                         <div class="stitch-file-preview-empty">
                             <div class="stitch-file-preview-icon">
@@ -132,6 +150,7 @@
 
                             <div class="stitch-file-preview-content">
                                 <h4>Chưa hỗ trợ xem trước trực tiếp</h4>
+
                                 <p>
                                     Tài liệu đã được tải lên thành công. Bạn có thể mở hoặc tải file gốc để xem nội dung.
                                 </p>
@@ -155,6 +174,12 @@
                                 </a>
                             }
                         </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">
+                            Tài liệu này chưa có nội dung văn bản để hiển thị.
+                        </p>
                     }
                 </div>
             </div>

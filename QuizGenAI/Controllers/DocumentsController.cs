@@ -1,10 +1,10 @@
-﻿using DocumentFormat.OpenXml.Bibliography;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuizGenAI.Models;
 using System.Text;
 using UglyToad.PdfPig;
+using DocumentFormat.OpenXml.Packaging;
 
 namespace QuizGenAI.Controllers
 {
@@ -64,6 +64,7 @@ namespace QuizGenAI.Controllers
             string SourceType,
             IFormFile? UploadedFile)
         {
+            
             ViewData["ActivePage"] = "Documents";
 
             if (string.IsNullOrWhiteSpace(Title))
@@ -193,6 +194,12 @@ namespace QuizGenAI.Controllers
 
                     extractedTextFromFile = textBuilder.ToString().Trim();
                 }
+
+                if (documentSourceType == DocumentSourceType.Word)
+                {
+                    extractedTextFromFile = ExtractTextFromWord(fullPath);
+                    pageCount = GetWordPageCountFromMetadata(fullPath);     
+                }
             }
 
             var document = new Document
@@ -251,6 +258,54 @@ namespace QuizGenAI.Controllers
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
+        }
+
+        private static string? ExtractTextFromWord(string filePath)
+        {
+            using var wordDocument = WordprocessingDocument.Open(filePath, false);
+
+            var mainPart = wordDocument.MainDocumentPart;
+
+            if (mainPart?.Document?.Body == null)
+            {
+                return null;
+            }
+
+            var body = mainPart.Document.Body;
+
+            var textBuilder = new StringBuilder();
+
+            foreach (var text in body.Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>())
+            {
+                if (!string.IsNullOrWhiteSpace(text.Text))
+                {
+                    textBuilder.Append(text.Text);
+                    textBuilder.Append(' ');
+                }
+            }
+
+            var extractedText = textBuilder.ToString().Trim();
+
+            return string.IsNullOrWhiteSpace(extractedText)
+                ? null
+                : extractedText;
+        }
+
+        private static int GetWordPageCountFromMetadata(string filePath)
+        {
+            using var wordDocument = WordprocessingDocument.Open(filePath, false);
+
+            var pagesText = wordDocument.ExtendedFilePropertiesPart?
+                .Properties?
+                .Pages?
+                .InnerText;
+
+            if (int.TryParse(pagesText, out var pageCount) && pageCount > 0)
+            {
+                return pageCount;
+            }
+
+            return 1;
         }
     }
 }

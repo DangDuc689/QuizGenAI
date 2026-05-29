@@ -20,7 +20,8 @@
         <form asp-controller="Documents"
               asp-action="Create"
               method="post"
-              enctype="multipart/form-data">
+              enctype="multipart/form-data"
+              id="createDocumentForm">
 
             @Html.AntiForgeryToken()
 
@@ -139,8 +140,8 @@
                     Hủy bỏ
                 </a>
 
-                <button type="submit" class="btn-save-document">
-                    Lưu tài liệu
+                <button type="submit" class="btn-save-document" id="submitDocumentBtn">
+                    <span class="submit-text">Lưu tài liệu</span>
                     <span class="material-symbols-outlined">save</span>
                 </button>
             </div>
@@ -157,6 +158,8 @@
         const selectedFileName = document.getElementById("selectedFileName");
         const documentContent = document.getElementById("documentContent");
         const charCount = document.getElementById("charCount");
+        const createDocumentForm = document.getElementById("createDocumentForm");
+        const submitDocumentBtn = document.getElementById("submitDocumentBtn");
 
         tabButtons.forEach(button => {
             button.addEventListener("click", () => {
@@ -197,6 +200,16 @@
                 } else {
                     selectedFileName.textContent = "";
                 }
+            });
+        }
+        if (createDocumentForm && submitDocumentBtn) {
+            createDocumentForm.addEventListener("submit", function () {
+                submitDocumentBtn.disabled = true;
+                submitDocumentBtn.classList.add("disabled");
+                submitDocumentBtn.innerHTML = `
+                    <span class="submit-text">Đang lưu...</span>
+                    <span class="material-symbols-outlined">hourglass_top</span>
+                `;
             });
         }
     </script>
