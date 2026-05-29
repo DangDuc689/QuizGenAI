@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuizGenAI.Models;
+using System.Text;
+using UglyToad.PdfPig;
 
 namespace QuizGenAI.Controllers
 {
@@ -151,6 +153,8 @@ namespace QuizGenAI.Controllers
 
             string? filePath = null;
             long fileSizeBytes = 0;
+            int pageCount = 0;
+            string? extractedTextFromFile = null;
 
             if (SourceType == "File" && UploadedFile != null)
             {
@@ -173,6 +177,22 @@ namespace QuizGenAI.Controllers
 
                 filePath = $"/uploads/documents/{safeFileName}";
                 fileSizeBytes = UploadedFile.Length;
+
+                if (documentSourceType == DocumentSourceType.PDF)
+                {
+                    using var pdfDocument = PdfDocument.Open(fullPath);
+
+                    pageCount = pdfDocument.NumberOfPages;
+
+                    var textBuilder = new StringBuilder();
+
+                    foreach (var page in pdfDocument.GetPages())
+                    {
+                        textBuilder.AppendLine(page.Text);
+                    }
+
+                    extractedTextFromFile = textBuilder.ToString().Trim();
+                }
             }
 
             var document = new Document
@@ -181,13 +201,13 @@ namespace QuizGenAI.Controllers
                 SourceType = documentSourceType,
                 ExtractedText = documentSourceType == DocumentSourceType.PastedText
                     ? ExtractedText?.Trim()
-                    : null,
+                    : extractedTextFromFile,
                 SourceUrl = documentSourceType == DocumentSourceType.URL
                     ? SourceUrl?.Trim()
                     : null,
                 FilePath = filePath,
                 CreatedAt = DateTime.Now,
-                PageCount = documentSourceType == DocumentSourceType.PDF || documentSourceType == DocumentSourceType.Word? 1: 0,
+                PageCount = pageCount > 0 ? pageCount : (SourceType == "File" ? 1 : 0),
                 FileSizeBytes = fileSizeBytes,
                 UserId = userId
             };
