@@ -14,7 +14,7 @@
     <div class="documents-toolbar">
         <div class="document-search-box">
             <span class="material-symbols-outlined">search</span>
-            <input type="text" placeholder="Tìm kiếm tài liệu..." />
+            <input id="documentSearchInput" type="text" placeholder="Tìm kiếm tài liệu..." />
         </div>
 
         <div class="document-filter-group">
@@ -81,10 +81,28 @@
                     iconName = "link";
                 }
 
-                <div class="document-card">
-                    <button type="button" class="document-more-btn">
-                        <span class="material-symbols-outlined">more_vert</span>
-                    </button>
+                <div class="document-card"
+                     data-title="@document.Title.ToLower()"
+                     data-detail-url="@Url.Action("Details", "Documents", new { id = document.Id })">
+                    <div class="document-more-wrapper">
+                        <button type="button" class="document-more-btn">
+                            <span class="material-symbols-outlined">more_vert</span>
+                        </button>
+
+                        <div class="document-more-menu">
+                            <a asp-controller="Documents"
+                               asp-action="Details"
+                               asp-route-id="@document.Id">
+                                <span class="material-symbols-outlined">visibility</span>
+                                Xem chi tiết
+                            </a>
+
+                            <button type="button">
+                                <span class="material-symbols-outlined">quiz</span>
+                                Tạo đề
+                            </button>
+                        </div>
+                    </div>
 
                     <div class="document-type-icon @iconClass">
                         <span class="material-symbols-outlined">@iconName</span>
@@ -113,13 +131,6 @@
                     </div>
 
                     <div class="document-card-actions">
-                        <a asp-controller="Documents"
-                           asp-action="Details"
-                           asp-route-id="@document.Id"
-                           class="btn-view-document">
-                            Xem chi tiết
-                        </a>
-
                         <button type="button" class="btn-create-quiz">
                             Tạo đề
                         </button>
@@ -139,6 +150,61 @@
                     Thêm tài liệu
                 </a>
             </div>
+        }
+        @section Scripts {
+            <script>
+                        document.addEventListener("click", function (event) {
+                            const clickedButton = event.target.closest(".document-more-btn");
+
+                            document.querySelectorAll(".document-more-wrapper.is-open").forEach(function (menu) {
+                                if (!menu.contains(event.target)) {
+                                    menu.classList.remove("is-open");
+                                }
+                            });
+
+                            if (clickedButton) {
+                                event.preventDefault();
+                                event.stopPropagation();
+
+                                const wrapper = clickedButton.closest(".document-more-wrapper");
+                                wrapper.classList.toggle("is-open");
+                            }
+                        });
+
+                        const searchInput = document.getElementById("documentSearchInput");
+
+                        if (searchInput) {
+                            searchInput.addEventListener("input", function () {
+                                const keyword = this.value.trim().toLowerCase();
+                                const cards = document.querySelectorAll(".document-card");
+
+                                cards.forEach(function (card) {
+                                    const title = card.dataset.title || "";
+                                    const isMatched = title.includes(keyword);
+
+                                    card.style.display = isMatched ? "" : "none";
+                                });
+                            });
+                        }
+
+                        document.querySelectorAll(".document-card").forEach(function (card) {
+                            card.addEventListener("click", function (event) {
+                                const isInteractiveElement = event.target.closest(
+                                    ".document-more-wrapper, .btn-create-quiz, button, a"
+                                );
+
+                                if (isInteractiveElement) {
+                                    return;
+                                }
+
+                                const detailUrl = card.dataset.detailUrl;
+
+                                if (detailUrl) {
+                                    window.location.href = detailUrl;
+                                }
+                            });
+                        });
+            </script>
         }
     </div>
 </div>

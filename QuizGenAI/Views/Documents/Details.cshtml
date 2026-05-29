@@ -116,72 +116,71 @@
             </div>
 
             <div class="stitch-document-viewer">
-                <div class="stitch-document-page">
-                    <h2>@Model.Title</h2>
+                @if (Model.SourceType == QuizGenAI.Models.DocumentSourceType.URL && !string.IsNullOrWhiteSpace(Model.SourceUrl))
+                {
+                    <div class="stitch-url-preview-card">
+                        <div class="stitch-url-icon">
+                            <span class="material-symbols-outlined">link</span>
+                        </div>
 
-                    <h3>Nội dung tài liệu</h3>
+                        <div class="stitch-url-content">
+                            <p class="stitch-url-label">Nguồn tài liệu URL</p>
 
-                    @if (Model.SourceType == QuizGenAI.Models.DocumentSourceType.URL && !string.IsNullOrWhiteSpace(Model.SourceUrl))
-                    {
-                        <div class="stitch-document-text">
-                            <p>Tài liệu này được lưu từ nguồn URL bên ngoài.</p>
+                            <h2>@Model.Title</h2>
 
-                            <p>
-                                <a href="@Model.SourceUrl" target="_blank" rel="noopener noreferrer">
-                                    @Model.SourceUrl
-                                </a>
+                            <p class="stitch-url-desc">
+                                Tài liệu này được lưu từ nguồn URL bên ngoài. Bạn có thể mở liên kết để xem nội dung gốc.
                             </p>
+
+                            <a href="@Model.SourceUrl"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="stitch-url-link">
+                                @Model.SourceUrl
+                            </a>
+
+                            <a href="@Model.SourceUrl"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="btn-open-document">
+                                <span class="material-symbols-outlined">open_in_new</span>
+                                Mở liên kết
+                            </a>
                         </div>
-                    }
-                    else if (!string.IsNullOrWhiteSpace(Model.ExtractedText))
-                    {
-                        <div class="stitch-document-text">
-                            @Model.ExtractedText
-                        </div>
-                    }
-                    else if (Model.SourceType == QuizGenAI.Models.DocumentSourceType.PDF
-                          || Model.SourceType == QuizGenAI.Models.DocumentSourceType.Word
-                          || Model.SourceType == QuizGenAI.Models.DocumentSourceType.Excel)
-                    {
-                        <div class="stitch-file-preview-empty">
-                            <div class="stitch-file-preview-icon">
-                                <span class="material-symbols-outlined">draft</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="stitch-document-page">
+                        <h2>@Model.Title</h2>
+
+                        <h3>Nội dung tài liệu</h3>
+
+                        @if (!string.IsNullOrWhiteSpace(Model.ExtractedText))
+                        {
+                            <div class="stitch-document-text-wrapper collapsed">
+                                <div class="stitch-document-text">
+                                    @Model.ExtractedText
+                                </div>
+
+                                <div class="stitch-document-fade"></div>
                             </div>
 
-                            <div class="stitch-file-preview-content">
-                                <h4>Chưa hỗ trợ xem trước trực tiếp</h4>
-
-                                <p>
-                                    Tài liệu đã được tải lên thành công. Bạn có thể mở hoặc tải file gốc để xem nội dung.
-                                </p>
-
-                                @if ((Model.FileSizeBytes ?? 0) > 0)
-                                {
-                                    <span class="stitch-file-size">
-                                        Dung lượng: @(((Model.FileSizeBytes ?? 0) / 1024.0).ToString("0.##")) KB
-                                    </span>
-                                }
+                            <button type="button" class="btn-toggle-document-text" id="toggleDocumentTextBtn">
+                                Xem thêm nội dung
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="stitch-placeholder-image">
+                                <div>
+                                    <span class="material-symbols-outlined">description</span>
+                                    <p>Chưa có nội dung xem trước cho tài liệu này.</p>
+                                </div>
                             </div>
-
-                            @if (!string.IsNullOrWhiteSpace(Model.FilePath))
-                            {
-                                <a href="@Model.FilePath"
-                                   target="_blank"
-                                   rel="noopener noreferrer"
-                                   class="btn-open-document">
-                                    <span class="material-symbols-outlined">open_in_new</span>
-                                    Mở / tải file
-                                </a>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="text-muted">
-                            Tài liệu này chưa có nội dung văn bản để hiển thị.
-                        </p>
-                    }
-                </div>
+                        }
+                    </div>
+                }
             </div>
         </section>
 
@@ -255,3 +254,23 @@
         </aside>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        const toggleDocumentTextBtn = document.getElementById("toggleDocumentTextBtn");
+        const documentTextWrapper = document.querySelector(".stitch-document-text-wrapper");
+
+        if (toggleDocumentTextBtn && documentTextWrapper) {
+            toggleDocumentTextBtn.addEventListener("click", function () {
+                const isCollapsed = documentTextWrapper.classList.contains("collapsed");
+
+                documentTextWrapper.classList.toggle("collapsed", !isCollapsed);
+                documentTextWrapper.classList.toggle("expanded", isCollapsed);
+
+                toggleDocumentTextBtn.textContent = isCollapsed
+                    ? "Thu gọn nội dung"
+                    : "Xem thêm nội dung";
+            });
+        }
+    </script>
+}

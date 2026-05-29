@@ -873,6 +873,113 @@ main:has(.documents-page) {
         grid-template-columns: 1fr;
     }
 }
+/* Documents Index - polish gần thiết kế Stitch */
+.document-filter {
+    background: #fbf8ff;
+    border-color: #dcd4ff;
+}
+
+    .document-filter:hover,
+    .document-filter.active {
+        background: #f3edff;
+        border-color: #9b7cff;
+        color: #0037b0;
+        box-shadow: 0 6px 14px rgba(139, 92, 246, 0.12);
+    }
+
+.document-card {
+    min-height: 180px;
+    padding: 18px 20px;
+    cursor: pointer;
+}
+
+.document-more-wrapper,
+.document-card-actions,
+.btn-create-quiz {
+    cursor: default;
+}
+
+.btn-create-quiz,
+.document-more-btn,
+.document-more-menu a,
+.document-more-menu button {
+    cursor: pointer;
+}
+
+.document-type-icon {
+    margin-bottom: 14px;
+}
+
+.document-card h2 {
+    min-height: 44px;
+    margin-bottom: 10px;
+}
+
+.document-meta {
+    margin-bottom: 18px;
+    gap: 14px;
+}
+
+.document-card-actions {
+    gap: 0;
+}
+
+.btn-view-document,
+.btn-create-quiz {
+    height: 36px;
+}
+/* Documents Index - menu 3 chấm */
+.document-more-wrapper {
+    position: absolute;
+    top: 18px;
+    right: 16px;
+    z-index: 5;
+}
+
+.document-more-menu {
+    position: absolute;
+    top: 34px;
+    right: 0;
+    width: 160px;
+    padding: 6px;
+    border: 1px solid #e5edf7;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
+    display: none;
+}
+
+.document-more-wrapper.is-open .document-more-menu {
+    display: block;
+}
+
+.document-more-menu a,
+.document-more-menu button {
+    width: 100%;
+    min-height: 36px;
+    border: none;
+    border-radius: 8px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #334155;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+    .document-more-menu a:hover,
+    .document-more-menu button:hover {
+        color: #0037b0;
+        background: #f3edff;
+    }
+
+.document-more-menu .material-symbols-outlined {
+    font-size: 18px;
+}
 
 /* =========================================================
    7. MODULE TÀI LIỆU - DOCUMENT DETAIL PAGE
@@ -1485,3 +1592,141 @@ main:has(.documents-page) {
     background: #ede9fe;
     color: #6d28d9;
 }
+
+/* Document Detail - compact URL preview */
+.stitch-url-preview-card {
+    max-width: 720px;
+    margin: 32px auto;
+    padding: 28px;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    background: #ffffff;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+}
+
+.stitch-url-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0037b0;
+    background: #eaf1ff;
+    flex-shrink: 0;
+}
+
+    .stitch-url-icon .material-symbols-outlined {
+        font-size: 30px;
+    }
+
+.stitch-url-content {
+    min-width: 0;
+    flex: 1;
+}
+
+.stitch-url-label {
+    margin: 0 0 8px;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.stitch-url-content h2 {
+    margin: 0 0 10px;
+    color: #0f172a;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.stitch-url-desc {
+    margin: 0 0 14px;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.stitch-url-link {
+    width: 100%;
+    margin-bottom: 18px;
+    padding: 12px 14px;
+    border: 1px solid #dbe5f5;
+    border-radius: 12px;
+    display: block;
+    color: #0037b0;
+    background: #f8fbff;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+    .stitch-url-link:hover {
+        color: #002b8c;
+        background: #f1f6ff;
+    }
+
+@media (max-width: 768px) {
+    .stitch-url-preview-card {
+        flex-direction: column;
+        margin: 20px auto;
+        padding: 22px;
+    }
+}
+
+/* Document Detail - shorten extracted text preview */
+.stitch-document-text-wrapper {
+    position: relative;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+}
+
+    .stitch-document-text-wrapper.collapsed {
+        max-height: 520px;
+    }
+
+    .stitch-document-text-wrapper.expanded {
+        max-height: none;
+    }
+
+.stitch-document-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 90px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0), #ffffff 85%);
+    pointer-events: none;
+}
+
+.stitch-document-text-wrapper.expanded .stitch-document-fade {
+    display: none;
+}
+
+.btn-toggle-document-text {
+    margin: 18px auto 0;
+    border: 1.5px solid #d8d9f8;
+    border-radius: 10px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0037b0;
+    background: #f7f6ff;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+    .btn-toggle-document-text:hover {
+        color: #ffffff;
+        background: #0037b0;
+        border-color: #0037b0;
+    }
