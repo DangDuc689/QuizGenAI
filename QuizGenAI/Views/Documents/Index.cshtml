@@ -1,5 +1,9 @@
-﻿@{
+﻿@model IEnumerable<QuizGenAI.Models.Document>
+
+@{
     ViewData["Title"] = "Tài liệu";
+    var selectedType = ViewData["SelectedType"]?.ToString()?.ToLower();
+
 }
 
 <div class="documents-index-page">
@@ -14,24 +18,35 @@
         </div>
 
         <div class="document-filter-group">
-            <button type="button" class="document-filter active">
+            <a asp-controller="Documents"
+               asp-action="Index"
+               class="document-filter @(string.IsNullOrEmpty(selectedType) ? "active" : "")">
                 Tất cả
-            </button>
+            </a>
 
-            <button type="button" class="document-filter">
+            <a asp-controller="Documents"
+               asp-action="Index"
+               asp-route-type="pdf"
+               class="document-filter @(selectedType == "pdf" ? "active" : "")">
                 <span class="material-symbols-outlined">picture_as_pdf</span>
                 PDF
-            </button>
+            </a>
 
-            <button type="button" class="document-filter">
+            <a asp-controller="Documents"
+               asp-action="Index"
+               asp-route-type="word"
+               class="document-filter @(selectedType == "word" || selectedType == "docx" ? "active" : "")">
                 <span class="material-symbols-outlined">description</span>
                 DOCX
-            </button>
+            </a>
 
-            <button type="button" class="document-filter">
+            <a asp-controller="Documents"
+               asp-action="Index"
+               asp-route-type="url"
+               class="document-filter @(selectedType == "url" ? "active" : "")">
                 <span class="material-symbols-outlined">link</span>
                 URL
-            </button>
+            </a>
         </div>
 
         <a asp-controller="Documents" asp-action="Create" class="btn-add-document">
@@ -41,88 +56,81 @@
     </div>
 
     <div class="document-card-grid">
-        <div class="document-card">
-            <button type="button" class="document-more-btn">
-                <span class="material-symbols-outlined">more_vert</span>
-            </button>
+        @if (Model != null && Model.Any())
+        {
+            foreach (var document in Model)
+            {
 
-            <div class="document-type-icon pdf">
-                <span class="material-symbols-outlined">picture_as_pdf</span>
+                var iconClass = "docx";
+                var iconName = "description";
+                var sourceType = document.SourceType.ToString().ToLower();
+
+                if (sourceType.Contains("pdf"))
+                {
+                    iconClass = "pdf";
+                    iconName = "picture_as_pdf";
+                }
+                else if (sourceType.Contains("word") || sourceType.Contains("docx") || sourceType.Contains("pastedtext"))
+                {
+                    iconClass = "docx";
+                    iconName = "description";
+                }
+                else if (sourceType.Contains("url"))
+                {
+                    iconClass = "url";
+                    iconName = "link";
+                }
+
+                <div class="document-card">
+                    <button type="button" class="document-more-btn">
+                        <span class="material-symbols-outlined">more_vert</span>
+                    </button>
+
+                    <div class="document-type-icon @iconClass">
+                        <span class="material-symbols-outlined">@iconName</span>
+                    </div>
+
+                    <h2>@document.Title</h2>
+
+                    <div class="document-meta">
+                        <span>
+                            <span class="material-symbols-outlined">calendar_today</span>
+                            @document.CreatedAt.ToString("dd/MM/yyyy")
+                        </span>
+
+                        <span>
+                            <span class="material-symbols-outlined">description</span>
+                            @(document.PageCount.HasValue ? $"{document.PageCount} trang" : "Chưa rõ")
+                        </span>
+                    </div>
+
+                    <div class="document-card-actions">
+                        <a asp-controller="Documents"
+                           asp-action="Details"
+                           asp-route-id="@document.Id"
+                           class="btn-view-document">
+                            Xem chi tiết
+                        </a>
+
+                        <button type="button" class="btn-create-quiz">
+                            Tạo đề
+                        </button>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="documents-empty-state">
+                <span class="material-symbols-outlined">folder_open</span>
+                <h2>Chưa có tài liệu nào</h2>
+                <p>Tải lên hoặc thêm tài liệu học tập đầu tiên để bắt đầu tạo bộ câu hỏi.</p>
+
+                <a asp-controller="Documents" asp-action="Create" class="btn-add-document">
+                    <span class="material-symbols-outlined">add</span>
+                    Thêm tài liệu
+                </a>
             </div>
-
-            <h2>Lịch sử Thế giới Hiện đại - Chương 1 đến 3</h2>
-
-            <div class="document-meta">
-                <span>
-                    <span class="material-symbols-outlined">calendar_today</span>
-                    12/10/2023
-                </span>
-
-                <span>
-                    <span class="material-symbols-outlined">description</span>
-                    45 trang
-                </span>
-            </div>
-
-            <button type="button" class="btn-create-quiz">
-                Tạo đề
-            </button>
-        </div>
-
-        <div class="document-card">
-            <button type="button" class="document-more-btn">
-                <span class="material-symbols-outlined">more_vert</span>
-            </button>
-
-            <div class="document-type-icon docx">
-                <span class="material-symbols-outlined">description</span>
-            </div>
-
-            <h2>Ghi chú Sinh học Tế bào - Bài giảng Thầy Hùng</h2>
-
-            <div class="document-meta">
-                <span>
-                    <span class="material-symbols-outlined">calendar_today</span>
-                    10/10/2023
-                </span>
-
-                <span>
-                    <span class="material-symbols-outlined">description</span>
-                    12 trang
-                </span>
-            </div>
-
-            <button type="button" class="btn-create-quiz">
-                Tạo đề
-            </button>
-        </div>
-
-        <div class="document-card">
-            <button type="button" class="document-more-btn">
-                <span class="material-symbols-outlined">more_vert</span>
-            </button>
-
-            <div class="document-type-icon url">
-                <span class="material-symbols-outlined">link</span>
-            </div>
-
-            <h2>Bài báo: Ứng dụng AI trong Giáo dục (Wikipedia)</h2>
-
-            <div class="document-meta">
-                <span>
-                    <span class="material-symbols-outlined">calendar_today</span>
-                    05/10/2023
-                </span>
-
-                <span>
-                    <span class="material-symbols-outlined">public</span>
-                    Nguồn ngoài
-                </span>
-            </div>
-
-            <button type="button" class="btn-create-quiz">
-                Tạo đề
-            </button>
-        </div>
+        }
     </div>
 </div>

@@ -1,0 +1,197 @@
+﻿@model QuizGenAI.Models.Document
+
+
+@{
+    ViewData["Title"] = "Chi tiết tài liệu";
+    var textLength = Model.ExtractedText?.Length ?? 0;
+
+    var estimatedQuestions = textLength switch
+    {
+        < 500 => "5 - 10 câu",
+        < 2000 => "10 - 20 câu",
+        < 5000 => "20 - 35 câu",
+        _ => "35 - 50 câu"
+    };
+
+    var contentLevel = textLength switch
+    {
+        < 1000 => "Cơ bản",
+        < 4000 => "Trung bình",
+        _ => "Nâng cao"
+    };
+
+    var mainTopic = Model.Title;
+
+}
+
+<div class="document-detail-page stitch-detail-page">
+    <div class="stitch-detail-header-card">
+        <div class="stitch-detail-top">
+            <a asp-controller="Documents" asp-action="Index" class="stitch-back-link">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Quay lại danh sách
+            </a>
+
+            <div class="stitch-header-actions">
+                <form asp-controller="Documents"
+                      asp-action="Delete"
+                      asp-route-id="@Model.Id"
+                      method="post"
+                      onsubmit="return confirm('Bạn có chắc chắn muốn xóa tài liệu này không?');">
+                    @Html.AntiForgeryToken()
+
+                    <button type="submit" class="stitch-delete-btn">
+                        <span class="material-symbols-outlined">delete</span>
+                        Xóa tài liệu
+                    </button>
+                </form>
+
+                <button type="button" class="stitch-create-quiz-btn">
+                    <span class="material-symbols-outlined">add_circle</span>
+                    Tạo thêm bộ đề
+                </button>
+            </div>
+        </div>
+
+        <div class="stitch-detail-title-row">
+            <div>
+                <h1>@Model.Title</h1>
+
+                <div class="stitch-document-meta">
+                    <span class="stitch-file-badge">
+                        <span class="material-symbols-outlined">description</span>
+                        @Model.SourceType
+                    </span>
+
+                    <span>
+                        <span class="material-symbols-outlined">calendar_today</span>
+                        Thêm lúc: @Model.CreatedAt.ToString("dd/MM/yyyy")
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="stitch-detail-layout">
+        <section class="stitch-preview-card">
+            <div class="stitch-preview-toolbar">
+                <div class="stitch-preview-tools">
+                    <span class="material-symbols-outlined">search</span>
+                    <span>100%</span>
+                    <span class="material-symbols-outlined">zoom_in</span>
+                </div>
+
+                <button type="button" class="stitch-download-btn">
+                    <span class="material-symbols-outlined">download</span>
+                </button>
+            </div>
+
+            <div class="stitch-document-viewer">
+                <div class="stitch-document-page">
+                    <h2>@Model.Title</h2>
+
+                    <h3>Nội dung tài liệu</h3>
+
+                    @if (Model.SourceType == QuizGenAI.Models.DocumentSourceType.URL && !string.IsNullOrWhiteSpace(Model.SourceUrl))
+                    {
+                        <p>
+                            <a href="@Model.SourceUrl" target="_blank" rel="noopener noreferrer">
+                                @Model.SourceUrl
+                            </a>
+                        </p>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(Model.ExtractedText))
+                    {
+                        <p class="stitch-document-text">
+                            @Model.ExtractedText
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="text-muted">
+                            Tài liệu này chưa có nội dung văn bản để hiển thị.
+                        </p>
+                    }
+
+                    @if (Model.SourceType == QuizGenAI.Models.DocumentSourceType.PDF 
+                      || Model.SourceType == QuizGenAI.Models.DocumentSourceType.Word
+                      || Model.SourceType == QuizGenAI.Models.DocumentSourceType.Excel)
+                    {
+                        <div class="stitch-placeholder-image">
+                            [Khu vực xem trước tài liệu]
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+
+        <aside class="stitch-side-panel">
+            <div class="stitch-side-card">
+                <div class="stitch-side-title">
+                    <span class="material-symbols-outlined">quiz</span>
+                    <h3>Bộ đề đã tạo</h3>
+                </div>
+
+                @if (Model.QuizSets != null && Model.QuizSets.Any())
+                {
+                    foreach (var quizSet in Model.QuizSets)
+                    {
+                        <div class="stitch-quiz-card">
+                            <h4>@quizSet.Title</h4>
+
+                            <p>
+                                <span class="material-symbols-outlined">format_list_numbered</span>
+                                Bộ câu hỏi đã tạo
+                            </p>
+
+                            <p>
+                                <span class="material-symbols-outlined">calendar_today</span>
+                                Tạo lúc: @quizSet.CreatedAt.ToString("dd/MM/yyyy")
+                            </p>
+
+                            <div class="stitch-quiz-footer">
+                                <span class="stitch-score pending">
+                                    Chưa làm
+                                </span>
+
+                                <a href="#">Làm ngay →</a>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="stitch-empty-quiz">
+                        <span class="material-symbols-outlined">quiz</span>
+                        <h4>Chưa có bộ đề nào</h4>
+                        <p>Tạo bộ đề đầu tiên từ tài liệu này để bắt đầu ôn tập.</p>
+                    </div>
+                }
+            </div>
+
+            <div class="stitch-side-card">
+                <div class="stitch-side-title">
+                    <span class="material-symbols-outlined">auto_awesome</span>
+                    <h3>Phân tích nhanh</h3>
+                </div>
+
+                <div class="stitch-analysis-list">
+                    <div>
+                        <span>Số câu hỏi có thể tạo</span>
+                        <strong>@estimatedQuestions</strong>
+                    </div>
+
+                    <div>
+                        <span>Mức độ nội dung</span>
+                        <strong>@contentLevel</strong>
+                    </div>
+
+                    <div>
+                        <span>Chủ đề chính</span>
+                        <strong>@mainTopic</strong>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>

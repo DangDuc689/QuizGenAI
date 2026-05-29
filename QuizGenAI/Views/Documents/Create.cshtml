@@ -17,13 +17,17 @@
     </div>
 
     <div class="document-form-card">
-        <form>
+        <form asp-controller="Documents" asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="SourceType" name="SourceType" value="PastedText" />
             <div class="document-fields">
                 <div class="document-field">
                     <label class="document-label">Tên tài liệu</label>
                     <input type="text"
+                           name="Title"
                            class="document-control"
-                           placeholder="Nhập tên tài liệu..." />
+                           placeholder="Nhập tên tài liệu..." 
+                           required />
                 </div>
 
                 <div class="document-field">
@@ -56,6 +60,7 @@
                     <div class="tab-panel active" id="tab-paste">
                         <div class="textarea-wrapper">
                             <textarea id="documentContent"
+                                      name="ExtractedText"
                                       class="document-content-textarea"
                                       maxlength="50000"
                                       placeholder="Dán nội dung tài liệu của bạn vào đây..."></textarea>
@@ -95,13 +100,14 @@
                             <div class="url-input-wrapper">
                                 <span class="material-symbols-outlined">link</span>
                                 <input type="url"
+                                       name="SourceUrl"
                                        class="document-control url-control"
                                        placeholder="https://..." />
                             </div>
 
-                            <button type="button" class="btn-get-content">
-                                Lấy nội dung
-                            </button>
+                            @* <button type="button" class="btn-get-content" disabled>
+                                Lưu link
+                            </button> *@
                         </div>
 
                         <p class="url-hint">
@@ -116,7 +122,7 @@
                     Hủy bỏ
                 </a>
 
-                <button type="button" class="btn-save-document">
+                <button type="submit" class="btn-save-document">
                     Lưu tài liệu
                     <span class="material-symbols-outlined">save</span>
                 </button>
@@ -129,6 +135,7 @@
     <script>
         const tabButtons = document.querySelectorAll(".tab-btn");
         const tabPanels = document.querySelectorAll(".tab-panel");
+        const sourceTypeInput = document.getElementById("SourceType");
 
         tabButtons.forEach(button => {
             button.addEventListener("click", () => {
@@ -139,6 +146,16 @@
 
                 button.classList.add("active");
                 document.getElementById(`tab-${selectedTab}`).classList.add("active");
+
+                if (sourceTypeInput) {
+                    if (selectedTab === "paste") {
+                        sourceTypeInput.value = "PastedText";
+                    } else if (selectedTab === "upload") {
+                        sourceTypeInput.value = "File";
+                    } else if (selectedTab === "url") {
+                        sourceTypeInput.value = "URL";
+                    }
+                }
             });
         });
 
