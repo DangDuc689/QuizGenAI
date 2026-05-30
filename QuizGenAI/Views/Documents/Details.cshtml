@@ -65,6 +65,13 @@
             <div>
                 <h1>@Model.Title</h1>
 
+                @if (!string.IsNullOrWhiteSpace(Model.Description))
+                {
+                    <p class="document-detail-description">
+                        @Model.Description
+                    </p>
+                }
+
                 <div class="stitch-document-meta">
                     <span class="stitch-file-badge @badgeClass">
                         <span class="material-symbols-outlined">description</span>

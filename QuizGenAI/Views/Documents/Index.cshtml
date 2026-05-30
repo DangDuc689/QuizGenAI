@@ -110,6 +110,13 @@
 
                     <h2>@document.Title</h2>
 
+                    @if (!string.IsNullOrWhiteSpace(document.Description))
+                    {
+                        <p class="document-card-description">
+                            @document.Description
+                        </p>
+                    }
+
                     <div class="document-meta">
                         <span>
                             <span class="material-symbols-outlined">calendar_today</span>

@@ -1730,3 +1730,21 @@ main:has(.documents-page) {
         background: #0037b0;
         border-color: #0037b0;
     }
+.document-card-description {
+    margin: 8px 0 0;
+    color: #6b7280;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.document-detail-description {
+    margin: 8px 0 14px;
+    color: #6b7280;
+    font-size: 0.98rem;
+    line-height: 1.6;
+    max-width: 760px;
+}

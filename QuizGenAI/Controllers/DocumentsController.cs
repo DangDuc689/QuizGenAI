@@ -59,6 +59,7 @@ namespace QuizGenAI.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(
             string Title,
+            string? Description,
             string? ExtractedText,
             string? SourceUrl,
             string SourceType,
@@ -205,6 +206,7 @@ namespace QuizGenAI.Controllers
             var document = new Document
             {
                 Title = Title.Trim(),
+                Description = Description?.Trim(),
                 SourceType = documentSourceType,
                 ExtractedText = documentSourceType == DocumentSourceType.PastedText
                     ? ExtractedText?.Trim()
