@@ -20,6 +20,12 @@ namespace QuizGenAI.Models
         [StringLength(200)]
         public string Title { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Mô tả ngắn về tài liệu, do người dùng nhập khi tạo tài liệu.
+        /// </summary>
+        [StringLength(500)]
+        public string? Description { get; set; }
+
         public DocumentSourceType SourceType { get; set; }
 
         /// <summary>
