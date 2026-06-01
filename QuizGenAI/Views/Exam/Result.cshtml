@@ -1,0 +1,511 @@
+@{
+    Layout = null;
+    ViewData["Title"] = "Kết quả bài thi - QuizGen AI";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "slate-200": "#E2E8F0",
+                      "primary-fixed-dim": "#b7c4ff",
+                      "on-secondary-fixed": "#0d1c2f",
+                      "surface-bright": "#faf8ff",
+                      "on-secondary": "#ffffff",
+                      "surface-container-high": "#e2e7ff",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-low": "#f2f3ff",
+                      "slate-100": "#F1F5F9",
+                      "slate-300": "#CBD5E1",
+                      "outline": "#747686",
+                      "on-primary": "#ffffff",
+                      "warning": "#D97706",
+                      "danger": "#DC2626",
+                      "success": "#16A34A",
+                      "danger-light": "#FEE2E2",
+                      "success-light": "#DCFCE7",
+                      "primary-fixed": "#dce1ff",
+                      "surface-container-lowest": "#ffffff",
+                      "slate-50": "#F8FAFC",
+                      "secondary": "#515f74",
+                      "warning-light": "#FEF3C7",
+                      "secondary-fixed-dim": "#b9c7e0",
+                      "slate-400": "#94A3B8",
+                      "primary-container": "#1d4ed8",
+                      "on-primary-fixed": "#001551",
+                      "surface": "#faf8ff",
+                      "on-error": "#ffffff",
+                      "surface-dim": "#d2d9f4",
+                      "on-background": "#131b2e",
+                      "bloom-remember": "#1D4ED8",
+                      "on-surface-variant": "#434655",
+                      "bloom-understand": "#7C3AED",
+                      "bloom-apply": "#EA580C",
+                      "error": "#ba1a1a",
+                      "surface-container": "#eaedff",
+                      "outline-variant": "#c4c5d7",
+                      "background": "#faf8ff",
+                      "on-primary-container": "#cad3ff",
+                      "on-surface": "#131b2e",
+                      "secondary-container": "#d5e3fd",
+                      "on-secondary-fixed-variant": "#3a485c",
+                      "on-primary-fixed-variant": "#0039b5",
+                      "primary": "#0037b0",
+              },
+              "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px" },
+              "fontFamily": { "sans": ["Inter"], "label-sm": ["Inter"], "body": ["Inter"], "button": ["Inter"], "h3": ["Inter"], "h1": ["Inter"], "h2": ["Inter"], "caption": ["Inter"] },
+              "fontSize": {
+                      "label-sm": ["11px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                      "body": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                      "button": ["14px", { "lineHeight": "1", "fontWeight": "600" }],
+                      "h3": ["18px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                      "h1": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                      "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                      "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }]
+              }
+            },
+          },
+        }
+    </script>
+
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <style>
+        /* Circular ring animation */
+        #score-ring {
+            transition: stroke-dashoffset 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Progress bar animation */
+        .level-bar-fill {
+            transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Fade-in animation for review cards */
+        @@keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .review-card {
+            animation: slideUp 0.5s ease both;
+        }
+        .review-card:nth-child(1) { animation-delay: 0.05s; }
+        .review-card:nth-child(2) { animation-delay: 0.12s; }
+        .review-card:nth-child(3) { animation-delay: 0.19s; }
+        .review-card:nth-child(4) { animation-delay: 0.26s; }
+        .review-card:nth-child(5) { animation-delay: 0.33s; }
+        .review-card:nth-child(n+6) { animation-delay: 0.4s; }
+
+        /* Score hero animation */
+        @@keyframes popIn {
+            0%   { opacity: 0; transform: scale(0.7); }
+            70%  { transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .score-hero { animation: popIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both; }
+
+        /* Sparkle icon spin on hover */
+        #practice-btn:hover .sparkle-icon { animation: spin 0.6s linear; }
+        @@keyframes spin { to { transform: rotate(360deg); } }
+
+        /* AI explanation gradient bg */
+        .ai-explanation-box {
+            background: linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%);
+            border: 1px solid #dde1ff;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-on-background min-h-screen font-sans text-on-surface antialiased transition-colors duration-300">
+
+    <!-- ────────────────────────────────────────── -->
+    <!-- MAIN SCROLL AREA                          -->
+    <!-- ────────────────────────────────────────── -->
+    <main class="max-w-3xl mx-auto px-4 sm:px-6 py-10 pb-32 flex flex-col gap-10">
+
+        <!-- ── HERO SCORE SECTION ── -->
+        <section class="flex flex-col items-center gap-4 text-center score-hero">
+            <div>
+                <h1 class="text-[28px] font-bold text-primary dark:text-primary-fixed-dim tracking-tight">Hoàn thành bài thi! 🎉</h1>
+                <p id="quiz-title" class="text-body font-body text-secondary dark:text-secondary-fixed-dim mt-1">
+                    Thiết kế chẩn đoán mạng nâng cao
+                </p>
+            </div>
+
+            <!-- Circular Score Ring -->
+            <div class="relative w-44 h-44 flex items-center justify-center my-2">
+                <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 176 176">
+                    <!-- Track -->
+                    <circle cx="88" cy="88" r="74" class="stroke-slate-200 dark:stroke-outline-variant" stroke-width="10" fill="transparent"/>
+                    <!-- Fill ring -->
+                    <circle id="score-ring" cx="88" cy="88" r="74"
+                            class="stroke-success" stroke-width="10" fill="transparent"
+                            stroke-dasharray="464.96" stroke-dashoffset="464.96"
+                            stroke-linecap="round"/>
+                </svg>
+                <div class="text-center z-10">
+                    <div class="flex items-baseline justify-center gap-1">
+                        <span id="score-num" class="text-[38px] font-bold text-on-surface dark:text-on-primary-container leading-none">0</span>
+                        <span id="score-denom" class="text-[20px] font-semibold text-secondary dark:text-secondary-fixed-dim">/25</span>
+                    </div>
+                    <span id="score-pct" class="text-[13px] font-semibold text-success mt-1 block">0% độ chính xác</span>
+                </div>
+            </div>
+
+            <!-- Quick Stats Row -->
+            <div class="flex items-center gap-3 flex-wrap justify-center">
+                <div class="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-on-secondary-fixed rounded-full border border-slate-200 dark:border-outline-variant shadow-sm">
+                    <span class="material-symbols-outlined text-[16px] text-secondary dark:text-secondary-fixed-dim">timer</span>
+                    <span class="text-caption font-semibold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider" id="time-taken-label">THỜI GIAN:</span>
+                    <span class="text-caption font-bold text-on-surface dark:text-on-primary-container tabular-nums" id="time-taken-value">--</span>
+                </div>
+                <div id="vs-avg-pill" class="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-on-secondary-fixed rounded-full border border-slate-200 dark:border-outline-variant shadow-sm">
+                    <span class="material-symbols-outlined text-[16px] text-success">trending_up</span>
+                    <span class="text-caption font-semibold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider">SO VỚI TRUNG BÌNH:</span>
+                    <span class="text-caption font-bold text-success tabular-nums" id="vs-avg-value">+0%</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── PERFORMANCE BY COGNITIVE LEVEL ── -->
+        <section>
+            <h2 class="text-[17px] font-semibold text-on-surface dark:text-on-primary-container mb-4">Hiệu suất theo cấp độ nhận thức</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="cognitive-grid">
+                <!-- Cards injected by JS -->
+            </div>
+        </section>
+
+        <!-- ── DETAILED REVIEW ── -->
+        <section>
+            <h2 class="text-[17px] font-semibold text-on-surface dark:text-on-primary-container mb-4">Xem lại chi tiết</h2>
+            <div id="review-list" class="flex flex-col gap-4">
+                <!-- Cards injected by JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ────────────────────────────────────────── -->
+    <!-- STICKY BOTTOM ACTION BAR                 -->
+    <!-- ────────────────────────────────────────── -->
+    <div class="fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-on-secondary-fixed/95 backdrop-blur-md border-t border-slate-200/70 dark:border-outline-variant px-6 py-4 flex items-center justify-between shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
+        <a href="/" class="flex items-center gap-2 text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim font-semibold text-[14px] transition-colors group">
+            <span class="material-symbols-outlined text-[18px] transition-transform group-hover:-translate-x-0.5">arrow_back</span>
+            Trở về Dashboard
+        </a>
+        <button id="practice-btn"
+                class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-[14px] shadow-md hover:bg-primary/90 active:scale-95 transition-all duration-200 focus:ring-4 focus:ring-primary/20">
+            <span class="material-symbols-outlined text-[18px] sparkle-icon" style="font-variation-settings:'FILL' 1;">auto_awesome</span>
+            Luyện tập chủ đề còn yếu
+        </button>
+    </div>
+
+    <!-- ────────────────────────────────────────── -->
+    <!-- SCRIPTS                                   -->
+    <!-- ────────────────────────────────────────── -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+    // ────────────────────────────────────────────────────────────
+    //  MOCK DATA – replace with real server-rendered data later
+    // ────────────────────────────────────────────────────────────
+    const RESULT = {
+        quizTitle:          "Thiết kế chẩn đoán mạng nâng cao",
+        totalQuestions:     25,
+        correctAnswers:     16,
+        timeTakenSeconds:   862,   // 14m 22s
+        vsAveragePercent:   5,     // +5%
+
+        // Cognitive level breakdown
+        remember:  { correct: 6,  total: 6 },
+        understand:{ correct: 7,  total: 8 },
+        apply:     { correct: 3,  total: 6 },   // (remaining questions default to apply)
+
+        // Questions for detailed review
+        questions: [
+            {
+                index: 1,
+                level: "Remembering",
+                stem: "Bào quan nào chịu trách nhiệm chính cho việc tổng hợp ATP qua phosphoryl hóa oxy hóa?",
+                options: [
+                    { key: "A", text: "Nhân" },
+                    { key: "B", text: "Ty thể" },
+                    { key: "C", text: "Ribôxôm" },
+                    { key: "D", text: "Bộ máy Golgi" },
+                ],
+                userAnswer: "B",
+                correctAnswer: "B",
+                explanation: "Ty thể được gọi là 'nhà máy điện' của tế bào vì chúng thực hiện phosphoryl hóa oxy hóa — quá trình sử dụng gradien proton để thúc đẩy ATP synthase, tạo ra phần lớn ATP cho tế bào."
+            },
+            {
+                index: 2,
+                level: "Understanding",
+                stem: "Vai trò chính của bơm natri-kali trong việc duy trì thế điện thế màng tế bào là gì?",
+                options: [
+                    { key: "A", text: "Nó cân bằng nồng độ ion hai bên màng." },
+                    { key: "B", text: "Nó bơm 3 Na⁺ ra ngoài và 2 K⁺ vào trong, tạo gradien điện hóa." },
+                    { key: "C", text: "Nó chỉ hoạt động khi có điện thế hoạt động." },
+                    { key: "D", text: "Nó vận chuyển glucose qua màng." },
+                ],
+                userAnswer: "A",
+                correctAnswer: "B",
+                explanation: "Na⁺/K⁺-ATPase chủ động bơm 3 ion natri ra ngoài tế bào và 2 ion kali vào trong tế bào chống lại gradien nồng độ, tiêu thụ một phân tử ATP cho mỗi chu kỳ. Bơm điện hóa này duy trì thế nghỉ khoảng −70 mV."
+            },
+            {
+                index: 3,
+                level: "Applying",
+                stem: "Bệnh nhân 45 tuổi bị nhồi máu cơ tim cấp. Xét nghiệm cho thấy troponin tăng. Cơ chế chính gây giải phóng troponin vào máu là gì?",
+                options: [
+                    { key: "A", text: "Vận chuyển chủ động qua ngoại bào xuất do stress." },
+                    { key: "B", text: "Mất tính toàn vẹn màng tế bào do hoại tử thiếu máu cục bộ." },
+                    { key: "C", text: "Tăng tổng hợp troponin do thiếu oxy." },
+                    { key: "D", text: "Khuếch tán thụ động qua màng khỏe mạnh." },
+                ],
+                userAnswer: "A",
+                correctAnswer: "B",
+                explanation: "Troponin là protein cấu trúc bên trong tế bào cơ tim và không được tiết ra tích cực. Khi nhồi máu cơ tim xảy ra, thiếu máu gây hoại tử khiến màng tế bào vỡ, giải phóng nội dung tế bào như troponin vào máu. Vận chuyển chủ động (ngoại bào xuất) cần năng lượng ATP, vốn suy giảm trong thiếu máu cục bộ."
+            },
+            {
+                index: 4,
+                level: "Remembering",
+                stem: "Giai đoạn nào trong chu kỳ tế bào đặc trưng bởi sự nhân đôi DNA?",
+                options: [
+                    { key: "A", text: "Pha G1" },
+                    { key: "B", text: "Pha S" },
+                    { key: "C", text: "Pha G2" },
+                    { key: "D", text: "Pha M" },
+                ],
+                userAnswer: "B",
+                correctAnswer: "B",
+                explanation: "Pha S (synthesis) là giai đoạn của chu kỳ tế bào khi DNA được nhân đôi. Sau khi nhân đôi, mỗi nhiễm sắc thể gồm hai nhiễm sắc tử chị em giống hệt nhau nối tại tâm động."
+            },
+            {
+                index: 5,
+                level: "Understanding",
+                stem: "Khi apoptosis xảy ra, cytochrome c được giải phóng từ ty thể vào tế bào chất. Điều này báo hiệu gì?",
+                options: [
+                    { key: "A", text: "Nó kích hoạt con đường chết tế bào hoại tử." },
+                    { key: "B", text: "Nó liên kết Apaf-1 để hình thành apoptosome, kích hoạt caspase-9." },
+                    { key: "C", text: "Nó ức chế thác caspase để ngưng chết tế bào." },
+                    { key: "D", text: "Nó kích hoạt tự thực bào như cơ chế bảo vệ." },
+                ],
+                userAnswer: "B",
+                correctAnswer: "B",
+                explanation: "Cytochrome c được giải phóng liên kết với Apaf-1 trong sự hiện diện của dATP, tạo thành phức hợp apoptosome. Phức hợp này tuyển và kích hoạt procaspase-9, sau đó kích hoạt các caspase thực hiện như caspase-3, -6, -7 để tiến hành apoptosis."
+            },
+            {
+                index: 6,
+                level: "Applying",
+                stem: "Sinh thiết cho thấy tế bào có nhân co lại, bào tương ái toan và màng tế bào nguyên vẹn mà không có thâm nhiễm viêm. Quy trình chết tế bào nào khả năng nhất?",
+                options: [
+                    { key: "A", text: "Hoại tử" },
+                    { key: "B", text: "Tự thực" },
+                    { key: "C", text: "Apoptosis" },
+                    { key: "D", text: "Pyroptosis" },
+                ],
+                userAnswer: "C",
+                correctAnswer: "C",
+                explanation: "Các đặc điểm mô tả — nhân cô đặc (pyknosis), bào tương ái toan và màng nguyên vẹn không có phản ứng viêm — là dấu hiệu đặc trưng của apoptosis. Hoại tử sẽ cho thấy tế bào phù nề, vỡ màng và thâm nhiễm viêm."
+            },
+        ]
+    };
+
+    // ────────────────────────────────────────────────────────────
+    //  HELPERS
+    // ────────────────────────────────────────────────────────────
+    function formatTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${m}M ${s.toString().padStart(2,'0')}S`;
+    }
+
+    function bloomBadgeClass(level) {
+            if (level === "Remembering" || level === "Nhận biết")  return "bg-blue-100   text-bloom-remember  border-blue-200";
+            if (level === "Understanding" || level === "Thông hiểu")return "bg-purple-100 text-bloom-understand border-purple-200";
+            return "bg-orange-100 text-bloom-apply border-orange-200";
+        }
+
+        function barColor(level) {
+            if (level === "Remembering" || level === "Nhận biết")  return "bg-bloom-remember";
+            if (level === "Understanding" || level === "Thông hiểu")return "bg-bloom-understand";
+            return "bg-bloom-apply";
+        }
+
+        function displayLevelName(level) {
+            if (level === "Remembering") return "Nhận biết";
+            if (level === "Understanding") return "Thông hiểu";
+            if (level === "Applying") return "Vận dụng";
+            return level;
+        }
+
+    // ────────────────────────────────────────────────────────────
+    //  RENDER HERO SCORE
+    // ────────────────────────────────────────────────────────────
+    function renderScore() {
+        const { correctAnswers, totalQuestions, timeTakenSeconds, vsAveragePercent, quizTitle } = RESULT;
+        const pct = Math.round((correctAnswers / totalQuestions) * 100);
+
+        document.getElementById("quiz-title").textContent = quizTitle;
+        document.getElementById("score-denom").textContent = "/" + totalQuestions;
+        document.getElementById("time-taken-value").textContent = formatTime(timeTakenSeconds);
+        document.getElementById("vs-avg-value").textContent = (vsAveragePercent >= 0 ? "+" : "") + vsAveragePercent + "%";
+
+        // Animate counter
+        let current = 0;
+        const step = Math.ceil(correctAnswers / 30);
+        const counter = setInterval(() => {
+            current = Math.min(current + step, correctAnswers);
+            document.getElementById("score-num").textContent = current;
+            document.getElementById("score-pct").textContent = Math.round((current/totalQuestions)*100) + "% độ chính xác";
+            if (current >= correctAnswers) clearInterval(counter);
+        }, 35);
+
+        // Animate ring (circumference for r=74: 2π×74 ≈ 464.96)
+        const circumference = 464.96;
+        const offset = circumference - (pct / 100) * circumference;
+        setTimeout(() => {
+            document.getElementById("score-ring").style.strokeDashoffset = offset;
+        }, 300);
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  RENDER COGNITIVE LEVEL CARDS
+    // ────────────────────────────────────────────────────────────
+    function renderCognitiveLevels() {
+        const levels = [
+            { name: "NHẬN BIẾT",   sub: "Ghi nhớ sự kiện cơ bản",       data: RESULT.remember,   color: "bg-bloom-remember",   badge: "bg-blue-50 text-bloom-remember border border-blue-200" },
+            { name: "THÔNG HIỂU", sub: "Giải thích ý tưởng hoặc khái niệm", data: RESULT.understand,  color: "bg-bloom-understand",  badge: "bg-purple-50 text-bloom-understand border border-purple-200" },
+            { name: "VẬN DỤNG",    sub: "Áp dụng kiến thức vào tình huống mới", data: RESULT.apply,       color: "bg-bloom-apply",       badge: "bg-orange-50 text-bloom-apply border border-orange-200" },
+        ];
+
+        const grid = document.getElementById("cognitive-grid");
+        levels.forEach((lv, i) => {
+            const pct = lv.data.total > 0 ? Math.round((lv.data.correct / lv.data.total) * 100) : 0;
+            const card = document.createElement("div");
+            card.className = "bg-white dark:bg-on-secondary-fixed rounded-2xl border border-slate-200/80 dark:border-outline-variant p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow";
+            card.innerHTML = `
+                <div class="flex items-center justify-between gap-2">
+                    <span class="inline-block px-2.5 py-1 rounded-full font-label-sm text-label-sm uppercase tracking-wider ${lv.badge}">${lv.name}</span>
+                    <span class="text-[22px] font-bold text-on-surface dark:text-on-primary-container tabular-nums">${lv.data.correct}/${lv.data.total}</span>
+                </div>
+                <p class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">${lv.sub}</p>
+                <div class="w-full h-2 bg-slate-100 dark:bg-outline-variant/50 rounded-full overflow-hidden">
+                    <div class="h-full ${lv.color} rounded-full level-bar-fill" style="width:0%" data-target="${pct}%"></div>
+                </div>
+            `;
+            grid.appendChild(card);
+
+            // Animate bar with stagger
+            setTimeout(() => {
+                card.querySelector(".level-bar-fill").style.width = pct + "%";
+            }, 400 + i * 150);
+        });
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  RENDER DETAILED REVIEW CARDS
+    // ────────────────────────────────────────────────────────────
+    function renderReview() {
+        const list = document.getElementById("review-list");
+
+        RESULT.questions.forEach(q => {
+            const isCorrect = q.userAnswer === q.correctAnswer;
+            const correctOption = q.options.find(o => o.key === q.correctAnswer);
+            const userOption    = q.options.find(o => o.key === q.userAnswer);
+            const badge = bloomBadgeClass(q.level);
+
+            const card = document.createElement("div");
+            card.className = "review-card rounded-2xl border overflow-hidden shadow-sm " +
+                (isCorrect
+                    ? "border-success/30 bg-success-light/20 dark:bg-success/5 dark:border-success/20"
+                    : "border-danger/30 bg-danger-light/20 dark:bg-danger/5 dark:border-danger/20");
+
+            // Build options HTML (only show user's answer if wrong, plus correct)
+            let answerHTML = "";
+            if (isCorrect) {
+                answerHTML = `
+                    <div class="flex items-center gap-3 px-4 py-3 rounded-xl border border-success/30 bg-success-light/30 dark:bg-success/10">
+                        <span class="material-symbols-outlined text-success text-[20px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
+                        <span class="text-body font-body text-success font-semibold">${correctOption ? correctOption.text : ""}</span>
+                    </div>
+                `;
+            } else {
+                answerHTML = `
+                    <!-- Wrong answer (user's choice) -->
+                    <div class="flex items-center gap-3 px-4 py-3 rounded-xl border border-danger/30 bg-danger-light/30 dark:bg-danger/10">
+                        <span class="material-symbols-outlined text-danger text-[20px]">cancel</span>
+                        <span class="text-body font-body text-danger line-through opacity-80">${userOption ? userOption.text : "Bỏ trống"}</span>
+                        <span class="ml-auto material-symbols-outlined text-danger text-[18px]">close</span>
+                    </div>
+                    <!-- Correct answer -->
+                    <div class="flex items-center gap-3 px-4 py-3 rounded-xl border border-success/30 bg-success-light/30 dark:bg-success/10">
+                        <span class="material-symbols-outlined text-success text-[20px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
+                        <span class="text-body font-body text-success font-semibold">${correctOption ? correctOption.text : ""}</span>
+                        <span class="ml-auto material-symbols-outlined text-success text-[18px]" style="font-variation-settings:'FILL' 1;">check</span>
+                    </div>
+                    <!-- AI Explanation -->
+                    <div class="ai-explanation-box rounded-xl p-4 flex flex-col gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-primary dark:text-primary-fixed-dim" style="font-variation-settings:'FILL' 1;">psychology</span>
+                            <span class="text-caption font-semibold text-primary dark:text-primary-fixed-dim uppercase tracking-wider">Giải thích AI</span>
+                        </div>
+                        <p class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim leading-relaxed">${q.explanation}</p>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="p-5 flex flex-col gap-4">
+                    <!-- Header row -->
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${isCorrect ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}">
+                            <span class="material-symbols-outlined text-[18px]" style="font-variation-settings:'FILL' 1;">${isCorrect ? "check_circle" : "cancel"}</span>
+                        </div>
+                        <span class="text-caption font-semibold text-secondary dark:text-secondary-fixed-dim">Câu ${q.index}</span>
+                        <span class="inline-block px-2.5 py-1 rounded-full font-label-sm text-label-sm uppercase tracking-wider border ${badge}">${displayLevelName(q.level)}</span>
+                    </div>
+
+                    <!-- Question stem -->
+                    <p class="text-body font-body text-on-surface dark:text-on-primary-container leading-relaxed">${q.stem}</p>
+
+                    <!-- Answer area -->
+                    <div class="flex flex-col gap-2.5">
+                        ${answerHTML}
+                    </div>
+                </div>
+            `;
+
+            list.appendChild(card);
+        });
+    }
+
+    // ────────────────────────────────────────────────────────────
+    //  INIT
+    // ────────────────────────────────────────────────────────────
+    document.addEventListener("DOMContentLoaded", () => {
+        renderScore();
+        renderCognitiveLevels();
+        renderReview();
+
+        document.getElementById("practice-btn").addEventListener("click", () => {
+            // TODO: navigate to weak-topic practice
+            alert("Chức năng luyện tập chủ đề yếu sẽ được triển khai sớm!");
+        });
+    });
+    </script>
+</body>
+</html>

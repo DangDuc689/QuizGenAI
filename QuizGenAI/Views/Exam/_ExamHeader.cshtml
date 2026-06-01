@@ -1,0 +1,29 @@
+<!-- Exam Header (Focus Mode - Suppressed Global Nav) -->
+<header class="bg-surface-container-lowest dark:bg-on-secondary-fixed border-b border-slate-200 dark:border-outline-variant h-16 flex items-center justify-between px-6 shrink-0 sticky top-0 z-50 transition-colors duration-300">
+    <!-- Logo & Context -->
+    <div class="flex items-center gap-4">
+        <a href="/" class="flex items-center gap-2 text-primary dark:text-primary-fixed-dim hover:opacity-90 transition-opacity">
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+            <span class="font-h3 text-h3 tracking-tight">QuizGen AI</span>
+        </a>
+        <div class="h-6 w-px bg-slate-200 dark:bg-outline-variant mx-2 hidden md:block"></div>
+        <div class="hidden md:flex flex-col">
+            <span class="font-label-sm text-label-sm text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider">Luyện tập</span>
+            <span class="font-button text-button text-on-surface dark:text-on-primary-container">Thiết kế chẩn đoán mạng nâng cao</span>
+        </div>
+    </div>
+    
+    <!-- Controls (Dark mode toggle & Timer) -->
+    <div class="flex items-center gap-3">
+        <!-- Dark Mode Toggle Button (uses global ID to hook into site.js) -->
+        <button id="dark-mode-toggle" class="text-secondary dark:text-secondary-fixed-dim hover:bg-slate-100 dark:hover:bg-secondary-container rounded-full p-2 active:scale-95 transition-transform flex items-center justify-center cursor-pointer" title="Chuyển chế độ sáng/tối">
+            <span class="material-symbols-outlined" id="dark-mode-icon">dark_mode</span>
+        </button>
+
+        <!-- Timer (Dynamic red state for low time) -->
+        <div id="exam-timer-container" class="flex items-center gap-2 px-4 py-2 bg-success-light dark:bg-success-light/10 rounded-full border border-success/20 text-success dark:text-success shadow-sm transition-all duration-300">
+            <span class="material-symbols-outlined text-xl">timer</span>
+            <span id="exam-timer" class="font-button text-button tabular-nums tracking-wide">25:00</span>
+        </div>
+    </div>
+</header>

@@ -18,6 +18,10 @@
         {
             activePage = "Review";
         }
+        else if (controller == "Home" && action == "History")
+        {
+            activePage = "History";
+        }
         else
         {
             activePage = "Review"; // Mặc định hiển thị Ôn tập nếu ở trang khác
@@ -92,7 +96,7 @@
         
         <!-- Lịch sử -->
         <li>
-            <a href="#" 
+            <a asp-controller="Home" asp-action="History"
                class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "History" ? "bg-surface-container-low dark:bg-secondary-container text-primary border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
                 <span class="material-symbols-outlined" style="@(activePage == "History" ? "font-variation-settings: 'FILL' 1;" : "")">history</span>
                 <span class="font-label-sm text-label-sm">Lịch sử</span>
