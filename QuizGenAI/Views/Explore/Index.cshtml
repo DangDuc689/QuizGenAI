@@ -1,0 +1,210 @@
+@{
+    ViewData["Title"] = "Khám phá";
+    ViewData["ActivePage"] = "Explore";
+}
+
+<!-- Page Title & Search/Filter Section -->
+<div class="mb-8">
+    <h1 class="text-h1 font-h1 text-on-surface dark:text-on-primary-container mb-2">Khám phá</h1>
+    <p class="font-body text-body text-secondary dark:text-secondary-fixed-dim mb-6">Tìm kiếm hàng ngàn bộ đề được tạo bởi cộng đồng QuizGen AI.</p>
+    <div class="flex flex-col md:flex-row gap-4">
+        <div class="relative flex-1 md:hidden">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-outline" data-icon="search">search</span>
+            <input class="w-full pl-10 pr-4 py-2 bg-surface dark:bg-on-secondary-fixed border border-slate-200 dark:border-outline-variant rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body text-body text-on-surface dark:text-on-primary-container placeholder-outline transition-shadow" placeholder="Tìm kiếm bộ đề..." type="text">
+        </div>
+        <div class="flex space-x-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
+            <button class="px-4 py-2 bg-primary text-on-primary rounded-lg font-button text-button whitespace-nowrap shadow-sm hover:bg-primary/90 transition-colors">Tất cả</button>
+            <button class="px-4 py-2 bg-surface dark:bg-on-secondary-fixed text-secondary dark:text-secondary-fixed-dim border border-slate-200 dark:border-outline-variant rounded-lg font-button text-button whitespace-nowrap hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant transition-colors">Toán học</button>
+            <button class="px-4 py-2 bg-surface dark:bg-on-secondary-fixed text-secondary dark:text-secondary-fixed-dim border border-slate-200 dark:border-outline-variant rounded-lg font-button text-button whitespace-nowrap hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant transition-colors">Vật lý</button>
+            <button class="px-4 py-2 bg-surface dark:bg-on-secondary-fixed text-secondary dark:text-secondary-fixed-dim border border-slate-200 dark:border-outline-variant rounded-lg font-button text-button whitespace-nowrap hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant transition-colors">Hóa học</button>
+            <button class="px-4 py-2 bg-surface dark:bg-on-secondary-fixed text-secondary dark:text-secondary-fixed-dim border border-slate-200 dark:border-outline-variant rounded-lg font-button text-button whitespace-nowrap hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant transition-colors">Sinh học</button>
+            <button class="px-4 py-2 bg-surface dark:bg-on-secondary-fixed text-secondary dark:text-secondary-fixed-dim border border-slate-200 dark:border-outline-variant rounded-lg font-button text-button whitespace-nowrap hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant transition-colors flex items-center">
+                <span class="material-symbols-outlined text-[18px] mr-1" data-icon="filter_list">filter_list</span> Lọc
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Bộ đề nổi bật (Horizontal Scroll) -->
+<div class="mb-12">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-h2 font-h2 text-on-surface dark:text-on-primary-container">Bộ đề nổi bật</h2>
+        <a class="font-button text-button text-primary dark:text-primary-fixed-dim hover:underline flex items-center" href="#">
+            Xem tất cả <span class="material-symbols-outlined text-[16px] ml-1" data-icon="arrow_forward">arrow_forward</span>
+        </a>
+    </div>
+    <div class="flex space-x-6 overflow-x-auto no-scrollbar pb-4 -mx-6 px-6 md:mx-0 md:px-0">
+        <!-- Featured Card 1 -->
+        <div class="flex-none w-[300px] bg-surface dark:bg-on-secondary-fixed rounded-[20px] p-6 shadow-sm border border-slate-200 dark:border-outline-variant relative overflow-hidden group hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] transition-shadow">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-primary-fixed-dim/30 to-transparent rounded-bl-full pointer-events-none"></div>
+            <div class="flex justify-between items-start mb-4">
+                <div class="bg-warning-light dark:bg-warning/20 text-warning px-2 py-1 rounded-full font-label-sm text-label-sm flex items-center">
+                    <span class="material-symbols-outlined text-[14px] mr-1" data-icon="local_fire_department">local_fire_department</span> Thịnh hành
+                </div>
+                <span class="font-caption text-caption text-secondary dark:text-secondary-fixed-dim">50 câu</span>
+            </div>
+            <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container mb-2 line-clamp-2">Ôn thi THPT Quốc Gia môn Vật Lý - Dao động cơ</h3>
+            <p class="font-body text-body text-secondary dark:text-secondary-fixed-dim mb-4 line-clamp-2">Tổng hợp các dạng bài tập dao động điều hòa, con lắc lò xo và con lắc đơn thường gặp trong đề thi.</p>
+            <div class="flex items-center justify-between mt-auto pt-4 border-t border-slate-100 dark:border-outline-variant">
+                <div class="flex items-center space-x-2">
+                    <img alt="Creator" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxnRBU_uTe-WnpSlLTBastX1YP34F7onvAPXilfrMiBYwU0pLBWPcE1205C6Tnr3GPQQyDu2gfOcl2EhRemCZBlbjTR_zeA2HDplWXxXUpWHrH-MtE3Vejl4ZjPk7Sq9b9hmQKQ5VPs1tL-PcDM7ol-cyYl3ops9n51pglXqvo20t0CGlyzjgZlOSRKs_ne8nvWE_TVTc-hafVk0sM1BLE-79Vq1xvyytuoxdUgJYDUx5qnsg7CFDZDFctYEsvIMwBorIRH296QYI">
+                    <span class="font-caption text-caption text-secondary dark:text-secondary-fixed-dim">Thầy Nguyễn V.</span>
+                </div>
+                <button class="bg-slate-100 dark:bg-on-secondary-fixed-variant text-secondary dark:text-secondary-fixed-dim hover:bg-primary-fixed hover:text-primary dark:hover:bg-primary-fixed-dim dark:hover:text-on-primary-fixed-variant px-3 py-1.5 rounded-lg font-button text-button transition-colors">Làm thử</button>
+            </div>
+        </div>
+
+        <!-- Featured Card 2 -->
+        <div class="flex-none w-[300px] bg-surface dark:bg-on-secondary-fixed rounded-[20px] p-6 shadow-sm border border-slate-200 dark:border-outline-variant relative overflow-hidden group hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] transition-shadow">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-success-light/50 to-transparent rounded-bl-full pointer-events-none"></div>
+            <div class="flex justify-between items-start mb-4">
+                <div class="bg-success-light dark:bg-success/20 text-success px-2 py-1 rounded-full font-label-sm text-label-sm flex items-center">
+                    <span class="material-symbols-outlined text-[14px] mr-1" data-icon="verified">verified</span> Đề xuất
+                </div>
+                <span class="font-caption text-caption text-secondary dark:text-secondary-fixed-dim">40 câu</span>
+            </div>
+            <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container mb-2 line-clamp-2">Giải tích 12 - Tích phân và Ứng dụng</h3>
+            <p class="font-body text-body text-secondary dark:text-secondary-fixed-dim mb-4 line-clamp-2">Hệ thống bài tập trắc nghiệm tích phân từ cơ bản đến vận dụng cao có giải chi tiết.</p>
+            <div class="flex items-center justify-between mt-auto pt-4 border-t border-slate-100 dark:border-outline-variant">
+                <div class="flex items-center space-x-2">
+                    <img alt="Creator" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhqaKxkCBNwtn1syWeO5SOifcRNHTCXHFJYLr9PKCN9PsiQ9XcKWzBm8Coa8ds0vkSgdubJ6CQogynXZXboP-fENHcXpK5l42X8TcYX4YwcfFbECc6P1IxsLZflmWUtVzKmqRHDpus7VRN06UolYUxHNmGBZCqyPMtzesFhE7SHzfXus0AAm56w2U6SxRUfXaoBNE7Do3fuLV9fs4DJ0ax48yeyozGKpyh6RoNZY2Lnilq1aEW2hM0Y8z4KPnLDoiN4V7fltTKfwQ">
+                    <span class="font-caption text-caption text-secondary dark:text-secondary-fixed-dim">Trần Phương</span>
+                </div>
+                <button class="bg-slate-100 dark:bg-on-secondary-fixed-variant text-secondary dark:text-secondary-fixed-dim hover:bg-primary-fixed hover:text-primary dark:hover:bg-primary-fixed-dim dark:hover:text-on-primary-fixed-variant px-3 py-1.5 rounded-lg font-button text-button transition-colors">Làm thử</button>
+            </div>
+        </div>
+
+        <!-- Featured Card 3 -->
+        <div class="flex-none w-[300px] bg-surface dark:bg-on-secondary-fixed rounded-[20px] p-6 shadow-sm border border-slate-200 dark:border-outline-variant relative overflow-hidden group hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] transition-shadow">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-tertiary-fixed-dim/30 to-transparent rounded-bl-full pointer-events-none"></div>
+            <div class="flex justify-between items-start mb-4">
+                <div class="bg-tertiary-fixed dark:bg-tertiary/20 text-tertiary dark:text-tertiary-fixed-dim px-2 py-1 rounded-full font-label-sm text-label-sm flex items-center">
+                    <span class="material-symbols-outlined text-[14px] mr-1" data-icon="star">star</span> Mới nhất
+                </div>
+                <span class="font-caption text-caption text-secondary dark:text-secondary-fixed-dim">30 câu</span>
+            </div>
+            <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container mb-2 line-clamp-2">Tiếng Anh Cấu trúc Câu Khó (C1-C2)</h3>
+            <p class="font-body text-body text-secondary dark:text-secondary-fixed-dim mb-4 line-clamp-2">Kiểm tra khả năng sử dụng các cấu trúc ngữ pháp phức tạp và thành ngữ trong tiếng Anh.</p>
+            <div class="flex items-center justify-between mt-auto pt-4 border-t border-slate-100 dark:border-outline-variant">
+                <div class="flex items-center space-x-2">
+                    <img alt="Creator" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB57_lFWK89odio-Jminv2hRWdFPMzuPzOJ6FWB-gezRGfrI2sghyTh2UHY812Lc2JtjeWym_JXFyh1KvjEUvncnjnu3YaOzjGiHNT0D220_B2WJBhFXys3G-kyrChovUAvew8jf7IZnYuGgt1WIQWbceGUsOLAROs7k4myZlWJp4DXSPa9AE3RN0GAG5Z7Ezzq9unQpmwkWfLP866dxgGDoiz8KXfhsTUYg4h6xXLg358AKPNvgPFI83VCAm_rXncryWOqs4GxjIA">
+                    <span class="font-caption text-caption text-secondary dark:text-secondary-fixed-dim">Lê Hoàng</span>
+                </div>
+                <button class="bg-slate-100 dark:bg-on-secondary-fixed-variant text-secondary dark:text-secondary-fixed-dim hover:bg-primary-fixed hover:text-primary dark:hover:bg-primary-fixed-dim dark:hover:text-on-primary-fixed-variant px-3 py-1.5 rounded-lg font-button text-button transition-colors">Làm thử</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Danh sách bộ đề công khai (3-column grid) -->
+<div>
+    <h2 class="text-h2 font-h2 text-on-surface dark:text-on-primary-container mb-6">Danh sách bộ đề công khai</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Grid Card 1 -->
+        <div class="bg-surface dark:bg-on-secondary-fixed rounded-[20px] p-5 shadow-sm border border-slate-200 dark:border-outline-variant flex flex-col hover:border-primary-fixed-dim dark:hover:border-primary-fixed transition-colors group">
+            <div class="flex justify-between items-start mb-3">
+                <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container group-hover:text-primary dark:group-hover:text-primary-fixed-dim transition-colors line-clamp-2">Hóa học Hữu cơ Đại cương - Đồng phân &amp; Danh pháp</h3>
+                <button class="text-outline hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                    <span class="material-symbols-outlined" data-icon="bookmark_border">bookmark_border</span>
+                </button>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-4">
+                <!-- Bloom Badges -->
+                <span class="bg-blue-100 dark:bg-bloom-remember/20 text-bloom-remember dark:text-primary-fixed-dim px-2 py-1 rounded-full font-label-sm text-label-sm">REMEMBERING</span>
+                <span class="bg-purple-100 dark:bg-bloom-understand/20 text-bloom-understand dark:text-tertiary-fixed-dim px-2 py-1 rounded-full font-label-sm text-label-sm">UNDERSTANDING</span>
+            </div>
+            <p class="font-body text-body text-secondary dark:text-secondary-fixed-dim mb-6 flex-1 line-clamp-3">Bộ câu hỏi trắc nghiệm kiểm tra lý thuyết về cách gọi tên và xác định số lượng đồng phân cấu tạo của Ankan, Anken, Ankin.</p>
+            <div class="flex items-center justify-between mt-auto pt-4 border-t border-slate-100 dark:border-outline-variant">
+                <div class="flex items-center space-x-2">
+                    <img alt="Creator" class="w-8 h-8 rounded-full border border-slate-200 dark:border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnOVPVC54vIqxumET-7yo0RcTrBJF5MRi2o2qnXWVXzaAz6m0izAD8jPsWN5Px-SCrOgibkxeC1N4EcnqW0vkMCF0tqYFUGbL46wqe5eWsR1rT8rrWLaomi-8_xt664njglAEYIPh66eRNrFDUrqn9MYC38mggvXKoRwkop8ANKF-tFTZQUPYKricgGeDfmjBfgvJ9Y2s9QJ8WP3tfm4-u4gfsoGmu94DNhQC1azfRUfXHO7Ta8Lw_0sC7oeKjQsXXHiF05BRrQyU">
+                    <div class="flex flex-col">
+                        <span class="font-caption text-caption text-on-surface dark:text-on-primary-container font-semibold">Phạm V. Minh</span>
+                        <span class="font-label-sm text-label-sm text-outline">25 CÂU</span>
+                    </div>
+                </div>
+                <button class="bg-primary text-on-primary hover:bg-primary/90 px-4 py-2 rounded-lg font-button text-button transition-colors">Làm thử</button>
+            </div>
+        </div>
+
+        <!-- Grid Card 2 -->
+        <div class="bg-surface dark:bg-on-secondary-fixed rounded-[20px] p-5 shadow-sm border border-slate-200 dark:border-outline-variant flex flex-col hover:border-primary-fixed-dim dark:hover:border-primary-fixed transition-colors group">
+            <div class="flex justify-between items-start mb-3">
+                <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container group-hover:text-primary dark:group-hover:text-primary-fixed-dim transition-colors line-clamp-2">Lịch sử Việt Nam - Giai đoạn 1945 - 1954</h3>
+                <button class="text-outline hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                    <span class="material-symbols-outlined" data-icon="bookmark_border">bookmark_border</span>
+                </button>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-4">
+                <span class="bg-blue-100 dark:bg-bloom-remember/20 text-bloom-remember dark:text-primary-fixed-dim px-2 py-1 rounded-full font-label-sm text-label-sm">REMEMBERING</span>
+                <span class="bg-orange-100 dark:bg-bloom-apply/20 text-bloom-apply dark:text-bloom-apply px-2 py-1 rounded-full font-label-sm text-label-sm">APPLYING</span>
+            </div>
+            <p class="font-body text-body text-secondary dark:text-secondary-fixed-dim mb-6 flex-1 line-clamp-3">Các sự kiện lịch sử quan trọng trong cuộc kháng chiến chống thực dân Pháp, chiến dịch Điện Biên Phủ và Hiệp định Giơ-ne-vơ.</p>
+            <div class="flex items-center justify-between mt-auto pt-4 border-t border-slate-100 dark:border-outline-variant">
+                <div class="flex items-center space-x-2">
+                    <img alt="Creator" class="w-8 h-8 rounded-full border border-slate-200 dark:border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMjcSLfyZCJSAAoqdu2xYJoTs8Av5-ews7QUtodCivqrhbYEmfeqhSGWjbov6y-etZl0tlFCOtjoP-1r8kZlQlcEpL8snO8PGDPitVvZo5quVHcFZNHZTmlpCe7frrPh75QLa8lkdGVcV0uCTc9eqMpLfdv1s-aQ3y4D0ssJORd2VJMZGZSqgZdTOSY3Dy2Ni2EzzQys_TXFDCplPi97yoUiHOq5fegA6TaTQRE1FcLx3-ZDzseqZkPwTu8fjEbNNFMAcR5RlhRxI">
+                    <div class="flex flex-col">
+                        <span class="font-caption text-caption text-on-surface dark:text-on-primary-container font-semibold">GV. Thu Hà</span>
+                        <span class="font-label-sm text-label-sm text-outline">60 CÂU</span>
+                    </div>
+                </div>
+                <button class="bg-primary text-on-primary hover:bg-primary/90 px-4 py-2 rounded-lg font-button text-button transition-colors">Làm thử</button>
+            </div>
+        </div>
+
+        <!-- Grid Card 3 -->
+        <div class="bg-surface dark:bg-on-secondary-fixed rounded-[20px] p-5 shadow-sm border border-slate-200 dark:border-outline-variant flex flex-col hover:border-primary-fixed-dim dark:hover:border-primary-fixed transition-colors group">
+            <div class="flex justify-between items-start mb-3">
+                <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container group-hover:text-primary dark:group-hover:text-primary-fixed-dim transition-colors line-clamp-2">Sinh học Tế bào - Quá trình phân bào</h3>
+                <button class="text-outline hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                    <span class="material-symbols-outlined" data-icon="bookmark_border">bookmark_border</span>
+                </button>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-4">
+                <span class="bg-purple-100 dark:bg-bloom-understand/20 text-bloom-understand dark:text-tertiary-fixed-dim px-2 py-1 rounded-full font-label-sm text-label-sm">UNDERSTANDING</span>
+            </div>
+            <p class="font-body text-body text-secondary dark:text-secondary-fixed-dim mb-6 flex-1 line-clamp-3">Kiến thức trọng tâm về nguyên phân, giảm phân, chu kỳ tế bào và ý nghĩa sinh học của các quá trình này.</p>
+            <div class="flex items-center justify-between mt-auto pt-4 border-t border-slate-100 dark:border-outline-variant">
+                <div class="flex items-center space-x-2">
+                    <img alt="Creator" class="w-8 h-8 rounded-full border border-slate-200 dark:border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYTKizH6wjTPF3wtAkodox0kmIlOdfM1HS4fTLs6sGwEsHNsdKiUr-YOXR-bf6oZBpJGJHhN1BQUVOZSoCKyyaGNv0WUOX-LClHWf4vhYXm0EwxhAPSDLIvthVHbaJxqcmcT7zxtqSCwYVzUt1dmkHGTWbQQQH_D74JFa7JgLp2PlX1nE2w6lfUCaXWPcTXj5PkTvgysDteIRkFxcXY5v_UDYOS0K2chtRLYcvO8isgXxk9JkzzP_SOdIEx2-OmoXL-VpoaKT4PAg">
+                    <div class="flex flex-col">
+                        <span class="font-caption text-caption text-on-surface dark:text-on-primary-container font-semibold">Đinh Tuấn</span>
+                        <span class="font-label-sm text-label-sm text-outline">35 CÂU</span>
+                    </div>
+                </div>
+                <button class="bg-primary text-on-primary hover:bg-primary/90 px-4 py-2 rounded-lg font-button text-button transition-colors">Làm thử</button>
+            </div>
+        </div>
+
+        <!-- Grid Card 4 -->
+        <div class="bg-surface dark:bg-on-secondary-fixed rounded-[20px] p-5 shadow-sm border border-slate-200 dark:border-outline-variant flex flex-col hover:border-primary-fixed-dim dark:hover:border-primary-fixed transition-colors group">
+            <div class="flex justify-between items-start mb-3">
+                <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container group-hover:text-primary dark:group-hover:text-primary-fixed-dim transition-colors line-clamp-2">Toán Rời Rạc - Lý thuyết Đồ thị</h3>
+                <button class="text-outline hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                    <span class="material-symbols-outlined" data-icon="bookmark_border">bookmark_border</span>
+                </button>
+            </div>
+            <div class="flex flex-wrap gap-2 mb-4">
+                <span class="bg-orange-100 dark:bg-bloom-apply/20 text-bloom-apply dark:text-bloom-apply px-2 py-1 rounded-full font-label-sm text-label-sm">APPLYING</span>
+                <span class="bg-purple-100 dark:bg-bloom-understand/20 text-bloom-understand dark:text-tertiary-fixed-dim px-2 py-1 rounded-full font-label-sm text-label-sm">UNDERSTANDING</span>
+            </div>
+            <p class="font-body text-body text-secondary dark:text-secondary-fixed-dim mb-6 flex-1 line-clamp-3">Bài tập áp dụng thuật toán Dijkstra, Euler, Hamilton và cây khung nhỏ nhất Kruskal.</p>
+            <div class="flex items-center justify-between mt-auto pt-4 border-t border-slate-100 dark:border-outline-variant">
+                <div class="flex items-center space-x-2">
+                    <img alt="Creator" class="w-8 h-8 rounded-full border border-slate-200 dark:border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDleRFvBpfXg2MpT-OTJ2dksuSa7URbbkbVPPaEJttU_-50sKyIVpYYpJFH7R-EmoUUUn_F2bFlq23X0sx74CwF4Gm8O_DJe6lgpg9SHumwqhR76YbTQhfEC8qQ-PtY4n4Gilq_EA8JdVZjrUUM6AlDcvfwHBwQWoak94o3mJfsquP2cZQTPjBIgCipVJ3MyIrfE___IZWmbPewNt650_nP-6VNxZKAHLXH03LrTe4ZVURyYUrlwhBK6wpjNrqYkFY6AhWJsIrK_sc">
+                    <div class="flex flex-col">
+                        <span class="font-caption text-caption text-on-surface dark:text-on-primary-container font-semibold">Ngô Q. Bảo</span>
+                        <span class="font-label-sm text-label-sm text-outline">20 CÂU</span>
+                    </div>
+                </div>
+                <button class="bg-primary text-on-primary hover:bg-primary/90 px-4 py-2 rounded-lg font-button text-button transition-colors">Làm thử</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pagination / Load More -->
+    <div class="mt-8 flex justify-center">
+        <button class="bg-surface dark:bg-on-secondary-fixed text-secondary dark:text-secondary-fixed-dim border border-slate-200 dark:border-outline-variant hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant px-6 py-2 rounded-lg font-button text-button transition-colors flex items-center shadow-sm">
+            Tải thêm <span class="material-symbols-outlined text-[18px] ml-2" data-icon="expand_more">expand_more</span>
+        </button>
+    </div>
+</div>

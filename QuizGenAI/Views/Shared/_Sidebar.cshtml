@@ -22,6 +22,10 @@
         {
             activePage = "History";
         }
+        else if (controller == "Explore")
+        {
+            activePage = "Explore";
+        }
         else
         {
             activePage = "Review"; // Mặc định hiển thị Ôn tập nếu ở trang khác
@@ -78,7 +82,7 @@
         
         <!-- Khám phá -->
         <li>
-            <a href="#" 
+            <a asp-controller="Explore" asp-action="Index" 
                class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Explore" ? "bg-surface-container-low dark:bg-secondary-container text-primary border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
                 <span class="material-symbols-outlined" style="@(activePage == "Explore" ? "font-variation-settings: 'FILL' 1;" : "")">explore</span>
                 <span class="font-label-sm text-label-sm">Khám phá</span>
