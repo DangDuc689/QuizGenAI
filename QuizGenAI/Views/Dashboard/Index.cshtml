@@ -1,0 +1,346 @@
+@model QuizGenAI.Models.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard - QuizGen AI";
+}
+
+<div class="flex flex-col gap-6">
+    <!-- Header Title & Action -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-h1 font-h1 text-on-background">Tổng quan</h1>
+            <p class="text-body text-secondary dark:text-secondary-fixed-dim">Chào mừng trở lại, xem tiến độ học tập và hiệu suất ôn tập của bạn.</p>
+        </div>
+        <div>
+            <a asp-controller="Documents" asp-action="Index" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white font-button text-button shadow-sm hover:bg-primary/95 transition-all">
+                <span class="material-symbols-outlined text-[20px]">add</span>
+                Tạo bộ đề mới
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Card 1: Tổng lần thi -->
+        <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200/60 dark:border-outline-variant rounded-2xl p-6 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary dark:text-primary-fixed-dim flex items-center justify-center">
+                <span class="material-symbols-outlined text-[28px]">assignment</span>
+            </div>
+            <div>
+                <span class="block text-caption text-secondary dark:text-secondary-fixed-dim">Tổng lần thi</span>
+                <span class="text-h2 font-h2 text-on-surface dark:text-on-primary-container">@Model.TotalExams</span>
+            </div>
+        </div>
+
+        <!-- Card 2: Điểm TB -->
+        <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200/60 dark:border-outline-variant rounded-2xl p-6 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-bloom-understand/10 text-bloom-understand dark:text-tertiary-fixed-dim flex items-center justify-center">
+                <span class="material-symbols-outlined text-[28px]">school</span>
+            </div>
+            <div>
+                <span class="block text-caption text-secondary dark:text-secondary-fixed-dim">Điểm trung bình</span>
+                <span class="text-h2 font-h2 text-on-surface dark:text-on-primary-container">@(Math.Round(Model.AverageScorePercent, 1))%</span>
+            </div>
+        </div>
+
+        <!-- Card 3: Đề đã lưu -->
+        <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200/60 dark:border-outline-variant rounded-2xl p-6 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-warning/10 text-warning flex items-center justify-center">
+                <span class="material-symbols-outlined text-[28px]">folder_special</span>
+            </div>
+            <div>
+                <span class="block text-caption text-secondary dark:text-secondary-fixed-dim">Bộ đề đã lưu</span>
+                <span class="text-h2 font-h2 text-on-surface dark:text-on-primary-container">@Model.SavedQuizSetsCount</span>
+            </div>
+        </div>
+
+        <!-- Card 4: Thời gian học -->
+        <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200/60 dark:border-outline-variant rounded-2xl p-6 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-success/10 text-success flex items-center justify-center">
+                <span class="material-symbols-outlined text-[28px]">timer</span>
+            </div>
+            <div>
+                <span class="block text-caption text-secondary dark:text-secondary-fixed-dim">Thời gian ôn tập</span>
+                <span class="text-h2 font-h2 text-on-surface dark:text-on-primary-container">@Model.StudyHours giờ</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace Row (Left 65% / Right 35%) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left: Line chart + Bloom Taxonomy Progress -->
+        <div class="lg:col-span-2 flex flex-col gap-6">
+            <!-- Line Chart Card -->
+            <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200/60 dark:border-outline-variant rounded-2xl p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container">Tiến độ điểm số</h3>
+                    <span class="text-caption text-secondary dark:text-secondary-fixed-dim bg-slate-100 dark:bg-secondary-container px-3 py-1 rounded-full">Qua các lần thi gần nhất</span>
+                </div>
+                <div class="h-[280px] w-full relative">
+                    <canvas id="performanceTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bloom Progress Bars Card -->
+            <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200/60 dark:border-outline-variant rounded-2xl p-6 shadow-sm">
+                <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container mb-4">Phân tích năng lực (Bloom's Taxonomy)</h3>
+                <div class="flex flex-col gap-4">
+                    <!-- Remember -->
+                    <div>
+                        <div class="flex justify-between items-center text-caption font-medium text-on-surface dark:text-on-primary-container mb-1">
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-bloom-remember"></span>Nhận biết (Remembering)</span>
+                            <span>@Model.BloomRememberPercent%</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-slate-100 dark:bg-outline-variant rounded-full overflow-hidden">
+                            <div class="h-full bg-bloom-remember rounded-full transition-all duration-500" style="width: @Model.BloomRememberPercent%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Understand -->
+                    <div>
+                        <div class="flex justify-between items-center text-caption font-medium text-on-surface dark:text-on-primary-container mb-1">
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-bloom-understand"></span>Thông hiểu (Understanding)</span>
+                            <span>@Model.BloomUnderstandPercent%</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-slate-100 dark:bg-outline-variant rounded-full overflow-hidden">
+                            <div class="h-full bg-bloom-understand rounded-full transition-all duration-500" style="width: @Model.BloomUnderstandPercent%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Apply -->
+                    <div>
+                        <div class="flex justify-between items-center text-caption font-medium text-on-surface dark:text-on-primary-container mb-1">
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-bloom-apply"></span>Vận dụng (Applying)</span>
+                            <span>@Model.BloomApplyPercent%</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-slate-100 dark:bg-outline-variant rounded-full overflow-hidden">
+                            <div class="h-full bg-bloom-apply rounded-full transition-all duration-500" style="width: @Model.BloomApplyPercent%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: InProgress exam + AI Feedback -->
+        <div class="flex flex-col gap-6">
+            <!-- In Progress Session Card (If Any) -->
+            @if (Model.InProgressExam != null)
+            {
+                <div class="bg-primary dark:bg-primary-container text-white rounded-2xl p-6 shadow-sm flex flex-col justify-between h-[180px] relative overflow-hidden">
+                    <!-- Decorative Circle -->
+                    <div class="absolute -right-10 -bottom-10 w-32 h-32 rounded-full bg-white/10"></div>
+                    <div>
+                        <h4 class="font-h3 text-h3 leading-tight font-semibold">Làm tiếp bộ đề</h4>
+                        <p class="text-caption text-primary-fixed-dim mt-1 truncate max-w-[90%]">@Model.InProgressExam.Title</p>
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-center text-caption text-primary-fixed-dim mb-1.5">
+                            <span>Còn @Model.InProgressExam.QuestionsRemaining câu hỏi</span>
+                            <span>@(Math.Round((Model.InProgressExam.TotalQuestions - Model.InProgressExam.QuestionsRemaining) * 100.0 / Model.InProgressExam.TotalQuestions))%</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-white/20 rounded-full overflow-hidden mb-4">
+                            <div class="h-full bg-white rounded-full" style="width: @((Model.InProgressExam.TotalQuestions - Model.InProgressExam.QuestionsRemaining) * 100 / Model.InProgressExam.TotalQuestions)%"></div>
+                        </div>
+                        <a asp-controller="Exam" asp-action="Index" asp-route-id="@Model.InProgressExam.SessionId" class="inline-flex w-full items-center justify-center py-2.5 rounded-xl bg-white hover:bg-slate-50 text-primary font-button text-button shadow-sm transition-all text-center">
+                            Tiếp tục làm bài
+                        </a>
+                    </div>
+                </div>
+            }
+
+            <!-- AI Feedback Advisor Card -->
+            <div class="bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200/80 dark:border-amber-900/40 rounded-2xl p-6 shadow-sm flex flex-col justify-between flex-1 gap-6">
+                <div>
+                    <div class="flex items-center gap-2 text-amber-800 dark:text-amber-400 mb-3 font-semibold">
+                        <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                        <span>AI Phân Tích & Gợi Ý</span>
+                    </div>
+                    <p class="text-body text-amber-900/90 dark:text-amber-200 leading-relaxed font-body">
+                        @Model.AiFeedback
+                    </p>
+                </div>
+                @if (Model.AiFeedbackTargetBloom != "None" && !string.IsNullOrEmpty(Model.AiFeedbackTargetBloom))
+                {
+                    <div>
+                        <a asp-controller="Exam" asp-action="Review" class="inline-flex w-full items-center justify-center gap-2 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-button text-button shadow-sm transition-all">
+                            <span class="material-symbols-outlined text-[18px]">bolt</span>
+                            Luyện Nhanh "@(Model.AiFeedbackTargetBloom == "Apply" ? "Vận dụng" : Model.AiFeedbackTargetBloom == "Understand" ? "Thông hiểu" : "Nhận biết")"
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div>
+                        <a asp-controller="Exam" asp-action="Review" class="inline-flex w-full items-center justify-center gap-2 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-button text-button shadow-sm transition-all">
+                            <span class="material-symbols-outlined text-[18px]">bolt</span>
+                            Bắt đầu ôn tập ôn luyện
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Row (Weak Topics & Recent Exam Sessions) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left 65% (2 cols): Weak Topics -->
+        <div class="lg:col-span-2 bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200/60 dark:border-outline-variant rounded-2xl p-6 shadow-sm">
+            <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-danger">trending_down</span>
+                Chủ đề cần cải thiện
+            </h3>
+            @if (Model.WeakTopics == null || !Model.WeakTopics.Any())
+            {
+                <div class="text-center py-8 text-secondary dark:text-secondary-fixed-dim">
+                    <span class="material-symbols-outlined text-[48px] opacity-40 mb-2">check_circle</span>
+                    <p class="text-body">Chưa phát hiện điểm yếu nào. Hãy làm thêm các đề ôn tập để phân tích!</p>
+                </div>
+            }
+            else
+            {
+                <div class="flex flex-col gap-4">
+                    @foreach (var topic in Model.WeakTopics)
+                    {
+                        <div class="p-4 rounded-xl border border-slate-100 dark:border-outline-variant bg-slate-50/50 dark:bg-secondary-container/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div class="flex-1">
+                                <span class="font-semibold text-body text-on-surface dark:text-on-primary-container block">@topic.TopicName</span>
+                                <span class="text-caption text-secondary dark:text-secondary-fixed-dim mt-0.5 block">@topic.Recommendation</span>
+                            </div>
+                            <div class="w-full sm:w-[150px] shrink-0 flex items-center gap-3">
+                                <div class="flex-1 h-2 bg-slate-200 dark:bg-outline-variant rounded-full overflow-hidden">
+                                    <div class="h-full bg-danger rounded-full" style="width: @topic.AccuracyRate%"></div>
+                                </div>
+                                <span class="font-medium text-caption text-danger shrink-0 w-8 text-right">@topic.AccuracyRate%</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Right 35% (1 col): Recent Exam Sessions -->
+        <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200/60 dark:border-outline-variant rounded-2xl p-6 shadow-sm">
+            <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim">history</span>
+                Lần thi gần nhất
+            </h3>
+            @if (Model.RecentExams == null || !Model.RecentExams.Any())
+            {
+                <div class="text-center py-8 text-secondary dark:text-secondary-fixed-dim">
+                    <span class="material-symbols-outlined text-[48px] opacity-40 mb-2">assignment_late</span>
+                    <p class="text-body">Chưa có bài thi nào được thực hiện.</p>
+                </div>
+            }
+            else
+            {
+                <div class="flex flex-col gap-4">
+                    @foreach (var exam in Model.RecentExams)
+                    {
+                        <div class="pb-4 border-b last:border-b-0 border-slate-100 dark:border-outline-variant flex justify-between items-center gap-4">
+                            <div class="truncate">
+                                <span class="font-medium text-body text-on-surface dark:text-on-primary-container block truncate">@exam.Title</span>
+                                <span class="text-caption text-secondary dark:text-secondary-fixed-dim mt-0.5 block">@exam.TakenAt.ToString("dd/MM/yyyy HH:mm")</span>
+                            </div>
+                            <div class="shrink-0 flex items-center gap-3">
+                                <div class="text-right">
+                                    <span class="font-semibold text-body text-on-surface dark:text-on-primary-container block">@exam.CorrectAnswers/@exam.TotalQuestions</span>
+                                    <span class="text-caption font-medium @(exam.ScorePercent >= 85 ? "text-success" : exam.ScorePercent >= 70 ? "text-warning" : "text-danger") block">@exam.ScorePercent%</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Chart.js Configuration
+            const ctx = document.getElementById('performanceTrendChart').getContext('2d');
+            
+            const labels = @Html.Raw(Json.Serialize(Model.TrendLabels));
+            const data = @Html.Raw(Json.Serialize(Model.TrendScores));
+
+            // Custom gradient background under the curve
+            const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+            gradient.addColorStop(0, 'rgba(0, 55, 176, 0.25)'); // Primary color light
+            gradient.addColorStop(1, 'rgba(0, 55, 176, 0.00)');
+
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Điểm số (%)',
+                        data: data,
+                        borderColor: '#0037b0', // primary theme color
+                        borderWidth: 3,
+                        pointBackgroundColor: '#0037b0',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        fill: true,
+                        backgroundColor: gradient,
+                        tension: 0.35 // smooth curve
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false // hide legend since we only have one dataset
+                        },
+                        tooltip: {
+                            backgroundColor: '#131b2e', // on-background
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            padding: 12,
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return `Điểm: ${context.parsed.y}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 100,
+                            grid: {
+                                borderDash: [5, 5],
+                                color: 'rgba(116, 118, 134, 0.15)' // outline-variant alpha
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                },
+                                font: {
+                                    family: 'Inter',
+                                    size: 11
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    family: 'Inter',
+                                    size: 11
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+}

@@ -6,7 +6,7 @@
     // Tự động nhận diện trang hoạt động dựa trên Controller/Action nếu chưa được chỉ định tường minh
     if (string.IsNullOrEmpty(activePage))
     {
-        if (controller == "Home" && action == "Index")
+        if ((controller == "Home" || controller == "Dashboard") && action == "Index")
         {
             activePage = "Dashboard";
         }
@@ -55,7 +55,7 @@
         
         <!-- Dashboard -->
         <li>
-            <a asp-controller="Home" asp-action="Index" 
+            <a asp-controller="Dashboard" asp-action="Index" 
                class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Dashboard" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
                 <span class="material-symbols-outlined" style="@(activePage == "Dashboard" ? "font-variation-settings: 'FILL' 1;" : "")">dashboard</span>
                 <span class="font-label-sm text-label-sm">Dashboard</span>
@@ -89,7 +89,8 @@
             </a>
         </li>
         
-        <!-- Phân tích -->
+        <!-- Phân tích (Đã gộp vào Dashboard) -->
+        <!-- 
         <li>
             <a href="#" 
                class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Analytics" ? "bg-surface-container-low dark:bg-secondary-container text-primary border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
@@ -97,6 +98,7 @@
                 <span class="font-label-sm text-label-sm">Phân tích</span>
             </a>
         </li>
+        -->
         
         <!-- Lịch sử -->
         <li>
