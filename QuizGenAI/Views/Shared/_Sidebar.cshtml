@@ -55,7 +55,7 @@
         
         <!-- Dashboard -->
         <li>
-            <a asp-controller="Home" asp-action="Index" 
+            <a asp-area="" asp-controller="Home" asp-action="Index" 
                class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Dashboard" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
                 <span class="material-symbols-outlined" style="@(activePage == "Dashboard" ? "font-variation-settings: 'FILL' 1;" : "")">dashboard</span>
                 <span class="font-label-sm text-label-sm">Dashboard</span>
@@ -64,7 +64,7 @@
         
         <!-- Tài liệu -->
         <li>
-            <a asp-controller="Documents" asp-action="Index"
+            <a asp-area="" asp-controller="Documents" asp-action="Index"
                class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Documents" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
                 <span class="material-symbols-outlined" style="@(activePage == "Documents" ? "font-variation-settings: 'FILL' 1;" : "")">description</span>
                 <span class="font-label-sm text-label-sm">Tài liệu</span>
@@ -73,7 +73,7 @@
         
         <!-- Ôn tập -->
         <li>
-            <a asp-controller="Exam" asp-action="Review" 
+            <a asp-area="" asp-controller="Exam" asp-action="Review" 
                class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Review" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
                 <span class="material-symbols-outlined" style="@(activePage == "Review" ? "font-variation-settings: 'FILL' 1;" : "")">auto_stories</span>
                 <span class="font-label-sm text-label-sm">Ôn tập</span>
@@ -82,7 +82,7 @@
         
         <!-- Khám phá -->
         <li>
-            <a asp-controller="Explore" asp-action="Index" 
+            <a asp-area="" asp-controller="Explore" asp-action="Index" 
                class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Explore" ? "bg-surface-container-low dark:bg-secondary-container text-primary border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
                 <span class="material-symbols-outlined" style="@(activePage == "Explore" ? "font-variation-settings: 'FILL' 1;" : "")">explore</span>
                 <span class="font-label-sm text-label-sm">Khám phá</span>
@@ -100,7 +100,7 @@
         
         <!-- Lịch sử -->
         <li>
-            <a asp-controller="Exam" asp-action="History"
+            <a asp-area="" asp-controller="Exam" asp-action="History"
                class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "History" ? "bg-surface-container-low dark:bg-secondary-container text-primary border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
                 <span class="material-symbols-outlined" style="@(activePage == "History" ? "font-variation-settings: 'FILL' 1;" : "")">history</span>
                 <span class="font-label-sm text-label-sm">Lịch sử</span>
