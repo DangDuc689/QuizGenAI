@@ -34,7 +34,6 @@ body {
     white-space: nowrap;
     word-wrap: normal;
     direction: ltr;
-    -webkit-font-feature-settings: 'liga';
     -webkit-font-smoothing: antialiased;
     transition: transform 0.2s ease, font-variation-settings 0.2s ease;
 }
@@ -981,6 +980,15 @@ main:has(.documents-page) {
     font-size: 18px;
 }
 
+.document-more-menu button.delete-document-btn {
+    color: #ef4444;
+}
+
+.document-more-menu button.delete-document-btn:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
 /* =========================================================
    7. MODULE TÀI LIỆU - DOCUMENT DETAIL PAGE
    Người thực hiện: Lê An
@@ -1589,8 +1597,8 @@ main:has(.documents-page) {
 }
 
 .stitch-file-badge.text {
-    background: #ede9fe;
-    color: #6d28d9;
+    background: #ffedd5;
+    color: #ea580c;
 }
 
 /* Document Detail - compact URL preview */
@@ -1736,8 +1744,9 @@ main:has(.documents-page) {
     font-size: 0.9rem;
     line-height: 1.5;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
 }
 

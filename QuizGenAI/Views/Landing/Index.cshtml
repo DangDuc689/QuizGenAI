@@ -1,0 +1,317 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html class="light" lang="vi">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>QuizGen AI - Học tập thông minh hơn</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "slate-200": "#E2E8F0",
+                    "primary-fixed-dim": "#b7c4ff",
+                    "on-secondary-fixed": "#0d1c2f",
+                    "on-tertiary-fixed-variant": "#5a00c6",
+                    "surface-bright": "#faf8ff",
+                    "on-tertiary-container": "#dfccff",
+                    "tertiary": "#5700c0",
+                    "tertiary-fixed": "#eaddff",
+                    "on-secondary": "#ffffff",
+                    "surface-container-high": "#e2e7ff",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-low": "#f2f3ff",
+                    "slate-100": "#F1F5F9",
+                    "inverse-surface": "#283044",
+                    "slate-300": "#CBD5E1",
+                    "outline": "#747686",
+                    "on-primary": "#ffffff",
+                    "warning": "#D97706",
+                    "surface-variant": "#dae2fd",
+                    "inverse-primary": "#b7c4ff",
+                    "danger": "#DC2626",
+                    "success": "#16A34A",
+                    "on-secondary-container": "#57657b",
+                    "danger-light": "#FEE2E2",
+                    "primary-fixed": "#dce1ff",
+                    "surface-container-lowest": "#ffffff",
+                    "slate-50": "#F8FAFC",
+                    "secondary": "#515f74",
+                    "tertiary-container": "#712ae2",
+                    "success-light": "#DCFCE7",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed-variant": "#0039b5",
+                    "on-tertiary-fixed": "#25005a",
+                    "bloom-apply": "#EA580C",
+                    "error": "#ba1a1a",
+                    "surface-container": "#eaedff",
+                    "surface-container-highest": "#dae2fd",
+                    "surface-tint": "#2151da",
+                    "warning-light": "#FEF3C7",
+                    "secondary-fixed-dim": "#b9c7e0",
+                    "tertiary-fixed-dim": "#d2bbff",
+                    "slate-400": "#94A3B8",
+                    "primary-container": "#1d4ed8",
+                    "on-primary-fixed": "#001551",
+                    "surface": "#faf8ff",
+                    "on-error": "#ffffff",
+                    "surface-dim": "#d2d9f4",
+                    "on-background": "#131b2e",
+                    "bloom-remember": "#1D4ED8",
+                    "on-surface-variant": "#434655",
+                    "bloom-understand": "#7C3AED",
+                    "secondary-fixed": "#d5e3fd",
+                    "error-container": "#ffdad6",
+                    "primary": "#0037b0",
+                    "on-secondary-fixed-variant": "#3a485c",
+                    "inverse-on-surface": "#eef0ff",
+                    "outline-variant": "#c4c5d7",
+                    "background": "#faf8ff",
+                    "on-primary-container": "#cad3ff",
+                    "on-surface": "#131b2e",
+                    "secondary-container": "#d5e3fd"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sidebar-width": "240px",
+                    "gutter": "24px",
+                    "base": "4px",
+                    "margin-desktop": "120px",
+                    "max-width": "1200px"
+            },
+            "fontFamily": {
+                    "label-sm": ["Inter"],
+                    "body": ["Inter"],
+                    "button": ["Inter"],
+                    "h3": ["Inter"],
+                    "h1": ["Inter"],
+                    "h2": ["Inter"],
+                    "caption": ["Inter"]
+            },
+            "fontSize": {
+                    "label-sm": ["11px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                    "body": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                    "button": ["14px", { "lineHeight": "1", "fontWeight": "600" }],
+                    "h3": ["18px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                    "h1": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                    "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                    "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }]
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-on-surface font-body antialiased selection:bg-primary selection:text-white flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-on-secondary-fixed shadow-sm w-full top-0 sticky z-50">
+<div class="flex justify-between items-center h-16 max-w-max-width mx-auto px-6 md:px-margin-desktop w-full">
+<div class="flex items-center gap-12">
+<div class="text-h2 font-h2 text-primary dark:text-primary-fixed-dim">QuizGen AI</div>
+<nav class="hidden md:flex items-center gap-8">
+<!-- Product is closest match for landing page active intent -->
+<a class="font-body text-body text-primary dark:text-primary-fixed-dim border-b-2 border-primary dark:border-primary-fixed-dim pb-1 cursor-pointer transition-all duration-200" href="#">Sản phẩm</a>
+<a class="font-body text-body text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors cursor-pointer transition-all duration-200" href="#">Tính năng</a>
+<a class="font-body text-body text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors cursor-pointer transition-all duration-200" href="#">Bảng giá</a>
+<a class="font-body text-body text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors cursor-pointer transition-all duration-200" href="#">Giới thiệu</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <span class="font-body text-body text-secondary dark:text-secondary-fixed-dim">
+            Xin chào, @(User.Identity.Name?.Split('@')[0] ?? "Thành viên")
+        </span>
+        <a href="/Dashboard" class="font-button text-button bg-primary text-on-primary px-6 py-2 rounded-DEFAULT hover:brightness-90 transition-all duration-200 shadow-sm flex items-center justify-center">Bảng điều khiển</a>
+        <form asp-controller="Account" asp-action="Logout" method="post" class="inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="font-button text-button text-danger px-4 py-2 rounded-DEFAULT hover:bg-danger-light transition-colors duration-200">Đăng xuất</button>
+        </form>
+    }
+    else
+    {
+        <a href="/Account/Login" class="font-button text-button text-primary px-4 py-2 rounded-DEFAULT hover:bg-surface-container-low transition-colors duration-200 flex items-center justify-center">Đăng nhập</a>
+        <a href="/Account/Register" class="font-button text-button bg-primary text-on-primary px-6 py-2 rounded-DEFAULT hover:brightness-90 transition-all duration-200 shadow-sm flex items-center justify-center">Đăng ký</a>
+    }
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow">
+<!-- Hero Section -->
+<section class="relative max-w-max-width mx-auto px-6 md:px-margin-desktop py-20 md:py-32 flex flex-col md:flex-row items-center justify-between gap-12">
+<div class="w-full md:w-1/2 flex flex-col gap-6 z-10">
+<span class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container-low text-primary font-label-sm text-label-sm rounded-full w-fit uppercase border border-primary-fixed-dim">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+                    Phiên bản 2.0 đã ra mắt
+                </span>
+<h1 class="font-h1 text-h1 text-on-surface leading-tight tracking-tight md:text-[48px] md:leading-[1.1]">
+                    Học tập thông minh hơn với QuizGen AI
+                </h1>
+<p class="font-body text-body text-secondary md:text-[18px] max-w-[480px]">
+                    Nền tảng tạo đề trắc nghiệm thông minh, phân tích chuyên sâu dựa trên Thang đo Bloom, giúp bạn tiết kiệm 80% thời gian biên soạn và tối ưu hóa lộ trình học tập.
+                </p>
+<div class="flex items-center gap-4 mt-4">
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <a href="/Dashboard" class="font-button text-button bg-primary text-on-primary px-8 py-4 rounded-lg shadow-sm hover:brightness-90 transition-all active:scale-95 flex items-center gap-2">
+            Dùng thử ngay
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">arrow_forward</span>
+        </a>
+    }
+    else
+    {
+        <a href="/Account/Register" class="font-button text-button bg-primary text-on-primary px-8 py-4 rounded-lg shadow-sm hover:brightness-90 transition-all active:scale-95 flex items-center gap-2">
+            Dùng thử ngay
+            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">arrow_forward</span>
+        </a>
+    }
+    <button class="font-button text-button bg-slate-100 text-secondary px-8 py-4 rounded-lg hover:bg-slate-200 transition-all active:scale-95 flex items-center gap-2">
+        Xem Demo
+    </button>
+</div>
+</div>
+<div class="w-full md:w-1/2 relative rounded-xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.08)] bg-surface border border-slate-200">
+<img class="w-full h-auto object-cover opacity-90" data-alt="A clean, highly professional photograph of a modern workspace featuring a sleek laptop displaying an advanced analytics dashboard with charts and data nodes. The scene is illuminated by soft, natural, high-key lighting that emphasizes clarity and focus, fitting a corporate, academic AI technology brand. The color palette leans heavily into crisp whites, light slate greys, and subtle accents of primary corporate blue. The overall mood is intelligent, structured, and modern." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcibgHFQLUIUybdBw6gs7PEUebIp7aX6tfvCrf7_2m4KMRywP4YGP3dm7AyKzvDDgTbsXr6FsIzyl_nkIGpwqOfUGkt2lT_w9ZcGyx3_KWeEekFMH3MrvTIFA7hs1GfViduYJx-rnI9oPioeJakQRc7zx2SeF8F7EofikUacVDgKT2Laz7s0BKZSj-VLb0wBiNwbqq1jUa1RSozOyP_H73_9du-gzMLBNf4hL6BsUT1_yJRSsICae4cIei1cwpNOiTGaXbfCP4kbE">
+<!-- Floating Glass Card overlay to emphasize UI aspect -->
+<div class="absolute bottom-6 left-6 right-6 bg-white/90 backdrop-blur-md border border-white/50 p-4 rounded-lg shadow-sm flex items-center gap-4">
+<div class="w-10 h-10 rounded-full bg-success-light flex items-center justify-center text-success">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div>
+<div class="font-h3 text-h3 text-on-surface">Đề thi đã được tạo</div>
+<div class="font-caption text-caption text-secondary">50 câu hỏi • Bao phủ 6 cấp độ Bloom</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Features Bento Grid -->
+<section class="max-w-max-width mx-auto px-6 md:px-margin-desktop py-16 md:py-24">
+<div class="text-center mb-12 flex flex-col gap-2">
+<h2 class="font-h2 text-h2 text-on-surface">Công nghệ tối ưu hóa học thuật</h2>
+<p class="font-body text-body text-secondary">Ba trụ cột chính giúp nâng cao chất lượng đánh giá kiến thức.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Card 1 -->
+<div class="bg-surface rounded-[20px] p-8 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-200 flex flex-col gap-6 hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] transition-shadow duration-300">
+<div class="w-12 h-12 bg-surface-container-high rounded-lg flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">magic_button</span>
+</div>
+<div>
+<h3 class="font-h3 text-h3 text-on-surface mb-2">Tạo đề tự động</h3>
+<p class="font-body text-body text-secondary">Hệ thống AI tự động phân tích tài liệu và sinh ra các bộ câu hỏi trắc nghiệm chất lượng cao chỉ trong vài giây.</p>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface rounded-[20px] p-8 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-200 flex flex-col gap-6 md:col-span-2 hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] transition-shadow duration-300">
+<div class="flex justify-between items-start">
+<div class="w-12 h-12 bg-surface-container-high rounded-lg flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">account_tree</span>
+</div>
+<!-- Visual representation of Bloom Badges -->
+<div class="flex gap-2 flex-wrap justify-end max-w-[200px]">
+<span class="bg-blue-100 text-blue-700 font-label-sm text-label-sm uppercase px-2 py-1 rounded-full">Ghi nhớ</span>
+<span class="bg-purple-100 text-purple-700 font-label-sm text-label-sm uppercase px-2 py-1 rounded-full">Thông hiểu</span>
+<span class="bg-orange-100 text-orange-700 font-label-sm text-label-sm uppercase px-2 py-1 rounded-full">Vận dụng</span>
+</div>
+</div>
+<div class="mt-auto">
+<h3 class="font-h3 text-h3 text-on-surface mb-2">Phân loại Bloom</h3>
+<p class="font-body text-body text-secondary max-w-md">Mỗi câu hỏi được gắn thẻ và phân tích chuẩn xác theo 6 cấp độ nhận thức của Thang đo Bloom, đảm bảo tính toàn diện của bài kiểm tra.</p>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface rounded-[20px] p-8 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-200 flex flex-col gap-6 md:col-span-3 hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] transition-shadow duration-300">
+<div class="flex flex-col md:flex-row gap-8 items-center">
+<div class="flex-grow">
+<div class="w-12 h-12 bg-surface-container-high rounded-lg flex items-center justify-center text-primary mb-6">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">troubleshoot</span>
+</div>
+<h3 class="font-h3 text-h3 text-on-surface mb-2">Khắc phục điểm yếu</h3>
+<p class="font-body text-body text-secondary max-w-lg">Báo cáo phân tích chuyên sâu sau mỗi bài test chỉ ra chính xác lỗ hổng kiến thức và gợi ý tài liệu ôn tập cá nhân hóa để cải thiện kết quả.</p>
+</div>
+<div class="w-full md:w-1/3 bg-slate-50 border border-slate-200 rounded-lg p-4 flex flex-col gap-3">
+<div class="flex justify-between items-center text-caption font-caption">
+<span class="text-secondary">Chương 3: Cấu trúc dữ liệu</span>
+<span class="text-danger font-bold">40%</span>
+</div>
+<div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+<div class="bg-danger h-full w-[40%]"></div>
+</div>
+<button class="w-full mt-2 font-button text-button text-primary bg-surface border border-slate-200 rounded py-2 hover:bg-surface-container-low transition-colors">Ôn tập ngay</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-slate-50 dark:bg-on-secondary-fixed border-t border-slate-200 dark:border-outline-variant w-full py-12 flat no shadows">
+<div class="max-w-max-width mx-auto px-6 md:px-margin-desktop py-12 md:py-16">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12 mb-12">
+<!-- Column 1: Brand & Social -->
+<div class="col-span-2 md:col-span-1 flex flex-col gap-4">
+<div class="text-h3 font-h3 text-primary">QuizGen AI</div>
+<div class="text-body text-secondary max-w-[240px]">
+        Nền tảng tạo đề thi và đánh giá năng lực thông minh ứng dụng AI hàng đầu Việt Nam.
+      </div>
+<div class="flex gap-4 mt-2">
+<span class="material-symbols-outlined text-secondary hover:text-primary cursor-pointer">public</span>
+<span class="material-symbols-outlined text-secondary hover:text-primary cursor-pointer">mail</span>
+<span class="material-symbols-outlined text-secondary hover:text-primary cursor-pointer">groups</span>
+</div>
+</div>
+<!-- Column 2: Products -->
+<div class="flex flex-col gap-4">
+<div class="text-body font-bold text-on-surface"> Sản phẩm </div>
+<nav class="flex flex-col gap-2">
+<a class="text-body text-secondary hover:text-primary" href="#"> Tính năng AI </a>
+<a class="text-body text-secondary hover:text-primary" href="#"> Bảng giá </a>
+<a class="text-body text-secondary hover:text-primary" href="#"> Tài liệu API </a>
+<a class="text-body text-secondary hover:text-primary" href="#"> Cập nhật </a>
+</nav>
+</div>
+<!-- Column 3: Company -->
+<div class="flex flex-col gap-4">
+<div class="text-body font-bold text-on-surface"> Công ty </div>
+<nav class="flex flex-col gap-2">
+<a class="text-body text-secondary hover:text-primary" href="#"> Về chúng tôi </a>
+<a class="text-body text-secondary hover:text-primary" href="#"> Blog giáo dục </a>
+<a class="text-body text-secondary hover:text-primary" href="#"> Liên hệ </a>
+<a class="text-body text-secondary hover:text-primary" href="#"> Đối tác </a>
+</nav>
+</div>
+<!-- Column 4: Legal -->
+<div class="flex flex-col gap-4">
+<div class="text-body font-bold text-on-surface"> Pháp lý </div>
+<nav class="flex flex-col gap-2">
+<a class="text-body text-secondary hover:text-primary" href="#"> Điều khoản dịch vụ </a>
+<a class="text-body text-secondary hover:text-primary" href="#"> Chính sách bảo mật </a>
+<a class="text-body text-secondary hover:text-primary" href="#"> Quyền riêng tư </a>
+</nav>
+</div>
+</div>
+<div class="pt-8 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+<div class="text-caption text-secondary"> © 2024 QuizGen AI. Bảo lưu mọi quyền. </div>
+<div class="text-caption text-secondary"> Ngôn ngữ: Tiếng Việt </div>
+</div>
+</div></footer>
+</body>
+</html>

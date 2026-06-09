@@ -1,3 +1,4 @@
+@model QuizGenAI.Models.QuizSet
 @{
     Layout = null;
     ViewData["Title"] = "Thi thử - QuizGen AI";
@@ -130,7 +131,7 @@
 <body class="bg-slate-50 dark:bg-on-background min-h-screen flex flex-col font-body text-on-surface dark:text-on-primary-container antialiased transition-colors duration-300">
 
     <!-- Top Header -->
-    <partial name="_ExamHeader" />
+    <partial name="_ExamHeader" model="Model" />
 
     <!-- Main Workspace -->
     <div class="flex flex-1 overflow-hidden">
@@ -290,7 +291,7 @@
                 <button id="result-review-btn" class="flex-1 px-5 py-2.5 rounded-lg border border-slate-200 dark:border-outline-variant text-secondary dark:text-secondary-fixed-dim hover:bg-slate-100 dark:hover:bg-secondary-container font-button text-button transition-colors cursor-pointer">
                     Xem chi tiết
                 </button>
-                <a href="/Exam/Result" class="flex-1 px-6 py-2.5 rounded-lg bg-primary text-white font-button text-button shadow-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+                <a href="" id="result-modal-detail-link" class="flex-1 px-6 py-2.5 rounded-lg bg-primary text-white font-button text-button shadow-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1;">auto_awesome</span>
                     Kết quả chi tiết
                 </a>
@@ -304,210 +305,69 @@
     
     <script>
     $(document).ready(function () {
-        // 1. MOCK QUESTIONS DATABASE (25 QUESTIONS)
+        // 1. REAL QUESTIONS DATABASE FROM SERVER DB
         const questions = [
+            @foreach (var q in Model.Questions)
             {
-                id: 1,
-                taxonomy: "Remembering",
-                taxonomyClass: "bg-bloom-remember/10 text-bloom-remember dark:text-primary-fixed-dim border border-bloom-remember/20",
-                stem: "Giao thức nào dưới đây thực hiện bắt tay ba bước (SYN, SYN-ACK, ACK) để thiết lập một kết nối tin cậy giữa hai máy chủ?",
-                options: [
-                    { key: "A", text: "UDP (User Datagram Protocol)" },
-                    { key: "B", text: "TCP (Transmission Control Protocol)" },
-                    { key: "C", text: "ICMP (Internet Control Message Protocol)" },
-                    { key: "D", text: "ARP (Address Resolution Protocol)" }
-                ],
-                correct: "B",
-                userAnswer: null,
-                flagged: false
-            },
-            {
-                id: 2,
-                taxonomy: "Understanding",
-                taxonomyClass: "bg-bloom-understand/10 text-bloom-understand dark:text-tertiary-fixed-dim border border-bloom-understand/20",
-                stem: "Nếu một gói tin IP có giá trị TTL (Time to Live) bằng 0 khi đến một bộ định tuyến trung gian, bộ định tuyến đó sẽ xử lý như thế nào?",
-                options: [
-                    { key: "A", text: "Chuyển tiếp gói tin đến đích như bình thường." },
-                    { key: "B", text: "Hủy bỏ gói tin và gửi thông báo lỗi ICMP Time Exceeded quay lại nguồn." },
-                    { key: "C", text: "Tăng giá trị TTL lên 64 và chuyển tiếp đi tiếp." },
-                    { key: "D", text: "Lưu gói tin vào bộ nhớ đệm cho đến khi nhận được chỉ thị mới." }
-                ],
-                correct: "B",
-                userAnswer: null,
-                flagged: false
-            },
-            {
-                id: 3,
-                taxonomy: "Applying",
-                taxonomyClass: "bg-warning-light text-bloom-apply dark:text-secondary-fixed-dim border border-warning/20",
-                stem: "Kỹ sư mạng muốn kiểm tra độ trễ phân giải DNS và thông tin đường truyền cho một tên miền. Công cụ CLI nào cung cấp cả phân tích đường đi cùng với thống kê mất gói và độ trễ trên từng chặng (hop)?",
-                options: [
-                    { key: "A", text: "nslookup" },
-                    { key: "B", text: "pathping" },
-                    { key: "C", text: "netstat" },
-                    { key: "D", text: "ipconfig" }
-                ],
-                correct: "B",
-                userAnswer: null,
-                flagged: false
-            },
-            {
-                id: 4,
-                taxonomy: "Remembering",
-                taxonomyClass: "bg-bloom-remember/10 text-bloom-remember dark:text-primary-fixed-dim border border-bloom-remember/20",
-                stem: "Mã trạng thái HTTP nào cho biết yêu cầu của khách hàng (client) không được ủy quyền truy cập vào tài nguyên do thông tin xác thực không hợp lệ hoặc bị thiếu?",
-                options: [
-                    { key: "A", text: "400 Bad Request" },
-                    { key: "B", text: "401 Unauthorized" },
-                    { key: "C", text: "403 Forbidden" },
-                    { key: "D", text: "404 Not Found" }
-                ],
-                correct: "B",
-                userAnswer: null,
-                flagged: false
-            },
-            {
-                id: 5,
-                taxonomy: "Analyzing",
-                taxonomyClass: "bg-danger-light text-error border border-danger/20 dark:bg-error-container/20 dark:text-error",
-                stem: "Một máy trạm không thể truy cập bất kỳ trang web nào trên Internet nhưng vẫn có thể kết nối với các thư mục chia sẻ trong mạng LAN nội bộ. Cấu hình lỗi nào dưới đây là nguyên nhân khả dĩ nhất?",
-                options: [
-                    { key: "A", text: "Thiếu địa chỉ máy chủ DNS hoặc cấu hình sai IP Default Gateway." },
-                    { key: "B", text: "Card mạng (NIC) đã bị vô hiệu hóa." },
-                    { key: "C", text: "Mặt nạ mạng (Subnet Mask) bị thiết lập sai hoàn toàn." },
-                    { key: "D", text: "Địa chỉ vật lý (MAC Address) bị trùng lặp." }
-                ],
-                correct: "A",
-                userAnswer: null,
-                flagged: false
-            },
-            {
-                id: 6,
-                taxonomy: "Analyzing",
-                taxonomyClass: "bg-danger-light text-error border border-danger/20 dark:bg-error-container/20 dark:text-error",
-                stem: "Giao thức nào hoạt động ở Layer 2 của mô hình OSI được thiết kế để phát hiện và ngăn chặn vòng lặp định tuyến (routing loops) trong mạng chuyển mạch (switched network)?",
-                options: [
-                    { key: "A", text: "OSPF (Open Shortest Path First)" },
-                    { key: "B", text: "BGP (Border Gateway Protocol)" },
-                    { key: "C", text: "STP (Spanning Tree Protocol)" },
-                    { key: "D", text: "RIP (Routing Information Protocol)" }
-                ],
-                correct: "C",
-                userAnswer: null,
-                flagged: false
-            },
-            {
-                id: 7,
-                taxonomy: "Applying",
-                taxonomyClass: "bg-warning-light text-bloom-apply dark:text-secondary-fixed-dim border border-warning/20",
-                stem: "Bạn cần kiểm tra các cổng (ports) TCP cục bộ đang mở và lắng nghe (listening) các kết nối đến trên một máy tính Windows. Bạn nên chạy lệnh CLI nào?",
-                options: [
-                    { key: "A", text: "ipconfig /all" },
-                    { key: "B", text: "netstat -ano" },
-                    { key: "C", text: "arp -a" },
-                    { key: "D", text: "nslookup" }
-                ],
-                correct: "B",
-                userAnswer: null,
-                flagged: false
-            },
-            {
-                id: 8,
-                taxonomy: "Applying",
-                taxonomyClass: "bg-warning-light text-bloom-apply dark:text-secondary-fixed-dim border border-warning/20",
-                stem: "Công ty đang gặp sự cố về tốc độ mạng. Bạn nghi ngờ có xung đột IP trên mạng con (subnet). Bạn dùng lệnh nào để xem bảng ARP lưu trữ ánh xạ giữa địa chỉ IP và địa chỉ MAC?",
-                options: [
-                    { key: "A", text: "tracert" },
-                    { key: "B", text: "ipconfig /renew" },
-                    { key: "C", text: "arp -a" },
-                    { key: "D", text: "ping -t" }
-                ],
-                correct: "C",
-                userAnswer: null,
-                flagged: false
-            },
-            {
-                id: 9, // Match user prompt question exactly
-                taxonomy: "Applying",
-                taxonomyClass: "bg-warning-light text-bloom-apply dark:text-secondary-fixed-dim border border-warning/20",
-                stem: "Một người dùng báo cáo độ trễ lớn khi truy cập ứng dụng web nội bộ. Bạn nghi ngờ có sự cố định tuyến mạng. Lệnh nào sau đây là bước đầu tiên thích hợp nhất để cô lập phân đoạn mạng gây ra độ trễ?",
-                options: [
-                    { key: "A", text: "Chạy lệnh ipconfig /flushdns trên máy tính cục bộ của người dùng." },
-                    { key: "B", text: "Thực hiện lệnh tracert (hoặc traceroute) tới địa chỉ IP của ứng dụng web." },
-                    { key: "C", text: "Kiểm tra nhật ký ứng dụng HTTP của máy chủ để tìm các mã lỗi 500 Internal Server Error." },
-                    { key: "D", text: "Khởi động lại bộ định tuyến cốt lõi kết nối mạng con của người dùng với mạng chính." }
-                ],
-                correct: "B",
-                userAnswer: "B", // Pre-selected in mockup screenshot
-                flagged: false
-            },
-            {
-                id: 10,
-                taxonomy: "Understanding",
-                taxonomyClass: "bg-bloom-understand/10 text-bloom-understand dark:text-tertiary-fixed-dim border border-bloom-understand/20",
-                stem: "Giao thức DHCP sử dụng các loại cổng dịch vụ UDP nào để giao tiếp giữa client và server?",
-                options: [
-                    { key: "A", text: "Cổng TCP 80 và 443" },
-                    { key: "B", text: "Cổng UDP 67 và 68" },
-                    { key: "C", text: "Cổng UDP 53" },
-                    { key: "D", text: "Cổng TCP 22" }
-                ],
-                correct: "B",
-                userAnswer: null,
-                flagged: false
+                <text>
+                {
+                    id: @q.OrderIndex,
+                    dbId: @q.Id,
+                    taxonomy: "@(q.BloomLevel == QuizGenAI.Models.BloomLevel.Remember ? "Remembering" : q.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "Understanding" : "Applying")",
+                    taxonomyClass: "@(q.BloomLevel == QuizGenAI.Models.BloomLevel.Remember ? "bg-bloom-remember/10 text-bloom-remember dark:text-primary-fixed-dim border border-bloom-remember/20" : q.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "bg-bloom-understand/10 text-bloom-understand dark:text-tertiary-fixed-dim border border-bloom-understand/20" : "bg-warning-light text-bloom-apply dark:text-secondary-fixed-dim border border-warning/20")",
+                    stem: `@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(q.Content))`,
+                    explanation: `@Html.Raw(q.Explanation != null ? System.Web.HttpUtility.JavaScriptStringEncode(q.Explanation) : "")`,
+                    options: [
+                        @foreach (var opt in q.AnswerOptions)
+                        {
+                            <text>
+                            { 
+                                id: @opt.Id, 
+                                key: "@opt.Label", 
+                                text: `@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(opt.Content))` 
+                            },
+                            </text>
+                        }
+                    ],
+                    correct: "@(q.AnswerOptions.FirstOrDefault(ao => ao.IsCorrect)?.Label ?? "A")",
+                    userAnswer: null,
+                    userAnswerId: null,
+                    flagged: false
+                },
+                </text>
             }
         ];
 
-        // Auto-generate questions 11 to 25 to complete the 25-question list
-        const concepts = [
-            { topic: "Mặt nạ mạng", cmd: "Subnetting", q: "Khi chia mạng con, mặt nạ mạng nào dưới đây cung cấp tối đa 30 địa chỉ IP khả dụng cho các thiết bị lưu trữ?", opt: ["/27 (255.255.255.224)", "/28 (255.255.255.240)", "/29 (255.255.255.248)", "/30 (255.255.255.252)"], ans: "A" },
-            { topic: "Bảo mật", cmd: "Firewall", q: "Loại thiết bị nào hoạt động ở Layer 3 và Layer 4 dùng để lọc lưu lượng dựa trên IP nguồn, IP đích, và số hiệu cổng?", opt: ["Switches Layer 2", "Hubs", "Packet Filtering Firewall", "Repeaters"], ans: "C" },
-            { topic: "Chuyển đổi IP", cmd: "NAT", q: "Kỹ thuật nào cho phép dịch nhiều địa chỉ IP riêng tư (Private IP) trong mạng nội bộ thành một địa chỉ IP công cộng (Public IP) duy nhất trước khi định tuyến ra Internet?", opt: ["PAT (Port Address Translation) hoặc NAT Overload", "Static NAT", "Dynamic Routing", "Subnet Masking"], ans: "A" },
-            { topic: "Địa chỉ IPv6", cmd: "IPv6 Address", q: "Độ dài của một địa chỉ IP phiên bản 6 (IPv6) là bao nhiêu bit?", opt: ["32 bits", "48 bits", "64 bits", "128 bits"], ans: "D" },
-            { topic: "DNS Records", cmd: "DNS AAAA", q: "Bản ghi DNS nào dùng để ánh xạ tên miền (Domain Name) sang địa chỉ IPv6?", opt: ["Bản ghi A", "Bản ghi CNAME", "Bản ghi AAAA", "Bản ghi MX"], ans: "C" },
-            { topic: "Kích thước gói tin", cmd: "MTU", q: "Kích thước khung dữ liệu truyền tải tối đa mặc định (Maximum Transmission Unit - MTU) cho mạng Ethernet thông thường là bao nhiêu bytes?", opt: ["576 bytes", "1500 bytes", "4096 bytes", "9000 bytes"], ans: "B" }
-        ];
+        // 2. STATE VARIABLES
+        let currentQuestionIndex = 0; // Bắt đầu từ câu 1 (index 0)
+        let totalQuestions = questions.length;
+        let timeRemainingSeconds = @(Model.TimeLimitMinutes * 60);
+        let isExamSubmitted = false;
+        let sessionId = 0;
 
-        for (let i = 11; i <= 25; i++) {
-            const c = concepts[(i - 11) % concepts.length];
-            const tax = ["Remembering", "Understanding", "Applying", "Analyzing"][i % 4];
-            let taxClass = "";
-            if (tax === "Remembering") taxClass = "bg-bloom-remember/10 text-bloom-remember dark:text-primary-fixed-dim border border-bloom-remember/20";
-            else if (tax === "Understanding") taxClass = "bg-bloom-understand/10 text-bloom-understand dark:text-tertiary-fixed-dim border border-bloom-understand/20";
-            else if (tax === "Applying") taxClass = "bg-warning-light text-bloom-apply dark:text-secondary-fixed-dim border border-warning/20";
-            else taxClass = "bg-danger-light text-error border border-danger/20 dark:bg-error-container/20 dark:text-error";
-
-            questions.push({
-                id: i,
-                taxonomy: tax,
-                taxonomyClass: taxClass,
-                stem: `[Chủ đề: ${c.topic}] Câu hỏi khảo sát thực tế thứ ${i}: ${c.q} (Mã khảo sát chuyên sâu #${100 + i})`,
-                options: [
-                    { key: "A", text: c.opt[0] },
-                    { key: "B", text: c.opt[1] },
-                    { key: "C", text: c.opt[2] },
-                    { key: "D", text: c.opt[3] }
-                ],
-                correct: c.ans,
-                userAnswer: null,
-                flagged: i === 8 // Mock flagged state for Question 8 to match screenshot
+        // 3. START SESSION IN DB
+        function startSessionInDb() {
+            $.ajax({
+                url: '/Exam/StartSession',
+                type: 'POST',
+                data: { quizSetId: @Model.Id },
+                success: function (response) {
+                    if (response.success) {
+                        sessionId = response.sessionId;
+                        startTimer();
+                    } else {
+                        alert("Không thể khởi tạo phiên thi: " + response.message);
+                    }
+                },
+                error: function () {
+                    alert("Lỗi kết nối mạng khi khởi tạo phiên thi thử.");
+                }
             });
         }
 
-        // Pre-populate answers in question map to match the user's mockup:
-        // Questions 1-7 are answered (solid blue), 8 is flagged (yellow outline), 9 is current/selected (active), 10+ are unanswered.
-        for (let i = 1; i <= 7; i++) {
-            questions[i - 1].userAnswer = "A"; // mark answered
-        }
-
-        // 2. STATE VARIABLES
-        let currentQuestionIndex = 8; // Question 9 (0-indexed = 8)
-        let totalQuestions = questions.length;
-        let timeRemainingSeconds = 252; // 04:12 to match mockup (4 min 12 sec = 252 seconds)
-        let isExamSubmitted = false;
-
-        // 3. UI RENDERING FUNCTIONS
+        // 4. UI RENDERING FUNCTIONS
         function renderQuestion(index) {
+            if (totalQuestions === 0) return;
             const q = questions[index];
             
             // Update Title & progress
@@ -558,19 +418,16 @@
                     const isUserChoice = q.userAnswer === opt.key;
                     
                     if (isCorrectAnswer) {
-                        // Correct option
                         btnClass = "border-success bg-success-light/20 dark:bg-success-light/10 pointer-events-none";
                         numClass = "bg-success text-white";
                         textClass = "text-success font-medium";
                         indicatorHtml = `<div class="ml-auto shrink-0 text-success flex items-center h-8"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span></div>`;
                     } else if (isUserChoice && !isCorrectAnswer) {
-                        // Incorrect user choice
                         btnClass = "border-danger bg-danger-light/20 dark:bg-error-container/10 pointer-events-none";
                         numClass = "bg-danger text-white";
                         textClass = "text-danger font-medium";
                         indicatorHtml = `<div class="ml-auto shrink-0 text-danger flex items-center h-8"><span class="material-symbols-outlined">cancel</span></div>`;
                     } else {
-                        // Normal option (disabled)
                         btnClass = "border-slate-200 dark:border-outline-variant bg-surface-container-lowest dark:bg-on-secondary-fixed opacity-60 pointer-events-none";
                         numClass = "bg-slate-100 dark:bg-secondary-container text-secondary dark:text-secondary-fixed-dim";
                         textClass = "text-secondary dark:text-secondary-fixed-dim";
@@ -603,6 +460,19 @@
                 $container.append(optionHtml);
             });
             
+            // Add Explanation block if submitted
+            if (isExamSubmitted && q.explanation) {
+                const explHtml = `
+                    <div class="mt-6 p-5 bg-slate-50 dark:bg-surface-dim/15 border border-slate-200 dark:border-outline-variant rounded-xl flex flex-col gap-2 transition-all duration-300">
+                        <span class="font-button text-button text-primary dark:text-primary-fixed-dim flex items-center gap-1">
+                            <span class="material-symbols-outlined text-lg">lightbulb</span> Giải thích từ AI
+                        </span>
+                        <p class="font-body text-body text-secondary dark:text-on-primary-container leading-relaxed">${q.explanation}</p>
+                    </div>
+                `;
+                $container.append(explHtml);
+            }
+
             // Disable option clicks if exam submitted
             if (!isExamSubmitted) {
                 $(".option-card").on("click", function () {
@@ -647,7 +517,6 @@
                 }
                 
                 if (isExamSubmitted) {
-                    // Color codes after submission: green for correct, red for incorrect
                     const isCorrect = q.userAnswer === q.correct;
                     if (isCorrect) {
                         btnClass = "bg-success text-white border border-success hover:opacity-90";
@@ -672,17 +541,20 @@
             });
         }
 
-        // 4. ACTION HANDLERS
+        // 5. ACTION HANDLERS
         function selectOption(key) {
             const q = questions[currentQuestionIndex];
+            const opt = q.options.find(o => o.key === key);
             
             if (q.userAnswer === key) {
-                // Toggle off if clicking selected
                 q.userAnswer = null;
+                q.userAnswerId = null;
             } else {
                 q.userAnswer = key;
+                q.userAnswerId = opt ? opt.id : null;
             }
             
+            saveAnswersToLocalStorage();
             renderQuestion(currentQuestionIndex);
         }
         
@@ -696,10 +568,41 @@
         function toggleFlag() {
             const q = questions[currentQuestionIndex];
             q.flagged = !q.flagged;
+            saveAnswersToLocalStorage();
             renderQuestion(currentQuestionIndex);
         }
 
-        // 5. TIMER CONTROLLERS
+        // 5.5 LOCALSTORAGE HELPER FUNCTIONS
+        function saveAnswersToLocalStorage() {
+            const answers = questions.map(q => ({
+                id: q.id,
+                userAnswer: q.userAnswer,
+                userAnswerId: q.userAnswerId,
+                flagged: q.flagged
+            }));
+            localStorage.setItem(`quiz_set_answers_${@Model.Id}`, JSON.stringify(answers));
+        }
+
+        function loadAnswersFromLocalStorage() {
+            const saved = localStorage.getItem(`quiz_set_answers_${@Model.Id}`);
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    parsed.forEach(savedQ => {
+                        const q = questions.find(item => item.id === savedQ.id);
+                        if (q) {
+                            q.userAnswer = savedQ.userAnswer;
+                            q.userAnswerId = savedQ.userAnswerId;
+                            q.flagged = savedQ.flagged;
+                        }
+                    });
+                } catch (e) {
+                    console.error("Lỗi khi khôi phục đáp án tạm thời:", e);
+                }
+            }
+        }
+
+        // 6. TIMER CONTROLLERS
         function formatTime(seconds) {
             const mins = Math.floor(seconds / 60);
             const secs = seconds % 60;
@@ -716,7 +619,6 @@
                 timeRemainingSeconds--;
                 $("#exam-timer").text(formatTime(timeRemainingSeconds));
                 
-                // Check critical time threshold (<20% of 25 mins = 5 mins = 300 seconds)
                 const $timerContainer = $("#exam-timer-container");
                 if (timeRemainingSeconds <= 300) {
                     $timerContainer.removeClass("bg-success-light dark:bg-success-light/10 text-success")
@@ -731,9 +633,12 @@
             }, 1000);
         }
         
-        // 6. SUBMISSION CONTROLLERS
+        function autoSubmitExam() {
+            submitExamToDb();
+        }
+
+        // 7. SUBMISSION CONTROLLERS
         function showSubmitModal() {
-            // Compute statistics
             let answered = 0;
             let flagged = 0;
             let unanswered = 0;
@@ -754,53 +659,92 @@
                 $("#unanswered-alert").addClass("hidden");
             }
             
-            // Show Modal
             const $modal = $("#submit-modal");
-            $modal.removeClass("hidden pointer-events-none");
-            setTimeout(() => {
-                $modal.removeClass("opacity-0").addClass("opacity-100");
-                $modal.find("> div").removeClass("scale-95").addClass("scale-100");
-            }, 10);
+            $modal.removeClass("hidden").addClass("flex");
+            setTimeout(() => $modal.removeClass("opacity-0 pointer-events-none").find(".transform").removeClass("scale-95"), 50);
         }
         
         function closeSubmitModal() {
             const $modal = $("#submit-modal");
-            $modal.find("> div").removeClass("scale-100").addClass("scale-95");
-            $modal.removeClass("opacity-100").addClass("opacity-0");
-            setTimeout(() => {
-                $modal.addClass("hidden pointer-events-none");
-            }, 300);
+            $modal.addClass("opacity-0 pointer-events-none").find(".transform").addClass("scale-95");
+            setTimeout(() => $modal.addClass("hidden").removeClass("flex"), 300);
         }
-        
-        function autoSubmitExam() {
-            closeSubmitModal();
-            navigateToResult();
-        }
-        
-        function processExamResults() {
-            navigateToResult();
-        }
-        
-        // Navigate to the full result page with a smooth loading overlay
-        function navigateToResult() {
+
+        function submitExamToDb() {
+            if (isExamSubmitted) return;
             isExamSubmitted = true;
 
-            // Show fullscreen loading overlay
-            const overlay = document.getElementById('submit-loading-overlay');
-            overlay.classList.remove('opacity-0', 'pointer-events-none');
-            overlay.classList.add('opacity-100');
+            const answersData = questions.map(q => {
+                return {
+                    questionId: q.dbId,
+                    selectedOptionId: q.userAnswerId
+                };
+            });
 
-            // Redirect after a short delay so user sees the transition
-            setTimeout(() => {
-                window.location.href = '/Exam/Result';
-            }, 800);
-        }
-        
-        function closeResultModal() {
-            // kept for compatibility – no-op since modal is no longer used
+            const durationSeconds = @(Model.TimeLimitMinutes * 60) - timeRemainingSeconds;
+
+            const submissionData = {
+                sessionId: sessionId,
+                actualDurationSeconds: durationSeconds,
+                answers: answersData
+            };
+
+            $("#confirm-submit-btn").text("Đang nộp...").attr("disabled", "disabled");
+
+            $.ajax({
+                url: '/Exam/SubmitExam',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(submissionData),
+                success: function (response) {
+                    if (response.success) {
+                        localStorage.removeItem(`quiz_set_answers_${@Model.Id}`);
+                        closeSubmitModal();
+                        
+                        // Hiển thị kết quả trong Result Modal
+                        $("#result-score-text").text(`${response.correctAnswers}/${response.totalQuestions}`);
+                        $("#result-percent-text").text(`${response.scorePercent}%`);
+                        $("#result-correct-count").text(response.correctAnswers);
+                        $("#result-incorrect-count").text(response.totalQuestions - response.correctAnswers);
+                        
+                        // Cấu hình vòng tròn điểm số
+                        const circle = document.getElementById("result-score-ring");
+                        const radius = circle.r.baseVal.value;
+                        const circumference = radius * 2 * Math.PI;
+                        const offset = circumference - (response.scorePercent / 100) * circumference;
+                        circle.style.strokeDashoffset = offset;
+
+                        // Xem kết quả ngay tại chỗ
+                        $("#result-review-btn").off("click").on("click", function() {
+                            const $resModal = $("#result-modal");
+                            $resModal.addClass("opacity-0 pointer-events-none").find(".transform").addClass("scale-95");
+                            setTimeout(() => {
+                                $resModal.addClass("hidden").removeClass("flex");
+                                renderQuestion(currentQuestionIndex);
+                            }, 300);
+                        });
+
+                        $("#result-modal-detail-link").attr("href", `/Exam/Result?sessionId=${sessionId}`);
+
+                        // Hiện Result Modal
+                        const $resModal = $("#result-modal");
+                        $resModal.removeClass("hidden").addClass("flex");
+                        setTimeout(() => $resModal.removeClass("opacity-0 pointer-events-none").find(".transform").removeClass("scale-95"), 50);
+                    } else {
+                        isExamSubmitted = false;
+                        $("#confirm-submit-btn").text("Xác nhận nộp").removeAttr("disabled");
+                        alert("Nộp bài thất bại: " + response.message);
+                    }
+                },
+                error: function () {
+                    isExamSubmitted = false;
+                    $("#confirm-submit-btn").text("Xác nhận nộp").removeAttr("disabled");
+                    alert("Lỗi kết nối khi nộp bài thi thử.");
+                }
+            });
         }
 
-        // 7. BIND INTERACTIVE EVENTS
+        // 8. BIND INTERACTIVE EVENTS
         $("#prev-btn").on("click", function () {
             navigateToQuestion(currentQuestionIndex - 1);
         });
@@ -815,8 +759,8 @@
         
         $("#submit-btn").on("click", function () {
             if (isExamSubmitted) {
-                // Already submitted – go straight to result page
-                window.location.href = '/Exam/Result';
+                // Đã nộp bài trước đó, chuyển thẳng đến trang kết quả chi tiết
+                window.location.href = $("#result-modal-detail-link").attr("href");
             } else {
                 showSubmitModal();
             }
@@ -828,16 +772,23 @@
         
         $("#confirm-submit-btn").on("click", function () {
             closeSubmitModal();
-            navigateToResult();
+            submitExamToDb();
         });
         
         $("#result-review-btn").on("click", function () {
             closeResultModal();
         });
 
+        function closeResultModal() {
+            const $resModal = $("#result-modal");
+            $resModal.addClass("opacity-0 pointer-events-none").find(".transform").addClass("scale-95");
+            setTimeout(() => $resModal.addClass("hidden").removeClass("flex"), 300);
+        }
+
         // 8. INITIALIZE PAGE
+        loadAnswersFromLocalStorage();
         renderQuestion(currentQuestionIndex);
-        startTimer();
+        startSessionInDb();
     });
     </script>
 

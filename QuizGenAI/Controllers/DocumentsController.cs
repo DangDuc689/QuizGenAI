@@ -1,13 +1,15 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuizGenAI.Models;
 using System.Text;
 using UglyToad.PdfPig;
 using DocumentFormat.OpenXml.Packaging;
+using Microsoft.AspNetCore.Authorization;
 
 namespace QuizGenAI.Controllers
 {
+    [Authorize]
     public class DocumentsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -104,38 +106,11 @@ namespace QuizGenAI.Controllers
                 }
             }
 
-            var devEmail = "lean@quizgen.local";
             var userId = _userManager.GetUserId(User);
 
             if (string.IsNullOrEmpty(userId))
             {
-                var existingUser = await _userManager.FindByEmailAsync(devEmail);
-
-                if (existingUser == null)
-                {
-                    var devUser = new ApplicationUser
-                    {
-                        UserName = devEmail,
-                        Email = devEmail,
-                        EmailConfirmed = true
-                    };
-
-                    var createUserResult = await _userManager.CreateAsync(devUser, "Dev@123456");
-
-                    if (!createUserResult.Succeeded)
-                    {
-                        foreach (var error in createUserResult.Errors)
-                        {
-                            ModelState.AddModelError("", error.Description);
-                        }
-
-                        return View();
-                    }
-
-                    existingUser = devUser;
-                }
-
-                userId = existingUser.Id;
+                return RedirectToAction("Login", "Account");
             }
 
             var documentSourceType = SourceType switch

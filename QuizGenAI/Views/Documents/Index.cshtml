@@ -1,4 +1,4 @@
-﻿@model IEnumerable<QuizGenAI.Models.Document>
+@model IEnumerable<QuizGenAI.Models.Document>
 
 @{
     ViewData["Title"] = "Tài liệu";
@@ -97,9 +97,16 @@
                                 Xem chi tiết
                             </a>
 
-                            <button type="button">
+                            <a asp-controller="Exam"
+                               asp-action="Review"
+                               asp-route-documentId="@document.Id">
                                 <span class="material-symbols-outlined">quiz</span>
                                 Tạo đề
+                            </a>
+
+                            <button type="button" class="delete-document-btn" data-id="@document.Id" data-title="@document.Title">
+                                <span class="material-symbols-outlined">delete</span>
+                                Xóa tài liệu
                             </button>
                         </div>
                     </div>
@@ -138,9 +145,9 @@
                     </div>
 
                     <div class="document-card-actions">
-                        <button type="button" class="btn-create-quiz">
+                        <a asp-controller="Exam" asp-action="Review" asp-route-documentId="@document.Id" class="btn-create-quiz flex items-center justify-center">
                             Tạo đề
-                        </button>
+                        </a>
                     </div>
                 </div>
             }
@@ -158,60 +165,95 @@
                 </a>
             </div>
         }
-        @section Scripts {
-            <script>
-                        document.addEventListener("click", function (event) {
-                            const clickedButton = event.target.closest(".document-more-btn");
 
-                            document.querySelectorAll(".document-more-wrapper.is-open").forEach(function (menu) {
-                                if (!menu.contains(event.target)) {
-                                    menu.classList.remove("is-open");
-                                }
-                            });
+        <!-- Form ẩn dùng chung để gửi request POST xóa tài liệu -->
+        <form id="deleteDocumentForm" asp-controller="Documents" asp-action="Delete" method="post" style="display:none;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="deleteDocumentId" />
+        </form>
 
-                            if (clickedButton) {
-                                event.preventDefault();
-                                event.stopPropagation();
-
-                                const wrapper = clickedButton.closest(".document-more-wrapper");
-                                wrapper.classList.toggle("is-open");
-                            }
-                        });
-
-                        const searchInput = document.getElementById("documentSearchInput");
-
-                        if (searchInput) {
-                            searchInput.addEventListener("input", function () {
-                                const keyword = this.value.trim().toLowerCase();
-                                const cards = document.querySelectorAll(".document-card");
-
-                                cards.forEach(function (card) {
-                                    const title = card.dataset.title || "";
-                                    const isMatched = title.includes(keyword);
-
-                                    card.style.display = isMatched ? "" : "none";
-                                });
-                            });
-                        }
-
-                        document.querySelectorAll(".document-card").forEach(function (card) {
-                            card.addEventListener("click", function (event) {
-                                const isInteractiveElement = event.target.closest(
-                                    ".document-more-wrapper, .btn-create-quiz, button, a"
-                                );
-
-                                if (isInteractiveElement) {
-                                    return;
-                                }
-
-                                const detailUrl = card.dataset.detailUrl;
-
-                                if (detailUrl) {
-                                    window.location.href = detailUrl;
-                                }
-                            });
-                        });
-            </script>
-        }
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // Xử lý sự kiện click nút xóa tài liệu
+        document.addEventListener("click", function (event) {
+            const deleteBtn = event.target.closest(".delete-document-btn");
+            if (deleteBtn) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const docId = deleteBtn.dataset.id;
+                const docTitle = deleteBtn.dataset.title;
+
+                window.showConfirmModal({
+                    title: "Xóa tài liệu",
+                    message: "Bạn có chắc chắn muốn xóa tài liệu <strong>\"" + docTitle + "\"</strong>?<br><br><span class='text-red-600 dark:text-red-400 font-semibold'>Lưu ý:</span> Hành động này cũng sẽ xóa toàn bộ các bộ đề thi liên quan và không thể hoàn tác.",
+                    onConfirm: function () {
+                        document.getElementById("deleteDocumentId").value = docId;
+                        document.getElementById("deleteDocumentForm").submit();
+                    }
+                });
+
+                // Đóng menu dropdown sau khi click
+                const wrapper = deleteBtn.closest(".document-more-wrapper");
+                if (wrapper) {
+                    wrapper.classList.remove("is-open");
+                }
+            }
+        });
+
+        document.addEventListener("click", function (event) {
+            const clickedButton = event.target.closest(".document-more-btn");
+
+            document.querySelectorAll(".document-more-wrapper.is-open").forEach(function (menu) {
+                if (!menu.contains(event.target)) {
+                    menu.classList.remove("is-open");
+                }
+            });
+
+            if (clickedButton) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const wrapper = clickedButton.closest(".document-more-wrapper");
+                wrapper.classList.toggle("is-open");
+            }
+        });
+
+        const searchInput = document.getElementById("documentSearchInput");
+
+        if (searchInput) {
+            searchInput.addEventListener("input", function () {
+                const keyword = this.value.trim().toLowerCase();
+                const cards = document.querySelectorAll(".document-card");
+
+                cards.forEach(function (card) {
+                    const title = card.dataset.title || "";
+                    const isMatched = title.includes(keyword);
+
+                    card.style.display = isMatched ? "" : "none";
+                });
+            });
+        }
+
+        document.querySelectorAll(".document-card").forEach(function (card) {
+            card.addEventListener("click", function (event) {
+                const isInteractiveElement = event.target.closest(
+                    ".document-more-wrapper, .btn-create-quiz, button, a"
+                );
+
+                if (isInteractiveElement) {
+                    return;
+                }
+
+                const detailUrl = card.dataset.detailUrl;
+
+                if (detailUrl) {
+                    window.location.href = detailUrl;
+                }
+            });
+        });
+    </script>
+}

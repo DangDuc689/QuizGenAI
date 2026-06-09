@@ -1,10 +1,8 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace QuizGenAI.Controllers
 {
-    [Authorize]
-    public class ExploreController : Controller
+    public class LandingController : Controller
     {
         public IActionResult Index()
         {
