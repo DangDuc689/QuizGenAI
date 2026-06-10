@@ -1,0 +1,160 @@
+@model QuizGenAI.Models.ExamHistoryViewModel
+
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="space-y-8">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-h1 font-h1 text-on-surface mb-2 tracking-tight">Lịch sử thi</h1>
+        <p class="text-body font-body text-secondary">Xem lại hiệu suất thi của bạn và xác định điểm cần cải thiện.</p>
+    </div>
+    <!-- Top Summary Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6 mb-8">
+        <section class="bg-surface rounded-2xl border border-slate-200 p-6 shadow-sm h-[28rem] flex flex-col">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                    <p class="text-caption font-caption uppercase tracking-[0.18em] text-secondary">Xu hướng điểm</p>
+                    <h2 class="mt-2 text-h3 font-h3 text-on-surface">Điểm trung bình trong 10 bài thi gần nhất</h2>
+                </div>
+                <span class="inline-flex items-center gap-2 rounded-full bg-primary-fixed px-3 py-2 text-caption font-caption text-primary"> 
+                    <span class="material-symbols-outlined text-[18px]">trending_up</span>
+                    +4.2%
+                </span>
+            </div>
+
+            <div class="relative flex-1 rounded-[2rem] bg-slate-50 border border-slate-200 p-5">
+                <div class="absolute inset-x-0 top-5 h-px bg-slate-200 opacity-50"></div>
+                <div class="absolute inset-x-0 top-1/3 h-px bg-slate-200 opacity-50"></div>
+                <div class="absolute inset-x-0 top-2/3 h-px bg-slate-200 opacity-50"></div>
+                <div class="absolute inset-x-0 top-4/5 h-px bg-slate-200 opacity-50"></div>
+
+                <div class="relative z-10 h-full flex items-end gap-3">
+                    @if (Model.PerformanceTrend.Any())
+                    {
+                        foreach (var score in Model.PerformanceTrend)
+                        {
+                            var height = Math.Max(12, score);
+                            <div class="flex-1 flex flex-col items-center justify-end gap-2">
+                                <div class="w-full max-w-[24px] rounded-t-3xl bg-primary/20 overflow-hidden">
+                                    <div class="h-full rounded-t-3xl bg-gradient-to-t from-primary to-primary-fixed-dim" style="height:@height%"></div>
+                                </div>
+                                <span class="text-caption font-caption text-secondary">@score%</span>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="col-span-5 rounded-3xl border border-dashed border-slate-300 bg-slate-100 p-6 text-center text-secondary">Không có dữ liệu hiệu suất trong lịch sử.</div>
+                    }
+                </div>
+            </div>
+        </section>
+
+        <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-tertiary-container p-6 shadow-sm text-on-primary h-[28rem]">
+            <div class="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-3xl"></div>
+            <div class="absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
+            <div class="relative z-10 flex h-full flex-col justify-between">
+                <div>
+                    <p class="text-caption font-caption uppercase tracking-[0.18em] text-white/80">Điểm trung bình</p>
+                    <div class="mt-3 text-[4rem] font-bold tracking-tight">@Model.AverageScoreLabel</div>
+                </div>
+                <div class="rounded-3xl bg-white/15 p-4 backdrop-blur-sm">
+                    <p class="font-caption text-caption text-white/90 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[16px]">military_tech</span>
+                        Top 15% trong lớp
+                    </p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Recent Assessments Table -->
+    <div class="bg-surface rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 md:p-6 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/80">
+            <div>
+                <p class="text-caption font-caption uppercase tracking-[0.18em] text-secondary">Bài thi gần đây</p>
+                <h3 class="mt-2 text-h3 font-h3 text-on-surface">Bài thi gần đây</h3>
+            </div>
+            <div class="flex gap-2 w-full sm:w-auto">
+                <button class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-surface px-4 py-2 text-caption font-caption text-secondary hover:border-primary hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined">filter_list</span>
+                    Lọc
+                </button>
+                <button class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-caption font-caption text-on-primary hover:bg-primary-fixed-dim transition-colors">
+                    <span class="material-symbols-outlined">file_download</span>
+                    Xuất CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-[820px] w-full text-left text-sm text-secondary">
+                <thead class="bg-surface border-b border-slate-200">
+                    <tr>
+                                <th class="px-6 py-4 font-label-sm uppercase tracking-[0.18em]">Tên đề</th>
+                        <th class="px-6 py-4 font-label-sm uppercase tracking-[0.18em]">Ngày thi</th>
+                        <th class="px-6 py-4 font-label-sm uppercase tracking-[0.18em]">Điểm</th>
+                        <th class="px-6 py-4 font-label-sm uppercase tracking-[0.18em]">Câu hỏi</th>
+                        <th class="px-6 py-4 font-label-sm uppercase tracking-[0.18em] text-right">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200">
+                    @if (Model.RecentAssessments.Any())
+                    {
+                        foreach (var assessment in Model.RecentAssessments)
+                        {
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-6 py-4 align-top">
+                                    <div class="font-semibold text-on-surface">@assessment.Title</div>
+                                    <div class="mt-2 inline-flex items-center gap-2 text-caption text-secondary">
+                                        <span class="h-2 w-2 rounded-full bg-primary"></span>
+                                        @assessment.Category
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 align-top">
+                                    <div class="font-body text-body text-on-surface">@assessment.TakenAt.ToString("MMM dd, yyyy")</div>
+                                    <div class="text-caption text-secondary mt-1">@assessment.TakenAt.ToString("hh:mm tt")</div>
+                                </td>
+                                <td class="px-6 py-4 align-top">
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex h-9 items-center rounded-full px-3 text-caption font-caption @assessment.ScoreBadgeClass">@assessment.ScorePercent%</span>
+                                        <div class="hidden sm:block h-2 w-16 rounded-full bg-slate-100 overflow-hidden">
+                                            <div class="h-full rounded-full bg-primary" style="width:@assessment.ScorePercent%"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 align-top text-on-surface">@assessment.QuestionSummary</td>
+                                <td class="px-6 py-4 align-top text-right">
+                                    <a asp-controller="Exam" asp-action="Result" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-caption font-caption text-primary hover:bg-primary hover:text-on-primary transition-colors">
+                                        <span class="material-symbols-outlined">visibility</span>
+                                        Xem lại
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="px-6 py-8 text-center text-secondary">Hiện chưa có bài thi nào.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="p-4 border-t border-slate-200 bg-surface flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <p class="font-caption text-secondary">Hiển thị 1 đến @Model.RecentAssessments.Count mục</p>
+            <div class="flex items-center gap-1">
+                <button class="h-10 w-10 rounded-full bg-primary text-on-primary">1</button>
+                <button class="h-10 w-10 rounded-full text-on-surface hover:bg-slate-100 transition-colors">2</button>
+                <button class="h-10 w-10 rounded-full text-on-surface hover:bg-slate-100 transition-colors">3</button>
+                <button class="h-10 w-10 rounded-full text-on-surface hover:bg-slate-100 transition-colors">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

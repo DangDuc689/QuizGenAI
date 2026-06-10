@@ -1,0 +1,570 @@
+@model List<QuizGenAI.Models.Document>
+@{
+    ViewData["Title"] = "Tạo bộ câu hỏi ôn tập";
+}
+
+<!-- Header & Stepper -->
+<div class="mb-8">
+    <h1 class="text-h1 font-h1 text-on-surface dark:text-primary-fixed-dim mb-2 tracking-tight">Tạo bộ câu hỏi ôn tập</h1>
+    <p class="text-body font-body text-secondary dark:text-secondary-fixed-dim">Chọn tài liệu từ thư viện và cấu hình các tham số để AI tự động biên soạn đề thi.</p>
+    
+    <!-- Stepper (Responsive) -->
+    <div class="flex flex-col sm:flex-row sm:items-center gap-4 mt-8">
+        <div id="step-header-1" class="flex items-center gap-2 transition-all duration-300">
+            <div id="step-num-1" class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-button text-button shadow-sm">1</div>
+            <span id="step-text-1" class="font-button text-button text-primary dark:text-primary-fixed-dim">Chọn tài liệu</span>
+        </div>
+        <div class="hidden sm:block h-px w-12 bg-slate-300 dark:bg-outline-variant"></div>
+        <div id="step-header-2" class="flex items-center gap-2 opacity-50 transition-all duration-300">
+            <div id="step-num-2" class="w-8 h-8 rounded-full bg-slate-200 dark:bg-on-secondary-fixed-variant text-secondary dark:text-secondary-fixed-dim flex items-center justify-center font-button text-button">2</div>
+            <span id="step-text-2" class="font-button text-button text-secondary dark:text-secondary-fixed-dim">Cấu hình đề</span>
+        </div>
+        <div class="hidden sm:block h-px w-12 bg-slate-300 dark:bg-outline-variant"></div>
+        <div id="step-header-3" class="flex items-center gap-2 opacity-50 transition-all duration-300">
+            <div id="step-num-3" class="w-8 h-8 rounded-full bg-slate-200 dark:bg-on-secondary-fixed-variant text-secondary dark:text-secondary-fixed-dim flex items-center justify-center font-button text-button">3</div>
+            <span id="step-text-3" class="font-button text-button text-secondary dark:text-secondary-fixed-dim">Tạo đề thi</span>
+        </div>
+    </div>
+</div>
+
+<!-- Main Area -->
+<div class="bg-surface dark:bg-on-secondary-fixed rounded-xl border border-slate-200 dark:border-outline-variant overflow-hidden mb-6 soft-shadow relative min-h-[350px]">
+    
+    <!-- STEP 1: CHỌN TÀI LIỆU -->
+    <div id="step-content-1" class="p-6 transition-all duration-300">
+        @if (Model == null || Model.Count == 0)
+        {
+            <!-- Empty State -->
+            <div class="flex flex-col items-center justify-center text-center py-16 px-4 gap-6">
+                <div class="w-20 h-20 rounded-full bg-slate-100 dark:bg-on-secondary-fixed-variant/15 flex items-center justify-center text-slate-400 dark:text-slate-500 animate-pulse">
+                    <span class="material-symbols-outlined text-[48px]">folder_open</span>
+                </div>
+                <div>
+                    <h3 class="font-h2 text-h2 text-on-surface dark:text-primary-fixed-dim mb-2">Thư viện tài liệu trống</h3>
+                    <p class="text-body font-body text-secondary dark:text-secondary-fixed-dim max-w-md mx-auto">
+                        Bạn chưa có tài liệu nào trong thư viện để tạo đề ôn tập. 
+                        Hãy tải lên tài liệu học tập (PDF, Word, Text) để bắt đầu tạo đề thi.
+                        <br><br>
+                        <strong>Lưu ý:</strong> Nếu bạn vừa tạo tài liệu nhưng không thấy ở đây, 
+                        có thể tài liệu đó thuộc về tài khoản khác. 
+                        Vui lòng đăng nhập đúng tài khoản hoặc tạo tài liệu mới.
+                    </p>
+                </div>
+                <a href="/Documents" class="px-6 py-3 rounded-lg font-button text-button bg-[#0037b0] dark:bg-primary text-on-primary hover:bg-opacity-90 dark:hover:bg-opacity-80 transition-all duration-200 shadow-sm flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">library_books</span>
+                    <span>Tải lên tài liệu mới</span>
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="flex flex-col lg:flex-row gap-6">
+                <!-- Cột trái (75%): Lưới chọn tài liệu -->
+                <div class="flex-1 lg:w-3/4">
+                    <!-- Search & Info Bar -->
+                    <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-6">
+                        <div class="relative flex-1 max-w-md">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary dark:text-secondary-fixed-dim">search</span>
+                            <input type="text" id="search-docs" class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary dark:focus:border-primary-fixed-dim outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface-variant font-body text-body" placeholder="Tìm kiếm tài liệu..." />
+                        </div>
+                        <div class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim flex items-center justify-end gap-2">
+                            <span class="material-symbols-outlined text-[16px]">info</span>
+                            <span id="selected-count-text">Đã chọn: 0 tài liệu</span>
+                        </div>
+                    </div>
+
+                    <!-- Documents Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="documents-grid">
+                        @foreach (var doc in Model)
+                        {
+                            var fileIcon = doc.SourceType == QuizGenAI.Models.DocumentSourceType.PDF ? "picture_as_pdf" :
+                                           doc.SourceType == QuizGenAI.Models.DocumentSourceType.Word ? "description" : "article";
+                            var iconColor = doc.SourceType == QuizGenAI.Models.DocumentSourceType.PDF ? "text-danger" :
+                                            doc.SourceType == QuizGenAI.Models.DocumentSourceType.Word ? "text-primary" : "text-success";
+                            
+                            <div class="document-card bg-surface-bright dark:bg-surface-dim/10 border border-slate-200 dark:border-outline-variant rounded-xl p-5 cursor-pointer relative hover:border-primary-fixed hover:bg-slate-50/50 dark:hover:bg-on-secondary-fixed-variant/20 transition-all duration-200 flex flex-col justify-between min-h-[140px]" data-id="@doc.Id" data-title="@doc.Title">
+                                <!-- Checkbox state badge -->
+                                <div class="checkbox-indicator absolute top-3 right-3 w-5 h-5 rounded-full border border-slate-300 dark:border-outline-variant flex items-center justify-center bg-white transition-colors">
+                                    <span class="material-symbols-outlined text-[14px] text-white font-bold hidden">check</span>
+                                </div>
+
+                                <div>
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="material-symbols-outlined @iconColor text-[20px]">@fileIcon</span>
+                                        <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">@doc.SourceType.ToString().ToUpper()</span>
+                                    </div>
+                                    <h3 class="font-button text-button text-on-surface dark:text-primary-fixed-dim line-clamp-2 pr-6" title="@doc.Title">@doc.Title</h3>
+                                </div>
+
+                                <div class="mt-4 flex items-center justify-between text-caption font-caption text-secondary dark:text-secondary-fixed-dim border-t border-slate-100 dark:border-outline-variant/30 pt-2">
+                                    <span>@(doc.PageCount.HasValue ? $"{doc.PageCount} trang" : "1 trang")</span>
+                                    <span>@doc.CreatedAt.ToString("dd/MM/yyyy")</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    
+                    <div id="no-docs-message" class="hidden text-center py-12 text-secondary dark:text-secondary-fixed-dim">
+                        <span class="material-symbols-outlined text-48">folder_open</span>
+                        <p class="mt-2 font-body text-body">Không tìm thấy tài liệu phù hợp.</p>
+                    </div>
+                </div>
+
+                <!-- Cột phải (25%): Panel thống kê nhanh -->
+                <div class="w-full lg:w-1/4 flex flex-col gap-4">
+                    <div class="bg-surface-bright dark:bg-surface-dim/10 border border-slate-200 dark:border-outline-variant rounded-xl p-5 flex flex-col gap-4">
+                        <h3 class="font-h3 text-h3 text-on-surface dark:text-primary-fixed-dim border-b border-slate-100 dark:border-outline-variant/30 pb-2 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[#0037b0]">insights</span>
+                            Thống kê nhanh
+                        </h3>
+                        
+                        <div class="flex flex-col gap-3">
+                            <!-- Tài liệu -->
+                            <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-on-secondary-fixed-variant/5 border border-slate-100 dark:border-outline-variant/10">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-[#0037b0]">folder</span>
+                                    <span class="text-body font-body text-secondary dark:text-secondary-fixed-dim">Tài liệu:</span>
+                                </div>
+                                <span class="font-h3 text-h3 text-on-surface dark:text-primary-fixed-dim">@(ViewBag.TotalDocuments ?? 0)</span>
+                            </div>
+
+                            <!-- Bộ đề đã tạo -->
+                            <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-on-secondary-fixed-variant/5 border border-slate-100 dark:border-outline-variant/10">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-[#0037b0]">quiz</span>
+                                    <span class="text-body font-body text-secondary dark:text-secondary-fixed-dim">Bộ đề đã tạo:</span>
+                                </div>
+                                <span class="font-h3 text-h3 text-on-surface dark:text-primary-fixed-dim">@(ViewBag.TotalQuizSets ?? 0)</span>
+                            </div>
+
+                            <!-- Lượt thi thử -->
+                            <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-on-secondary-fixed-variant/5 border border-slate-100 dark:border-outline-variant/10">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-[#0037b0]">assignment_turned_in</span>
+                                    <span class="text-body font-body text-secondary dark:text-secondary-fixed-dim">Bài thi đã nộp:</span>
+                                </div>
+                                <span class="font-h3 text-h3 text-on-surface dark:text-primary-fixed-dim">@(ViewBag.TotalSessions ?? 0)</span>
+                            </div>
+
+                            <!-- Điểm trung bình -->
+                            <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-on-secondary-fixed-variant/5 border border-slate-100 dark:border-outline-variant/10">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-success">stars</span>
+                                    <span class="text-body font-body text-secondary dark:text-secondary-fixed-dim">Điểm TB:</span>
+                                </div>
+                                <span class="font-h3 text-h3 text-success">@(ViewBag.AverageScore != null ? $"{ViewBag.AverageScore:0.#}%" : "0%")</span>
+                            </div>
+                        </div>
+
+                        <!-- Mẹo ôn tập -->
+                        <div class="p-3.5 rounded-lg border border-slate-100 dark:border-outline-variant/10 bg-[#0037b0]/5 dark:bg-primary/5 text-[#0037b0] dark:text-primary-fixed-dim flex gap-2">
+                            <span class="material-symbols-outlined text-[20px] flex-shrink-0 mt-0.5">lightbulb</span>
+                            <p class="text-caption font-caption leading-relaxed">
+                                Bạn có thể chọn nhiều tài liệu cùng lúc để hệ thống tự động tổng hợp nội dung và biên soạn câu hỏi ôn tập chéo!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- STEP 2: CẤU HÌNH ĐỀ -->
+    <div id="step-content-2" class="p-6 hidden transition-all duration-300">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Cấu hình cơ bản -->
+            <div class="flex flex-col gap-5">
+                <h3 class="font-h3 text-h3 text-on-surface dark:text-primary-fixed-dim border-b border-slate-100 dark:border-outline-variant/30 pb-2 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">settings_applications</span>
+                    Thông số bài thi
+                </h3>
+                
+                <div class="flex flex-col gap-2">
+                    <label class="font-button text-button text-on-surface dark:text-primary-fixed-dim" for="total-questions">Số lượng câu hỏi</label>
+                    <input type="number" id="total-questions" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface" min="5" max="50" value="20" />
+                    <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Mặc định 20 câu hỏi (Giới hạn từ 5 - 50 câu)</span>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="font-button text-button text-on-surface dark:text-primary-fixed-dim" for="time-limit">Thời gian làm bài</label>
+                    <select id="time-limit" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface">
+                        <option value="15">15 phút</option>
+                        <option value="30" selected>30 phút</option>
+                        <option value="45">45 phút</option>
+                        <option value="60">60 phút</option>
+                        <option value="90">90 phút</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="font-button text-button text-on-surface dark:text-primary-fixed-dim" for="output-lang">Ngôn ngữ bộ đề</label>
+                    <select id="output-lang" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface">
+                        <option value="0" selected>Tiếng Việt</option>
+                        <option value="1">Tiếng Anh (English)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Cấu hình mức độ Bloom -->
+            <div class="flex flex-col gap-5">
+                <div class="flex justify-between items-center border-b border-slate-100 dark:border-outline-variant/30 pb-2">
+                    <h3 class="font-h3 text-h3 text-on-surface dark:text-primary-fixed-dim flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">psychology</span>
+                        Tỷ lệ Bloom
+                    </h3>
+                    <span id="bloom-total" class="px-2.5 py-1 rounded bg-success-light text-success font-button text-caption">Tổng: 100%</span>
+                </div>
+                
+                <p class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Hệ thống sẽ dựa trên tỷ lệ này để yêu cầu AI sinh các câu hỏi tương ứng. Tổng tỷ lệ bắt buộc phải bằng 100%.</p>
+
+                <!-- Slider Nhận Biết -->
+                <div class="flex flex-col gap-2">
+                    <div class="flex justify-between font-button text-button text-on-surface dark:text-primary-fixed-dim">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-bloom-remember"></span>Nhận biết</span>
+                        <span id="val-remember">40%</span>
+                    </div>
+                    <input type="range" id="slider-remember" class="w-full h-2 bg-slate-200 dark:bg-outline-variant rounded-lg appearance-none cursor-pointer accent-bloom-remember" min="0" max="100" step="5" value="40" />
+                    <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Các câu hỏi trích xuất thông tin trực tiếp, sự kiện.</span>
+                </div>
+
+                <!-- Slider Thông Hiểu -->
+                <div class="flex flex-col gap-2">
+                    <div class="flex justify-between font-button text-button text-on-surface dark:text-primary-fixed-dim">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-bloom-understand"></span>Thông hiểu</span>
+                        <span id="val-understand">40%</span>
+                    </div>
+                    <input type="range" id="slider-understand" class="w-full h-2 bg-slate-200 dark:bg-outline-variant rounded-lg appearance-none cursor-pointer accent-bloom-understand" min="0" max="100" step="5" value="40" />
+                    <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Các câu hỏi giải thích lý do, bản chất hoặc so sánh.</span>
+                </div>
+
+                <!-- Slider Vận Dụng -->
+                <div class="flex flex-col gap-2">
+                    <div class="flex justify-between font-button text-button text-on-surface dark:text-primary-fixed-dim">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-bloom-apply"></span>Vận dụng</span>
+                        <span id="val-apply">20%</span>
+                    </div>
+                    <input type="range" id="slider-apply" class="w-full h-2 bg-slate-200 dark:bg-outline-variant rounded-lg appearance-none cursor-pointer accent-bloom-apply" min="0" max="100" step="5" value="20" />
+                    <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Áp dụng lý thuyết vào bài tập hoặc tình huống thực tế.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STEP 3: LOADING OVERLAY -->
+    <div id="loading-overlay" class="absolute inset-0 bg-surface/90 dark:bg-on-secondary-fixed/90 z-25 hidden flex flex-col items-center justify-center text-center p-8 transition-all duration-300">
+        <!-- AI Circle Spinner -->
+        <div class="relative w-24 h-24 mb-6 flex items-center justify-center">
+            <div class="absolute inset-0 rounded-full border-4 border-slate-200 dark:border-outline-variant"></div>
+            <div class="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+            <div class="w-16 h-16 rounded-full bg-primary/10 dark:bg-primary-fixed-dim/20 flex items-center justify-center animate-pulse">
+                <span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim text-[32px]">auto_awesome</span>
+            </div>
+        </div>
+        <h3 class="font-h2 text-h2 text-on-surface dark:text-primary-fixed-dim mb-2 animate-bounce">QuizGen AI đang xử lý...</h3>
+        <p id="loading-message" class="text-body font-body text-secondary dark:text-secondary-fixed-dim max-w-sm transition-all duration-500">
+            Đang kết nối với máy chủ AI...
+        </p>
+    </div>
+</div>
+
+<!-- Bottom Actions -->
+<div class="flex justify-between items-center pt-2">
+    <button id="btn-back" class="px-6 py-2.5 rounded-lg font-button text-button text-secondary dark:text-secondary-fixed-dim hover:bg-slate-100 dark:hover:bg-secondary-container transition-all duration-200 cursor-pointer hidden">
+        Quay lại
+    </button>
+    <div class="flex gap-2 ml-auto">
+        <a href="/Dashboard" id="btn-cancel" class="px-6 py-2.5 rounded-lg font-button text-button text-secondary dark:text-secondary-fixed-dim hover:bg-slate-100 dark:hover:bg-secondary-container transition-all duration-200 cursor-pointer flex items-center">
+            Hủy bỏ
+        </a>
+        <button id="btn-next" class="px-6 py-3 rounded-lg font-button text-button bg-[#0037b0] dark:bg-primary text-on-primary hover:bg-opacity-90 dark:hover:bg-opacity-80 transition-all duration-200 shadow-sm flex items-center gap-2 cursor-pointer opacity-50 pointer-events-none" disabled>
+            <span class="btn-text">Tiếp theo</span>
+            <span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
+        </button>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            let currentStep = 1;
+            let selectedDocIds = [];
+
+            // 1. SELECT DOCUMENTS LOGIC
+            $(".document-card").on("click", function () {
+                const docId = parseInt($(this).attr("data-id"));
+                const index = selectedDocIds.indexOf(docId);
+                
+                if (index > -1) {
+                    // Unselect
+                    selectedDocIds.splice(index, 1);
+                    $(this).removeClass("border-primary dark:border-primary-fixed-dim bg-primary-fixed dark:bg-primary/10 shadow-sm");
+                    $(this).find(".checkbox-indicator").removeClass("bg-primary border-primary").addClass("bg-white border-slate-300 dark:border-outline-variant");
+                    $(this).find(".checkbox-indicator span").addClass("hidden");
+                } else {
+                    // Select
+                    selectedDocIds.push(docId);
+                    $(this).addClass("border-primary dark:border-primary-fixed-dim bg-primary-fixed dark:bg-primary/10 shadow-sm");
+                    $(this).find(".checkbox-indicator").addClass("bg-primary border-primary").removeClass("bg-white border-slate-300 dark:border-outline-variant");
+                    $(this).find(".checkbox-indicator span").removeClass("hidden");
+                }
+
+                updateStep1ButtonState();
+            });
+
+            function updateStep1ButtonState() {
+                const count = selectedDocIds.length;
+                $("#selected-count-text").text(`Đã chọn: ${count} tài liệu`);
+                
+                if (count > 0) {
+                    $("#btn-next").removeClass("opacity-50 pointer-events-none").removeAttr("disabled");
+                } else {
+                    $("#btn-next").addClass("opacity-50 pointer-events-none").attr("disabled", "disabled");
+                }
+            }
+
+            // 2. SEARCH FILTER LOGIC
+            $("#search-docs").on("input", function () {
+                const query = $(this).val().toLowerCase().trim();
+                let hasResults = false;
+
+                $(".document-card").each(function () {
+                    const title = $(this).attr("data-title").toLowerCase();
+                    if (title.includes(query)) {
+                        $(this).removeClass("hidden");
+                        hasResults = true;
+                    } else {
+                        $(this).addClass("hidden");
+                    }
+                });
+
+                if (hasResults || query === "") {
+                    $("#no-docs-message").addClass("hidden");
+                } else {
+                    $("#no-docs-message").removeClass("hidden");
+                }
+            });
+
+            // 3. STEPPER NAVIGATION LOGIC
+            $("#btn-next").on("click", function () {
+                if (currentStep === 1) {
+                    if (selectedDocIds.length === 0) return;
+                    goToStep(2);
+                } else if (currentStep === 2) {
+                    // Submit form to create quiz set
+                    createQuizSet();
+                }
+            });
+
+            $("#btn-back").on("click", function () {
+                if (currentStep === 2) {
+                    goToStep(1);
+                }
+            });
+
+            function goToStep(step) {
+                if (step === 1) {
+                    $("#step-content-2").addClass("hidden");
+                    $("#step-content-1").removeClass("hidden");
+                    
+                    $("#step-header-2").addClass("opacity-50");
+                    $("#step-num-2").removeClass("bg-primary text-on-primary").addClass("bg-slate-200 dark:bg-on-secondary-fixed-variant text-secondary dark:text-secondary-fixed-dim");
+                    $("#step-text-2").removeClass("text-primary dark:text-primary-fixed-dim").addClass("text-secondary dark:text-secondary-fixed-dim");
+                    
+                    $("#btn-back").addClass("hidden");
+                    $("#btn-next .btn-text").text("Tiếp theo");
+                    $("#btn-cancel").removeClass("hidden");
+                    
+                    currentStep = 1;
+                    updateStep1ButtonState();
+                } else if (step === 2) {
+                    $("#step-content-1").addClass("hidden");
+                    $("#step-content-2").removeClass("hidden");
+                    
+                    $("#step-header-2").removeClass("opacity-50");
+                    $("#step-num-2").addClass("bg-primary text-on-primary").removeClass("bg-slate-200 dark:bg-on-secondary-fixed-variant text-secondary dark:text-secondary-fixed-dim");
+                    $("#step-text-2").addClass("text-primary dark:text-primary-fixed-dim").removeClass("text-secondary dark:text-secondary-fixed-dim");
+                    
+                    $("#btn-back").removeClass("hidden");
+                    $("#btn-next .btn-text").text("Tạo đề ngay");
+                    $("#btn-cancel").addClass("hidden");
+                    
+                    currentStep = 2;
+                    validateBloomTotal(); // Cập nhật trạng thái nút Next dựa vào tổng phần trăm Bloom
+                }
+            }
+
+            // 4. RANGE SLIDERS BALANCE LOGIC (BLOOM TOTAL = 100%)
+            const $sliderRemember = $("#slider-remember");
+            const $sliderUnderstand = $("#slider-understand");
+            const $sliderApply = $("#slider-apply");
+
+            const $valRemember = $("#val-remember");
+            const $valUnderstand = $("#val-understand");
+            const $valApply = $("#val-apply");
+            const $bloomTotal = $("#bloom-total");
+
+            function handleSliderChange(changedSlider) {
+                let rVal = parseInt($sliderRemember.val());
+                let uVal = parseInt($sliderUnderstand.val());
+                let aVal = parseInt($sliderApply.val());
+                
+                let diff = 100 - (rVal + uVal + aVal);
+                
+                if (diff !== 0) {
+                    // Phân bổ phần chênh lệch cho 2 sliders còn lại
+                    let listToAdjust = [];
+                    if (changedSlider !== 'remember') listToAdjust.push({ name: 'remember', element: $sliderRemember });
+                    if (changedSlider !== 'understand') listToAdjust.push({ name: 'understand', element: $sliderUnderstand });
+                    if (changedSlider !== 'apply') listToAdjust.push({ name: 'apply', element: $sliderApply });
+                    
+                    // Điều chỉnh slider đầu tiên trong danh sách cần điều chỉnh
+                    let firstSliderVal = parseInt(listToAdjust[0].element.val());
+                    let newFirstVal = firstSliderVal + diff;
+                    
+                    if (newFirstVal >= 0 && newFirstVal <= 100) {
+                        listToAdjust[0].element.val(newFirstVal);
+                    } else {
+                        // Nếu vượt giới hạn 0-100, điều chỉnh slider thứ hai
+                        let adjustVal = newFirstVal < 0 ? -newFirstVal : newFirstVal - 100;
+                        listToAdjust[0].element.val(newFirstVal < 0 ? 0 : 100);
+                        
+                        let secondSliderVal = parseInt(listToAdjust[1].element.val());
+                        listToAdjust[1].element.val(secondSliderVal - adjustVal);
+                    }
+                }
+                
+                // Cập nhật text hiển thị
+                $valRemember.text($sliderRemember.val() + "%");
+                $valUnderstand.text($sliderUnderstand.val() + "%");
+                $valApply.text($sliderApply.val() + "%");
+                
+                validateBloomTotal();
+            }
+
+            $sliderRemember.on("input", () => handleSliderChange('remember'));
+            $sliderUnderstand.on("input", () => handleSliderChange('understand'));
+            $sliderApply.on("input", () => handleSliderChange('apply'));
+
+            function validateBloomTotal() {
+                let rVal = parseInt($sliderRemember.val());
+                let uVal = parseInt($sliderUnderstand.val());
+                let aVal = parseInt($sliderApply.val());
+                let total = rVal + uVal + aVal;
+                
+                $bloomTotal.text(`Tổng: ${total}%`);
+                
+                if (total === 100) {
+                    $bloomTotal.removeClass("bg-danger-light text-danger").addClass("bg-success-light text-success");
+                    $("#btn-next").removeClass("opacity-50 pointer-events-none").removeAttr("disabled");
+                } else {
+                    $bloomTotal.removeClass("bg-success-light text-success").addClass("bg-danger-light text-danger");
+                    $("#btn-next").addClass("opacity-50 pointer-events-none").attr("disabled", "disabled");
+                }
+            }
+
+            // 5. CALL AI TO CREATE QUIZSET VIA AJAX
+            function createQuizSet() {
+                const totalQ = parseInt($("#total-questions").val());
+                const timeL = parseInt($("#time-limit").val());
+                const lang = parseInt($("#output-lang").val());
+                
+                const rVal = parseInt($sliderRemember.val());
+                const uVal = parseInt($sliderUnderstand.val());
+                const aVal = parseInt($sliderApply.val());
+
+                if (totalQ < 5 || totalQ > 50) {
+                    alert("Số lượng câu hỏi phải nằm trong khoảng 5 - 50 câu.");
+                    return;
+                }
+
+                // Hiện Loading Overlay
+                $("#loading-overlay").removeClass("hidden");
+                $("#step-header-3").removeClass("opacity-50");
+                $("#step-num-3").addClass("bg-primary text-on-primary").removeClass("bg-slate-200 dark:bg-on-secondary-fixed-variant text-secondary dark:text-secondary-fixed-dim");
+                $("#step-text-3").addClass("text-primary dark:text-primary-fixed-dim").removeClass("text-secondary dark:text-secondary-fixed-dim");
+
+                $("#btn-back, #btn-next, #btn-cancel").attr("disabled", "disabled").addClass("opacity-40 pointer-events-none");
+
+                // Chu kỳ đổi thông báo loading cho sinh động
+                const messages = [
+                    "Đang kết nối với máy chủ AI...",
+                    "Đang thu thập và phân tích nội dung tài liệu của bạn...",
+                    "Đang tính toán phân bổ Bloom theo yêu cầu...",
+                    "AI đang soạn thảo các câu hỏi trắc nghiệm chất lượng...",
+                    "Đang xây dựng đáp án nhiễu (distractors) thuyết phục...",
+                    "AI đang viết lời giải thích chi tiết cho từng câu...",
+                    "Đang xác thực cấu trúc bộ đề thi..."
+                ];
+                let msgIdx = 0;
+                const msgInterval = setInterval(function () {
+                    msgIdx = (msgIdx + 1) % messages.length;
+                    $("#loading-message").fadeOut(300, function () {
+                        $(this).text(messages[msgIdx]).fadeIn(300);
+                    });
+                }, 3500);
+
+                const requestData = {
+                    documentIds: selectedDocIds,
+                    totalQuestions: totalQ,
+                    bloomRememberPercent: rVal,
+                    bloomUnderstandPercent: uVal,
+                    bloomApplyPercent: aVal,
+                    timeLimitMinutes: timeL,
+                    language: lang
+                };
+
+                $.ajax({
+                    url: '/Exam/CreateQuizSet',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(requestData),
+                    success: function (response) {
+                        clearInterval(msgInterval);
+                        if (response.success) {
+                            // Chuyển hướng sang trang thi thử thực tế
+                            window.location.href = `/Exam/Index?quizSetId=${response.quizSetId}`;
+                        } else {
+                            hideLoadingOverlay();
+                            alert(response.message);
+                        }
+                    },
+                    error: function () {
+                        clearInterval(msgInterval);
+                        hideLoadingOverlay();
+                        alert("Đã xảy ra lỗi kết nối khi gọi AI tạo đề thi. Vui lòng kiểm tra cấu hình API Key và thử lại.");
+                    }
+                });
+            }
+
+            function hideLoadingOverlay() {
+                $("#loading-overlay").addClass("hidden");
+                
+                $("#step-header-3").addClass("opacity-50");
+                $("#step-num-3").removeClass("bg-primary text-on-primary").addClass("bg-slate-200 dark:bg-on-secondary-fixed-variant text-secondary dark:text-secondary-fixed-dim");
+                $("#step-text-3").removeClass("text-primary dark:text-primary-fixed-dim").addClass("text-secondary dark:text-secondary-fixed-dim");
+
+                $("#btn-back, #btn-next, #btn-cancel").removeAttr("disabled").removeClass("opacity-40 pointer-events-none");
+            }
+
+            // Tự động chọn tài liệu nếu có truyền documentId trên URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const preselectedDocId = urlParams.get('documentId');
+            if (preselectedDocId) {
+                const docId = parseInt(preselectedDocId);
+                if (!isNaN(docId)) {
+                    const $card = $(`.document-card[data-id="${docId}"]`);
+                    if ($card.length > 0) {
+                        selectedDocIds.push(docId);
+                        $card.addClass("border-primary dark:border-primary-fixed-dim bg-primary-fixed dark:bg-primary/10 shadow-sm");
+                        $card.find(".checkbox-indicator").addClass("bg-primary border-primary").removeClass("bg-white border-slate-300 dark:border-outline-variant");
+                        $card.find(".checkbox-indicator span").removeClass("hidden");
+                        updateStep1ButtonState();
+                        
+                        // Chuyển thẳng sang Bước 2 để cấu hình đề thi luôn
+                        goToStep(2);
+                    }
+                }
+            }
+        });
+    </script>
+}
