@@ -6,4 +6,4 @@ namespace QuizGenAI.Models
 
         public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
     }
-}
+} 
