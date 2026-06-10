@@ -1,82 +1,81 @@
-﻿@page
+@page
 @model LoginModel
-
 @{
-    ViewData["Title"] = "Log in";
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Đăng nhập";
 }
 
-<h1>@ViewData["Title"]</h1>
-<div class="row">
-    <div class="col-md-4">
-        <section>
-            <form id="account" method="post">
-                <h2>Use a local account to log in.</h2>
-                <hr />
-                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-                <div class="form-floating mb-3">
-                    <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <label asp-for="Input.Email" class="form-label">Email</label>
-                    <span asp-validation-for="Input.Email" class="text-danger"></span>
-                </div>
-                <div class="form-floating mb-3">
-                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label asp-for="Input.Password" class="form-label">Password</label>
-                    <span asp-validation-for="Input.Password" class="text-danger"></span>
-                </div>
-                <div class="checkbox mb-3">
-                    <label asp-for="Input.RememberMe" class="form-label">
-                        <input class="form-check-input" asp-for="Input.RememberMe" />
-                        @Html.DisplayNameFor(m => m.Input.RememberMe)
-                    </label>
-                </div>
-                <div>
-                    <button id="login-submit" type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
-                </div>
-                <div>
-                    <p>
-                        <a id="forgot-password" asp-page="./ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a id="resend-confirmation" asp-page="./ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
-                </div>
-            </form>
-        </section>
+<main class="auth-shell auth-shell-login">
+    <div class="auth-brand">
+        <a asp-area="" asp-controller="Home" asp-action="Index">QuizGen AI</a>
+        <p>Academic Excellence</p>
     </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
-            @{
-                if ((Model.ExternalLogins?.Count ?? 0) == 0)
-                {
-                    <div>
-                        <p>
-                            There are no external authentication services configured. See this <a href="https://go.microsoft.com/fwlink/?LinkID=532715">article
-                            about setting up this ASP.NET application to support logging in via external services</a>.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
-                        <div>
-                            <p>
-                                @foreach (var provider in Model.ExternalLogins!)
-                                {
-                                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                }
-                            </p>
-                        </div>
-                    </form>
-                }
-            }
-        </section>
-    </div>
-</div>
+
+    <section class="auth-card auth-card-login" aria-labelledby="login-title">
+        <div class="auth-tabs">
+            <a class="auth-tab active" asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Đăng nhập</a>
+            <a class="auth-tab" asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Đăng ký</a>
+        </div>
+
+        <form asp-route-returnUrl="@Model.ReturnUrl" method="post" class="auth-form" novalidate>
+            @Html.AntiForgeryToken()
+            <h1 id="login-title" class="sr-only">Đăng nhập QuizGen AI</h1>
+            <div asp-validation-summary="ModelOnly" class="auth-validation-summary"></div>
+
+            <div class="auth-field">
+                <label asp-for="Input.Email" class="auth-label"></label>
+                <div class="auth-input-wrap">
+                    <span class="material-symbols-outlined auth-input-icon">mail</span>
+                    <input asp-for="Input.Email" class="auth-input has-leading-icon" autocomplete="username" placeholder="name@university.edu" />
+                </div>
+                <span asp-validation-for="Input.Email" class="auth-error"></span>
+            </div>
+
+            <div class="auth-field">
+                <div class="auth-label-row">
+                    <label asp-for="Input.Password" class="auth-label"></label>
+                    <a class="auth-small-link" asp-page="./ForgotPassword">Quên mật khẩu?</a>
+                </div>
+                <div class="auth-input-wrap">
+                    <span class="material-symbols-outlined auth-input-icon">lock</span>
+                    <input asp-for="Input.Password" id="login-password" class="auth-input has-leading-icon has-trailing-icon" autocomplete="current-password" placeholder="Nhập mật khẩu" />
+                    <button class="auth-icon-button" type="button" data-password-toggle="#login-password" aria-label="Hiện hoặc ẩn mật khẩu">
+                        <span class="material-symbols-outlined">visibility</span>
+                    </button>
+                </div>
+                <span asp-validation-for="Input.Password" class="auth-error"></span>
+            </div>
+
+            <label class="auth-checkline">
+                <input asp-for="Input.RememberMe" class="auth-checkbox" />
+                <span>Ghi nhớ đăng nhập</span>
+            </label>
+
+            <button type="submit" class="auth-primary-button">
+                Đăng nhập
+                <span class="material-symbols-outlined">arrow_forward</span>
+            </button>
+
+            <div class="auth-divider"><span>hoặc</span></div>
+
+            <div class="auth-social-stack">
+                <button type="button" class="auth-social-button" disabled>
+                    <span class="auth-social-mark">G</span>
+                    Tiếp tục với Google
+                </button>
+                <button type="button" class="auth-social-button" disabled>
+                    <span class="auth-social-mark">M</span>
+                    Tiếp tục với Microsoft
+                </button>
+            </div>
+
+            <a class="auth-guest-link" asp-area="" asp-controller="Home" asp-action="Index">
+                Dùng thử không cần đăng nhập
+                <span class="material-symbols-outlined">arrow_forward</span>
+            </a>
+        </form>
+    </section>
+</main>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

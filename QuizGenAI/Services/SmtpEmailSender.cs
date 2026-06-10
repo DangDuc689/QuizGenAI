@@ -5,7 +5,7 @@ using QuizGenAI.Models;
 
 namespace QuizGenAI.Services
 {
-    public class SmtpEmailSender : IEmailSender
+    public class SmtpEmailSender : IEmailSender, Microsoft.AspNetCore.Identity.UI.Services.IEmailSender
     {
         private readonly EmailSettings _settings;
 
