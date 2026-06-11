@@ -2060,6 +2060,21 @@ main:has(.documents-page) {
     line-height: 1.45;
 }
 
+.auth-action-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 2px 0 22px;
+}
+
+.auth-action-row .auth-checkline {
+    margin: 0;
+}
+
+.auth-action-row .auth-small-link {
+    margin-bottom: 0;
+}
+
 .auth-checkbox {
     width: 16px;
     height: 16px;
@@ -2314,4 +2329,9 @@ main:has(.documents-page) {
         margin-left: 22px;
         margin-right: 22px;
     }
+}
+
+/* Option Card Transition in Exam Page */
+.option-card {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }

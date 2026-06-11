@@ -10,3 +10,8 @@ bin/
 # Chỉ giữ file .gitkeep để Git theo dõi cấu trúc thư mục uploads/documents
 QuizGenAI/wwwroot/uploads/documents/*
 !QuizGenAI/wwwroot/uploads/documents/.gitkeep
+
+# Bảo vệ credentials và API keys
+# appsettings.json
+# appsettings.*.json
+# !appsettings.Development.json
