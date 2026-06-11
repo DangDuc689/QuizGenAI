@@ -34,4 +34,20 @@ namespace QuizGenAI.Models
         public string? SourceUrl { get; set; }
         public int? PageCount { get; set; }
     }
+
+    public class DocumentMetadataAnalysis
+    {
+        public int CharacterCount { get; set; }
+        public int WordCount { get; set; }
+        public int ParagraphCount { get; set; }
+        public string DetectedLanguage { get; set; } = string.Empty;
+        public string LengthCategory { get; set; } = string.Empty;
+        public bool HasExternalLinks { get; set; }
+        public bool HasEmailLikeText { get; set; }
+        public bool HasPhoneLikeText { get; set; }
+        public int QuizSetCount { get; set; }
+        public int QuestionCount { get; set; }
+        public string ReadinessStatus { get; set; } = string.Empty;
+        public string PrivacyNote { get; set; } = string.Empty;
+    }
 }

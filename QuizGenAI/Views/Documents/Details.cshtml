@@ -1,5 +1,7 @@
 @model QuizGenAI.Models.Document
 
+@Html.AntiForgeryToken()
+
 @{
     ViewData["Title"] = "Chi tiết tài liệu";
 
@@ -219,11 +221,17 @@
                             </p>
 
                             <div class="stitch-quiz-footer">
-                                <span class="stitch-score pending">
-                                    Chưa làm
-                                </span>
+                                <button type="button" 
+                                        class="btn-toggle-public @(quizSet.IsPublic ? "public" : "private")" 
+                                        data-quizset-id="@quizSet.Id"
+                                        title="@(quizSet.IsPublic ? "Đang công khai. Nhấn để chuyển sang riêng tư" : "Đang riêng tư. Nhấn để công khai bộ đề")">
+                                    <span class="material-symbols-outlined">
+                                        @(quizSet.IsPublic ? "public" : "lock")
+                                    </span>
+                                    <span>@(quizSet.IsPublic ? "Công khai" : "Riêng tư")</span>
+                                </button>
 
-                                <a href="#">Làm ngay →</a>
+                                <a href="/Exam/Start/@quizSet.Id">Làm ngay →</a>
                             </div>
                         </div>
                     }
@@ -282,6 +290,56 @@
                     : "Xem thêm nội dung";
             });
         }
+
+        // Xử lý sự kiện click nút toggle public/private
+        document.querySelectorAll(".btn-toggle-public").forEach(button => {
+            button.addEventListener("click", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const btn = this;
+                const quizSetId = btn.dataset.quizsetId;
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+                if (!token) {
+                    alert("Không tìm thấy CSRF token.");
+                    return;
+                }
+
+                fetch('/Documents/TogglePublic', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'quizSetId': quizSetId,
+                        '__RequestVerificationToken': token
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.isPublic) {
+                            btn.className = "btn-toggle-public public";
+                            btn.title = "Đang công khai. Nhấn để chuyển sang riêng tư";
+                            btn.querySelector(".material-symbols-outlined").textContent = "public";
+                            btn.querySelector("span:not(.material-symbols-outlined)").textContent = "Công khai";
+                        } else {
+                            btn.className = "btn-toggle-public private";
+                            btn.title = "Đang riêng tư. Nhấn để công khai bộ đề";
+                            btn.querySelector(".material-symbols-outlined").textContent = "lock";
+                            btn.querySelector("span:not(.material-symbols-outlined)").textContent = "Riêng tư";
+                        }
+                    } else {
+                        alert(data.message || "Đã xảy ra lỗi khi cập nhật trạng thái.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("Không thể kết nối tới máy chủ.");
+                });
+            });
+        });
 
         // Xử lý sự kiện click nút xóa ở trang chi tiết tài liệu
         const btnDeleteDocDetails = document.getElementById("btn-delete-document-details");

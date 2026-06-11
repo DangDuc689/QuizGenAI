@@ -2335,3 +2335,36 @@ main:has(.documents-page) {
 .option-card {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Custom CSS for Public/Private Toggle button */
+.btn-toggle-public {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+.btn-toggle-public.public {
+    background-color: #dcfce7;
+    color: #15803d;
+    border-color: #bbf7d0;
+}
+.btn-toggle-public.public:hover {
+    background-color: #bbf7d0;
+}
+.btn-toggle-public.private {
+    background-color: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+.btn-toggle-public.private:hover {
+    background-color: #e2e8f0;
+}
+.btn-toggle-public .material-symbols-outlined {
+    font-size: 16px;
+}

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace QuizGenAI.Areas.Admin.Controllers
@@ -155,9 +156,18 @@ namespace QuizGenAI.Areas.Admin.Controllers
         [HttpGet]
         public async Task<IActionResult> GetDocumentDetail(int id)
         {
-            var doc = await _context.Documents.Include(d => d.User).FirstOrDefaultAsync(d => d.Id == id);
+            var doc = await _context.Documents
+                .Include(d => d.User)
+                .Include(d => d.QuizSets)
+                    .ThenInclude(qs => qs.Questions)
+                .FirstOrDefaultAsync(d => d.Id == id);
+
             if (doc != null)
             {
+                int quizSetCount = doc.QuizSets?.Count ?? 0;
+                int questionCount = doc.QuizSets?.Sum(qs => qs.Questions?.Count ?? 0) ?? 0;
+                var analysis = AnalyzeDocumentMetadata(doc.ExtractedText, quizSetCount, questionCount);
+
                 return Json(new
                 {
                     success = true,
@@ -167,7 +177,7 @@ namespace QuizGenAI.Areas.Admin.Controllers
                     createdAt = doc.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
                     fileSize = FormatSize(doc.FileSizeBytes),
                     format = GetFormatString(doc.SourceType),
-                    extractedText = doc.ExtractedText ?? "Không có nội dung văn bản trích xuất.",
+                    analysis = analysis,
                     description = doc.Description ?? "Không có mô tả.",
                     pageCount = doc.PageCount ?? 0,
                     sourceUrl = doc.SourceUrl
@@ -177,6 +187,9 @@ namespace QuizGenAI.Areas.Admin.Controllers
             var mock = GetMockDocuments().FirstOrDefault(d => d.Id == id);
             if (mock != null)
             {
+                var mockText = $"[NỘI DUNG TRÍCH XUẤT GIẢ LẬP] Đây là nội dung văn bản gốc đã được công cụ AI trích xuất tự động từ tài liệu \"{mock.Title}\". Mô tả chi tiết: {mock.Description}. Vui lòng liên hệ hỗ trợ tại support@quizgen.ai hoặc số điện thoại 0901234567 nếu có thắc mắc.";
+                var analysis = AnalyzeDocumentMetadata(mockText, 2, mock.QuestionsCount);
+
                 return Json(new
                 {
                     success = true,
@@ -186,7 +199,7 @@ namespace QuizGenAI.Areas.Admin.Controllers
                     createdAt = mock.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
                     fileSize = mock.FileSize,
                     format = mock.Format,
-                    extractedText = $"[NỘI DUNG TRÍCH XUẤT GIẢ LẬP]\nĐây là nội dung văn bản gốc đã được công cụ AI trích xuất tự động từ tài liệu \"{mock.Title}\".\n\nNội dung này được sử dụng làm cơ sở tri thức để AI phân tích và tự động tạo câu hỏi trắc nghiệm theo các cấp độ nhận thức của Bloom (Nhận biết, Thông hiểu, Vận dụng).\n\nMô tả chi tiết: {mock.Description}",
+                    analysis = analysis,
                     description = mock.Description,
                     pageCount = mock.PageCount ?? 0,
                     sourceUrl = mock.SourceUrl
@@ -194,6 +207,101 @@ namespace QuizGenAI.Areas.Admin.Controllers
             }
 
             return Json(new { success = false, message = "Không tìm thấy tài liệu tương ứng." });
+        }
+
+        private static DocumentMetadataAnalysis AnalyzeDocumentMetadata(string? text, int quizSetCount, int questionCount)
+        {
+            var analysis = new DocumentMetadataAnalysis
+            {
+                QuizSetCount = quizSetCount,
+                QuestionCount = questionCount,
+                PrivacyNote = "Nội dung gốc của tài liệu không được hiển thị tại trang Admin để bảo vệ quyền riêng tư của người dùng. Admin chỉ xem các chỉ số tổng quan phục vụ quản trị hệ thống."
+            };
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                analysis.CharacterCount = 0;
+                analysis.WordCount = 0;
+                analysis.ParagraphCount = 0;
+                analysis.DetectedLanguage = "Không xác định";
+                analysis.LengthCategory = "Không có nội dung";
+                analysis.HasExternalLinks = false;
+                analysis.HasEmailLikeText = false;
+                analysis.HasPhoneLikeText = false;
+                analysis.ReadinessStatus = "Chưa sẵn sàng (Không có nội dung)";
+                return analysis;
+            }
+
+            analysis.CharacterCount = text.Length;
+            
+            // Đếm từ
+            var words = text.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            analysis.WordCount = words.Length;
+
+            // Đếm đoạn văn
+            var paragraphs = text.Split(new[] { "\r\n\r\n", "\n\n", "\r\r" }, StringSplitOptions.RemoveEmptyEntries);
+            analysis.ParagraphCount = paragraphs.Length;
+            if (analysis.ParagraphCount == 1 && text.Contains('\n'))
+            {
+                analysis.ParagraphCount = text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).Length;
+            }
+
+            // Ngôn ngữ ước tính qua tiếng Việt có dấu
+            string vietnameseChars = "áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵđÁÀẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÉÈẺẼẸÊẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÚÙỦŨỤƯỨỪỬỮỰÝỲỶỸỴĐ";
+            int vnCharCount = text.Count(c => vietnameseChars.Contains(c));
+            if (vnCharCount > 10)
+            {
+                analysis.DetectedLanguage = "Tiếng Việt";
+            }
+            else
+            {
+                analysis.DetectedLanguage = "Tiếng Anh hoặc ngôn ngữ khác";
+            }
+
+            // Phân loại độ dài
+            if (analysis.WordCount < 300)
+            {
+                analysis.LengthCategory = "Ngắn (< 300 từ)";
+            }
+            else if (analysis.WordCount <= 1500)
+            {
+                analysis.LengthCategory = "Vừa (300 - 1500 từ)";
+            }
+            else if (analysis.WordCount <= 5000)
+            {
+                analysis.LengthCategory = "Dài (1500 - 5000 từ)";
+            }
+            else
+            {
+                analysis.LengthCategory = "Rất dài (> 5000 từ)";
+            }
+
+            // Link ngoài
+            analysis.HasExternalLinks = text.Contains("http://", StringComparison.OrdinalIgnoreCase) || 
+                                         text.Contains("https://", StringComparison.OrdinalIgnoreCase) || 
+                                         text.Contains("www.", StringComparison.OrdinalIgnoreCase);
+
+            // Email
+            analysis.HasEmailLikeText = Regex.IsMatch(text, @"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}");
+
+            // Số điện thoại
+            analysis.HasPhoneLikeText = Regex.IsMatch(text, @"(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\b\d{9,11}\b");
+
+            // Mức độ sẵn sàng
+            if (analysis.WordCount < 50)
+            {
+                analysis.ReadinessStatus = "Chưa sẵn sàng (Nội dung quá ngắn)";
+            }
+            else if (analysis.HasPhoneLikeText || analysis.HasEmailLikeText)
+            {
+                analysis.ReadinessStatus = "Cần lưu ý (Chứa thông tin cá nhân)";
+            }
+            else
+            {
+                analysis.ReadinessStatus = "Sẵn sàng";
+            }
+
+            return analysis;
         }
 
         // API xóa tài liệu (POST)
@@ -242,6 +350,7 @@ namespace QuizGenAI.Areas.Admin.Controllers
         private static string FormatSize(long? bytes)
         {
             if (bytes == null) return "N/A";
+            if (bytes.Value == 0) return "0 B";
             string[] suffixes = { "B", "KB", "MB", "GB" };
             double doubleBytes = bytes.Value;
             int i = 0;
@@ -250,7 +359,9 @@ namespace QuizGenAI.Areas.Admin.Controllers
                 doubleBytes /= 1024;
                 i++;
             }
-            return $"{doubleBytes:0.1} {suffixes[i]}";
+            return i == 0 
+                ? $"{doubleBytes:0} B" 
+                : $"{doubleBytes:0.0} {suffixes[i]}";
         }
 
         private static string GetFormatString(DocumentSourceType type)

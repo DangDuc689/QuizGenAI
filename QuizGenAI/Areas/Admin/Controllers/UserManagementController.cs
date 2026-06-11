@@ -14,18 +14,18 @@ namespace QuizGenAI.Areas.Admin.Controllers
         // Danh sách người dùng giả lập (Mock Data)
         private static readonly List<UserItemViewModel> _mockUsers = new()
         {
-            new UserItemViewModel { Id = "1", FullName = "Nguyễn Văn A", Email = "nguyenwana@gmail.com", Role = "Học sinh", JoinedDate = DateTime.Parse("2026-05-10"), IsActive = true },
-            new UserItemViewModel { Id = "2", FullName = "Trần Thị B", Email = "tranthib@gmail.com", Role = "Học sinh", JoinedDate = DateTime.Parse("2026-05-11"), IsActive = true },
+            new UserItemViewModel { Id = "1", FullName = "Nguyễn Văn A", Email = "nguyenwana@gmail.com", Role = "Người dùng", JoinedDate = DateTime.Parse("2026-05-10"), IsActive = true },
+            new UserItemViewModel { Id = "2", FullName = "Trần Thị B", Email = "tranthib@gmail.com", Role = "Người dùng", JoinedDate = DateTime.Parse("2026-05-11"), IsActive = true },
             new UserItemViewModel { Id = "3", FullName = "Lê Văn C", Email = "levanc@gmail.com", Role = "Quản trị viên", JoinedDate = DateTime.Parse("2026-01-01"), IsActive = true },
-            new UserItemViewModel { Id = "4", FullName = "Phạm Minh D", Email = "phamminhd@gmail.com", Role = "Học sinh", JoinedDate = DateTime.Parse("2026-06-02"), IsActive = false },
-            new UserItemViewModel { Id = "5", FullName = "Hoàng Anh E", Email = "hoanganhe@gmail.com", Role = "Học sinh", JoinedDate = DateTime.Parse("2026-06-03"), IsActive = true },
+            new UserItemViewModel { Id = "4", FullName = "Phạm Minh D", Email = "phamminhd@gmail.com", Role = "Người dùng", JoinedDate = DateTime.Parse("2026-06-02"), IsActive = false },
+            new UserItemViewModel { Id = "5", FullName = "Hoàng Anh E", Email = "hoanganhe@gmail.com", Role = "Người dùng", JoinedDate = DateTime.Parse("2026-06-03"), IsActive = true },
             new UserItemViewModel { Id = "6", FullName = "Đỗ Thị F", Email = "dothif@gmail.com", Role = "Quản trị viên", JoinedDate = DateTime.Parse("2026-02-15"), IsActive = true },
-            new UserItemViewModel { Id = "7", FullName = "Bùi Văn G", Email = "buivang@gmail.com", Role = "Học sinh", JoinedDate = DateTime.Parse("2026-04-20"), IsActive = false },
-            new UserItemViewModel { Id = "8", FullName = "Ngô Thị H", Email = "ngothih@gmail.com", Role = "Học sinh", JoinedDate = DateTime.Parse("2026-04-25"), IsActive = true },
-            new UserItemViewModel { Id = "9", FullName = "Dương Văn I", Email = "duongvani@gmail.com", Role = "Học sinh", JoinedDate = DateTime.Parse("2026-05-01"), IsActive = true },
-            new UserItemViewModel { Id = "10", FullName = "Vũ Thị K", Email = "vuthik@gmail.com", Role = "Học sinh", JoinedDate = DateTime.Parse("2026-05-05"), IsActive = true },
-            new UserItemViewModel { Id = "11", FullName = "Phan Văn L", Email = "phanvanl@gmail.com", Role = "Học sinh", JoinedDate = DateTime.Parse("2026-06-08"), IsActive = true },
-            new UserItemViewModel { Id = "12", FullName = "Lý Thị M", Email = "lythim@gmail.com", Role = "Học sinh", JoinedDate = DateTime.Parse("2026-06-11"), IsActive = true }
+            new UserItemViewModel { Id = "7", FullName = "Bùi Văn G", Email = "buivang@gmail.com", Role = "Người dùng", JoinedDate = DateTime.Parse("2026-04-20"), IsActive = false },
+            new UserItemViewModel { Id = "8", FullName = "Ngô Thị H", Email = "ngothih@gmail.com", Role = "Người dùng", JoinedDate = DateTime.Parse("2026-04-25"), IsActive = true },
+            new UserItemViewModel { Id = "9", FullName = "Dương Văn I", Email = "duongvani@gmail.com", Role = "Người dùng", JoinedDate = DateTime.Parse("2026-05-01"), IsActive = true },
+            new UserItemViewModel { Id = "10", FullName = "Vũ Thị K", Email = "vuthik@gmail.com", Role = "Người dùng", JoinedDate = DateTime.Parse("2026-05-05"), IsActive = true },
+            new UserItemViewModel { Id = "11", FullName = "Phan Văn L", Email = "phanvanl@gmail.com", Role = "Người dùng", JoinedDate = DateTime.Parse("2026-06-08"), IsActive = true },
+            new UserItemViewModel { Id = "12", FullName = "Lý Thị M", Email = "lythim@gmail.com", Role = "Người dùng", JoinedDate = DateTime.Parse("2026-06-11"), IsActive = true }
         };
 
         // Action hiển thị trang quản lý người dùng chính

@@ -130,6 +130,21 @@ static async Task SeedIdentityAsync(WebApplication app)
                 return;
             }
         }
+        else
+        {
+            var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<ApplicationUser>>();
+            var verifyResult = passwordHasher.VerifyHashedPassword(adminUser, adminUser.PasswordHash, adminPassword);
+            if (verifyResult == PasswordVerificationResult.Failed)
+            {
+                logger.LogInformation("Updating admin password to configured password...");
+                adminUser.PasswordHash = passwordHasher.HashPassword(adminUser, adminPassword);
+                var updateResult = await userManager.UpdateAsync(adminUser);
+                if (!updateResult.Succeeded)
+                {
+                    logger.LogWarning("Failed to update admin password: {Errors}", string.Join("; ", updateResult.Errors.Select(e => e.Description)));
+                }
+            }
+        }
 
         if (!await userManager.IsInRoleAsync(adminUser, SD.Role_Admin))
         {

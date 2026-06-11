@@ -73,9 +73,9 @@
                             class="px-4 py-2 font-button text-button transition-colors @(string.IsNullOrEmpty(Model.SelectedRole) ? "bg-slate-100 text-primary" : "text-secondary hover:bg-slate-50")">
                         Tất cả
                     </button>
-                    <button type="button" onclick="selectRoleFilter('Học sinh')" 
-                            class="px-4 py-2 font-button text-button transition-colors border-l border-r border-slate-200 @(Model.SelectedRole == "Học sinh" ? "bg-slate-100 text-primary" : "text-secondary hover:bg-slate-50")">
-                        Học sinh
+                    <button type="button" onclick="selectRoleFilter('Người dùng')" 
+                            class="px-4 py-2 font-button text-button transition-colors border-l border-r border-slate-200 @(Model.SelectedRole == "Người dùng" ? "bg-slate-100 text-primary" : "text-secondary hover:bg-slate-50")">
+                        Người dùng
                     </button>
                     <button type="button" onclick="selectRoleFilter('Quản trị viên')" 
                             class="px-4 py-2 font-button text-button transition-colors @(Model.SelectedRole == "Quản trị viên" ? "bg-slate-100 text-primary" : "text-secondary hover:bg-slate-50")">
@@ -265,7 +265,7 @@
                 <label for="edit-role" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Vai trò</label>
                 <select id="edit-role" name="role" required 
                         class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm cursor-pointer">
-                    <option value="Học sinh">Học sinh</option>
+                    <option value="Người dùng">Người dùng</option>
                     <option value="Quản trị viên">Quản trị viên</option>
                 </select>
             </div>
