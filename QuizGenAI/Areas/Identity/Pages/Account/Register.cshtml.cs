@@ -85,13 +85,20 @@ namespace QuizGenAI.Areas.Identity.Pages.Account
 
         public async Task OnGetAsync(string returnUrl = null)
         {
+            if (string.IsNullOrEmpty(returnUrl) || returnUrl == "/" || returnUrl == "~/")
+            {
+                returnUrl = Url.Content("~/Dashboard");
+            }
             ReturnUrl = returnUrl;
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
         }
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
-            returnUrl ??= Url.Content("~/");
+            if (string.IsNullOrEmpty(returnUrl) || returnUrl == "/" || returnUrl == "~/")
+            {
+                returnUrl = Url.Content("~/Dashboard");
+            }
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
             if (!Input.AcceptTerms)
