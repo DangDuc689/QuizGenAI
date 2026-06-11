@@ -6,6 +6,7 @@ using System.Text;
 using UglyToad.PdfPig;
 using DocumentFormat.OpenXml.Packaging;
 using Microsoft.AspNetCore.Authorization;
+using QuizGenAI.Services;
 
 namespace QuizGenAI.Controllers
 {
@@ -14,13 +15,19 @@ namespace QuizGenAI.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly DocxExtractionService _docxExtractionService;
+        private readonly UrlExtractionService _urlExtractionService;
 
         public DocumentsController(
             ApplicationDbContext context,
-            UserManager<ApplicationUser> userManager)
+            UserManager<ApplicationUser> userManager,
+            DocxExtractionService docxExtractionService,
+            UrlExtractionService urlExtractionService)
         {
             _context = context;
             _userManager = userManager;
+            _docxExtractionService = docxExtractionService;
+            _urlExtractionService = urlExtractionService;
         }
 
         public async Task<IActionResult> Index(string? type)
@@ -88,6 +95,14 @@ namespace QuizGenAI.Controllers
                 return View();
             }
 
+            if (SourceType == "URL" &&
+                (!Uri.TryCreate(SourceUrl?.Trim(), UriKind.Absolute, out var sourceUri) ||
+                 (sourceUri.Scheme != Uri.UriSchemeHttp && sourceUri.Scheme != Uri.UriSchemeHttps)))
+            {
+                ModelState.AddModelError("SourceUrl", "URL không hợp lệ. Vui lòng nhập liên kết đầy đủ bắt đầu bằng http:// hoặc https://.");
+                return View();
+            }
+
             if (SourceType == "File" && (UploadedFile == null || UploadedFile.Length == 0))
             {
                 ModelState.AddModelError("UploadedFile", "Vui lòng chọn file tài liệu.");
@@ -132,6 +147,7 @@ namespace QuizGenAI.Controllers
             long fileSizeBytes = 0;
             int pageCount = 0;
             string? extractedTextFromFile = null;
+            string? extractedTextFromUrl = null;
 
             if (SourceType == "File" && UploadedFile != null)
             {
@@ -173,8 +189,24 @@ namespace QuizGenAI.Controllers
 
                 if (documentSourceType == DocumentSourceType.Word)
                 {
-                    extractedTextFromFile = ExtractTextFromWord(fullPath);
+                    var docxExtraction = await _docxExtractionService.ExtractTextFromDocxAsync(
+                        fullPath,
+                        HttpContext.RequestAborted);
+
+                    extractedTextFromFile = docxExtraction.ExtractedText;
                     pageCount = GetWordPageCountFromMetadata(fullPath);     
+                }
+            }
+
+            if (documentSourceType == DocumentSourceType.URL)
+            {
+                var urlExtraction = await _urlExtractionService.ExtractAsync(
+                    SourceUrl,
+                    HttpContext.RequestAborted);
+
+                if (urlExtraction.Success)
+                {
+                    extractedTextFromUrl = urlExtraction.ExtractedText?.Trim();
                 }
             }
 
@@ -185,7 +217,9 @@ namespace QuizGenAI.Controllers
                 SourceType = documentSourceType,
                 ExtractedText = documentSourceType == DocumentSourceType.PastedText
                     ? ExtractedText?.Trim()
-                    : extractedTextFromFile,
+                    : documentSourceType == DocumentSourceType.URL
+                        ? extractedTextFromUrl
+                        : extractedTextFromFile,
                 SourceUrl = documentSourceType == DocumentSourceType.URL
                     ? SourceUrl?.Trim()
                     : null,

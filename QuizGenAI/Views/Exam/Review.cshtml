@@ -288,6 +288,7 @@
         $(document).ready(function () {
             let currentStep = 1;
             let selectedDocIds = [];
+            let isCreatingQuiz = false;
 
             // 1. SELECT DOCUMENTS LOGIC
             $(".document-card").on("click", function () {
@@ -464,6 +465,10 @@
 
             // 5. CALL AI TO CREATE QUIZSET VIA AJAX
             function createQuizSet() {
+                if (isCreatingQuiz) {
+                    return;
+                }
+
                 const totalQ = parseInt($("#total-questions").val());
                 const timeL = parseInt($("#time-limit").val());
                 const lang = parseInt($("#output-lang").val());
@@ -478,6 +483,7 @@
                 }
 
                 // Hiện Loading Overlay
+                isCreatingQuiz = true;
                 $("#loading-overlay").removeClass("hidden");
                 $("#step-header-3").removeClass("opacity-50");
                 $("#step-num-3").addClass("bg-primary text-on-primary").removeClass("bg-slate-200 dark:bg-on-secondary-fixed-variant text-secondary dark:text-secondary-fixed-dim");
@@ -513,30 +519,37 @@
                     language: lang
                 };
 
+                let hasRedirected = false;
+
                 $.ajax({
                     url: '/Exam/CreateQuizSet',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify(requestData),
                     success: function (response) {
-                        clearInterval(msgInterval);
                         if (response.success) {
+                            hasRedirected = true;
                             // Chuyển hướng sang trang thi thử thực tế
                             window.location.href = `/Exam/Index?quizSetId=${response.quizSetId}`;
                         } else {
-                            hideLoadingOverlay();
-                            alert(response.message);
+                            alert(getFriendlyAiErrorMessage(response.message));
                         }
                     },
-                    error: function () {
+                    error: function (xhr) {
+                        const responseMessage = xhr?.responseJSON?.message || xhr?.responseText;
+                        alert(getFriendlyAiErrorMessage(responseMessage || "Đã xảy ra lỗi kết nối khi gọi AI tạo đề thi. Vui lòng kiểm tra cấu hình API Key và thử lại."));
+                    },
+                    complete: function () {
                         clearInterval(msgInterval);
-                        hideLoadingOverlay();
-                        alert("Đã xảy ra lỗi kết nối khi gọi AI tạo đề thi. Vui lòng kiểm tra cấu hình API Key và thử lại.");
+                        if (!hasRedirected) {
+                            resetCreateQuizUi();
+                        }
                     }
                 });
             }
 
-            function hideLoadingOverlay() {
+            function resetCreateQuizUi() {
+                isCreatingQuiz = false;
                 $("#loading-overlay").addClass("hidden");
                 
                 $("#step-header-3").addClass("opacity-50");
@@ -544,6 +557,39 @@
                 $("#step-text-3").removeClass("text-primary dark:text-primary-fixed-dim").addClass("text-secondary dark:text-secondary-fixed-dim");
 
                 $("#btn-back, #btn-next, #btn-cancel").removeAttr("disabled").removeClass("opacity-40 pointer-events-none");
+                validateBloomTotal();
+            }
+
+            function getFriendlyAiErrorMessage(message) {
+                if (typeof message !== "string" || message.trim() === "") {
+                    return "Đã xảy ra lỗi khi gọi AI tạo đề thi. Vui lòng thử lại sau.";
+                }
+
+                console.warn("[QuizGenAI] AI error:", message);
+
+                const lowerMessage = message.toLowerCase();
+
+                // 503 / Service Unavailable
+                if (
+                    lowerMessage.includes("serviceunavailable") ||
+                    lowerMessage.includes("unavailable") ||
+                    lowerMessage.includes("503")
+                ) {
+                    return "AI đang quá tải, vui lòng thử lại sau ít phút.";
+                }
+
+                // 400 / Bad Request
+                if (
+                    lowerMessage.includes("badrequest") ||
+                    lowerMessage.includes("bad request") ||
+                    lowerMessage.includes("invalid_argument") ||
+                    lowerMessage.includes("400")
+                ) {
+                    return "AI không nhận được yêu cầu hợp lệ. Vui lòng thử lại với tài liệu ngắn hơn hoặc số câu ít hơn.";
+                }
+
+                // Trả message gốc từ backend (đã friendly sẵn)
+                return message;
             }
 
             // Tự động chọn tài liệu nếu có truyền documentId trên URL

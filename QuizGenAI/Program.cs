@@ -8,7 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient<UrlExtractionService>();
 builder.Services.AddTransient<QuizGenAI.Services.GeminiService>();
+builder.Services.AddTransient<DocxExtractionService>();
 
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings"));
