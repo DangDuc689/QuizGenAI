@@ -1,0 +1,380 @@
+@model QuizGenAI.Models.AdminSettingViewModel
+
+<!-- Font & Icons from FontAwesome or Bootstrap Icons (if user prefers them, we import Bootstrap Icons) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div>
+        <h2 class="font-h1 text-h1 text-on-background">Cài đặt hệ thống</h2>
+        <p class="font-body text-body text-secondary">Quản lý cấu hình chung, bảo mật và thiết lập thông báo cho QuizGen AI.</p>
+    </div>
+    <div>
+        <button type="button" onclick="submitSettingsForm()" class="flex items-center gap-2 px-5 py-3 bg-primary hover:bg-primary-container text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-button text-button cursor-pointer">
+            <i class="bi bi-floppy text-base"></i>
+            Lưu thay đổi
+        </button>
+    </div>
+</div>
+
+<!-- Main Settings Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+    
+    <!-- Left Navigation Column (Sidebar) -->
+    <div class="lg:col-span-1">
+        <div class="bg-surface dark:bg-on-secondary-fixed border border-slate-200/80 dark:border-outline-variant rounded-2xl p-4 shadow-sm flex flex-col gap-2">
+            <p class="text-[11px] font-bold text-slate-400 dark:text-secondary-fixed-dim uppercase tracking-wider px-3 mb-2">Danh mục cài đặt</p>
+            
+            <!-- Tab: General -->
+            <button type="button" onclick="switchSettingsTab('general')" id="tab-general" 
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-button text-button text-left w-full cursor-pointer text-secondary hover:bg-slate-100/60 dark:hover:bg-on-secondary-fixed-variant">
+                <i class="bi bi-gear-fill text-lg"></i>
+                <span>Cấu hình chung</span>
+            </button>
+            
+            <!-- Tab: Security (Active by default) -->
+            <button type="button" onclick="switchSettingsTab('security')" id="tab-security" 
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-button text-button text-left w-full cursor-pointer bg-primary-fixed text-primary font-semibold border-l-4 border-primary">
+                <i class="bi bi-shield-lock-fill text-lg"></i>
+                <span>Bảo mật & Tài khoản</span>
+            </button>
+            
+            <!-- Tab: Notifications -->
+            <button type="button" onclick="switchSettingsTab('notifications')" id="tab-notifications" 
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-button text-button text-left w-full cursor-pointer text-secondary hover:bg-slate-100/60 dark:hover:bg-on-secondary-fixed-variant">
+                <i class="bi bi-bell-fill text-lg"></i>
+                <span>Cấu hình thông báo</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Right Content Column (Cards) -->
+    <div class="lg:col-span-3">
+        <form id="settingsForm" class="space-y-6">
+            @Html.AntiForgeryToken()
+
+            <!-- 1. Section: Cấu hình chung (Initially Hidden) -->
+            <div id="section-general" class="hidden bg-surface dark:bg-on-secondary-fixed border border-slate-200/80 dark:border-outline-variant rounded-2xl p-6 shadow-sm space-y-6 transition-all duration-300">
+                <div class="border-b border-slate-100 dark:border-outline-variant pb-3 mb-4">
+                    <h3 class="text-h3 font-h3 text-on-surface dark:text-primary-fixed-dim flex items-center gap-2">
+                        <i class="bi bi-gear text-primary text-xl"></i>
+                        Cấu hình chung hệ thống
+                    </h3>
+                    <p class="text-xs text-secondary mt-1">Cài đặt các thông tin cơ bản về giao diện và ngôn ngữ của ứng dụng.</p>
+                </div>
+
+                <!-- Tên ứng dụng & Slogan -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="AppName" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Tên ứng dụng</label>
+                        <input type="text" id="AppName" name="AppName" value="@Model.AppName" required 
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" />
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label for="DefaultLanguage" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Ngôn ngữ mặc định</label>
+                        <select id="DefaultLanguage" name="DefaultLanguage" required 
+                                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm cursor-pointer">
+                            <!option value="vi" @(Model.DefaultLanguage == "vi" ? "selected" : "")>Tiếng Việt (vi)</!option>
+                            <!option value="en" @(Model.DefaultLanguage == "en" ? "selected" : "")>Tiếng Anh (en)</!option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label for="Slogan" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Slogan / Mô tả ngắn</label>
+                    <input type="text" id="Slogan" name="Slogan" value="@Model.Slogan" 
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" />
+                </div>
+
+                <!-- Logo Path & Upload Area -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Logo ứng dụng</label>
+                    <input type="hidden" id="LogoPath" name="LogoPath" value="@Model.LogoPath" />
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                        <!-- Preview Logo Area -->
+                        <div class="md:col-span-1 flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-[#132337] border border-slate-200 dark:border-outline-variant rounded-xl min-h-[140px]">
+                            <p class="text-[11px] font-bold text-slate-400 dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Xem trước logo</p>
+                            <div class="w-20 h-20 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden p-2">
+                                <img id="logo-preview-img" src="@Model.LogoPath" alt="Logo Preview" onerror="this.src='https://placehold.co/100x100?text=QuizGen';" class="max-w-full max-h-full object-contain" />
+                            </div>
+                        </div>
+
+                        <!-- Drag and Drop Upload Box -->
+                        <div class="md:col-span-2">
+                            <div class="border-2 border-dashed border-slate-300 dark:border-outline hover:border-primary dark:hover:border-primary-fixed-dim rounded-xl p-6 text-center cursor-pointer transition-all duration-200 bg-white dark:bg-[#132337]/50" onclick="document.getElementById('logo-file-input').click()">
+                                <i class="bi bi-cloud-arrow-up text-primary text-3xl mb-2 block"></i>
+                                <span class="text-sm font-semibold text-on-surface dark:text-on-primary-container block">Nhấp để tải logo lên hoặc kéo thả vào đây</span>
+                                <span class="text-xs text-secondary block mt-1">Định dạng JPG, PNG hoặc SVG. Dung lượng tối đa 2MB.</span>
+                                <input type="file" id="logo-file-input" class="hidden" accept="image/*" onchange="previewLogoFile(this)" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Section: Bảo mật & Tài khoản (Shown by Default) -->
+            <div id="section-security" class="bg-surface dark:bg-on-secondary-fixed border border-slate-200/80 dark:border-outline-variant rounded-2xl p-6 shadow-sm space-y-6 transition-all duration-300">
+                <div class="border-b border-slate-100 dark:border-outline-variant pb-3 mb-4">
+                    <h3 class="text-h3 font-h3 text-on-surface dark:text-primary-fixed-dim flex items-center gap-2">
+                        <i class="bi bi-shield-lock text-primary text-xl"></i>
+                        Bảo mật & Tài khoản quản trị
+                    </h3>
+                    <p class="text-xs text-secondary mt-1">Quản lý các xác thực bảo mật và thời gian duy trì phiên đăng nhập.</p>
+                </div>
+
+                <!-- Tác vụ bảo mật (Đổi mật khẩu, Quản lý phiên) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-100 dark:border-outline-variant">
+                    <button type="button" onclick="showMockAction('Đổi mật khẩu')" class="flex items-center justify-center gap-2.5 px-4 py-3 bg-slate-100 hover:bg-slate-200/80 dark:bg-[#132337] dark:hover:bg-slate-800 text-on-surface dark:text-on-primary-container rounded-xl font-button text-button shadow-sm transition-all cursor-pointer">
+                        <i class="bi bi-key-fill text-lg text-primary"></i>
+                        Đổi mật khẩu quản trị
+                    </button>
+                    <button type="button" onclick="showMockAction('Quản lý phiên đăng nhập')" class="flex items-center justify-center gap-2.5 px-4 py-3 bg-slate-100 hover:bg-slate-200/80 dark:bg-[#132337] dark:hover:bg-slate-800 text-on-surface dark:text-on-primary-container rounded-xl font-button text-button shadow-sm transition-all cursor-pointer">
+                        <i class="bi bi-phone-vibrate text-lg text-primary"></i>
+                        Quản lý phiên đăng nhập
+                    </button>
+                </div>
+
+                <!-- 2FA Toggle & Timeout Setting -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    <!-- 2FA Toggle switch -->
+                    <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-[#132337] border border-slate-200/60 dark:border-outline-variant rounded-2xl shadow-sm">
+                        <div class="pr-4">
+                            <span class="text-sm font-bold text-on-surface dark:text-on-primary-container block">Xác thực 2 yếu tố (2FA)</span>
+                            <span class="text-xs text-secondary block mt-0.5">Tăng cường bảo mật bằng mã xác nhận khi đăng nhập.</span>
+                        </div>
+                        <div>
+                            <label class="relative inline-flex items-center cursor-pointer select-none">
+                                <input type="checkbox" id="Enable2FA" name="Enable2FA" value="true" class="sr-only peer" @(Model.Enable2FA ? "checked" : "")>
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Timeout Numeric Input -->
+                    <div class="flex flex-col gap-1.5">
+                        <label for="SessionTimeout" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Thời gian hết hạn phiên (Phút)</label>
+                        <div class="relative">
+                            <input type="number" id="SessionTimeout" name="SessionTimeout" value="@Model.SessionTimeout" min="5" max="1440" required 
+                                   class="w-full pl-4 pr-12 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm font-semibold" />
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary">Phút</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Section: Cấu hình thông báo (Initially Hidden) -->
+            <div id="section-notifications" class="hidden bg-surface dark:bg-on-secondary-fixed border border-slate-200/80 dark:border-outline-variant rounded-2xl p-6 shadow-sm space-y-6 transition-all duration-300">
+                <div class="border-b border-slate-100 dark:border-outline-variant pb-3 mb-4">
+                    <h3 class="text-h3 font-h3 text-on-surface dark:text-primary-fixed-dim flex items-center gap-2">
+                        <i class="bi bi-bell text-primary text-xl"></i>
+                        Cấu hình thông báo hệ thống
+                    </h3>
+                    <p class="text-xs text-secondary mt-1">Tùy chọn nhận thông báo qua email hoặc kênh cảnh báo của quản trị viên.</p>
+                </div>
+
+                <!-- Notification Toggles List -->
+                <div class="divide-y divide-slate-100 dark:divide-outline-variant">
+                    <!-- Toggle 1: System Alert -->
+                    <div class="flex items-center justify-between py-4 first:pt-0">
+                        <div class="pr-6">
+                            <span class="text-sm font-bold text-on-surface dark:text-on-primary-container block">Cảnh báo hệ thống</span>
+                            <span class="text-xs text-secondary block mt-0.5">Lỗi bảo mật, hoạt động đăng nhập đáng ngờ hoặc sự cố hệ thống.</span>
+                        </div>
+                        <div>
+                            <label class="relative inline-flex items-center cursor-pointer select-none">
+                                <input type="checkbox" id="EnableSystemAlert" name="EnableSystemAlert" value="true" class="sr-only peer" @(Model.EnableSystemAlert ? "checked" : "")>
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Toggle 2: User Report -->
+                    <div class="flex items-center justify-between py-4">
+                        <div class="pr-6">
+                            <span class="text-sm font-bold text-on-surface dark:text-on-primary-container block">Báo cáo từ người dùng</span>
+                            <span class="text-xs text-secondary block mt-0.5">Thông báo khi học sinh gửi báo cáo lỗi câu hỏi hoặc đề thi.</span>
+                        </div>
+                        <div>
+                            <label class="relative inline-flex items-center cursor-pointer select-none">
+                                <input type="checkbox" id="EnableUserReport" name="EnableUserReport" value="true" class="sr-only peer" @(Model.EnableUserReport ? "checked" : "")>
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Toggle 3: AI Update -->
+                    <div class="flex items-center justify-between py-4 last:pb-0">
+                        <div class="pr-6">
+                            <span class="text-sm font-bold text-on-surface dark:text-on-primary-container block">Bản cập nhật AI</span>
+                            <span class="text-xs text-secondary block mt-0.5">Nhận tin tức khi có mô hình AI tạo đề thi mới được cập nhật.</span>
+                        </div>
+                        <div>
+                            <label class="relative inline-flex items-center cursor-pointer select-none">
+                                <input type="checkbox" id="EnableAIUpdate" name="EnableAIUpdate" value="true" class="sr-only peer" @(Model.EnableAIUpdate ? "checked" : "")>
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ==========================================
+     TOAST THÔNG BÁO PHẢN HỒI (POPUP TIN NHẮN)
+     ========================================== -->
+<div id="settings-toast" class="fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 transition-all duration-300 flex items-center gap-3 bg-white dark:bg-[#132337] border border-slate-200 dark:border-outline-variant rounded-xl p-4 shadow-lg max-w-sm pointer-events-none">
+    <div id="settings-toast-icon-container" class="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm">
+        <span id="settings-toast-icon" class="material-symbols-outlined text-[18px]">check</span>
+    </div>
+    <p id="settings-toast-message" class="text-xs font-semibold text-on-surface dark:text-on-primary-container leading-normal"></p>
+</div>
+
+@section Scripts {
+    <script>
+        // ==========================================
+        // CHUYỂN TAB CÀI ĐẶT
+        // ==========================================
+        function switchSettingsTab(tabId) {
+            // Danh sách các tab và section tương ứng
+            const tabs = ['general', 'security', 'notifications'];
+            
+            tabs.forEach(t => {
+                const tabEl = document.getElementById('tab-' + t);
+                const sectionEl = document.getElementById('section-' + t);
+                
+                if (t === tabId) {
+                    // Kích hoạt tab được chọn
+                    tabEl.className = "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-button text-button text-left w-full cursor-pointer bg-primary-fixed text-primary font-semibold border-l-4 border-primary";
+                    sectionEl.classList.remove('hidden');
+                } else {
+                    // Tắt các tab không được chọn
+                    tabEl.className = "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-button text-button text-left w-full cursor-pointer text-secondary hover:bg-slate-100/60 dark:hover:bg-on-secondary-fixed-variant";
+                    sectionEl.classList.add('hidden');
+                }
+            });
+        }
+
+        // ==========================================
+        // XỬ LÝ PREVIEW LOGO KHI TẢI LÊN
+        // ==========================================
+        function previewLogoFile(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                
+                // Kiểm tra dung lượng (2MB)
+                if (file.size > 2 * 1024 * 1024) {
+                    showToast("Dung lượng tệp tin quá lớn! Tệp tối đa là 2MB.", false);
+                    input.value = ''; // Reset file input
+                    return;
+                }
+
+                // Cập nhật giao diện preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('logo-preview-img').src = e.target.result;
+                    // Gán base64 vào LogoPath (để gửi lên controller lưu trữ giả lập)
+                    document.getElementById('LogoPath').value = e.target.result;
+                };
+                reader.readAsDataURL(file);
+                
+                showToast("Đã tải tệp ảnh lên tạm thời!", true);
+            }
+        }
+
+        // ==========================================
+        // QUẢN LÝ TOAST THÔNG BÁO
+        // ==========================================
+        function showToast(message, isSuccess = true) {
+            const toast = document.getElementById('settings-toast');
+            const toastIconContainer = document.getElementById('settings-toast-icon-container');
+            const toastIcon = document.getElementById('settings-toast-icon');
+            const toastMsg = document.getElementById('settings-toast-message');
+
+            toastMsg.innerText = message;
+
+            if (isSuccess) {
+                toastIconContainer.className = "w-8 h-8 rounded-lg bg-success text-white flex items-center justify-center shrink-0 shadow-sm";
+                toastIcon.className = "bi bi-check-lg text-lg";
+            } else {
+                toastIconContainer.className = "w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0 shadow-sm";
+                toastIcon.className = "bi bi-exclamation-triangle text-lg";
+            }
+
+            // Hiển thị toast
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            // Ẩn toast sau 3.5 giây
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0');
+            }, 3500);
+        }
+
+        // ==========================================
+        // HIỂN THỊ HÀNH ĐỘNG GIẢ LẬP
+        // ==========================================
+        function showMockAction(actionName) {
+            showToast(`Tính năng "${actionName}" đang được thiết lập...`, true);
+        }
+
+        // ==========================================
+        // SUBMIT FORM BẰNG AJAX
+        // ==========================================
+        function submitSettingsForm() {
+            const form = document.getElementById('settingsForm');
+            
+            // Lấy token anti-forgery
+            const token = $('input[name="__RequestVerificationToken"]').val();
+
+            // Tổng hợp dữ liệu JSON từ form
+            const data = {
+                AppName: document.getElementById('AppName').value,
+                Slogan: document.getElementById('Slogan').value,
+                LogoPath: document.getElementById('LogoPath').value,
+                DefaultLanguage: document.getElementById('DefaultLanguage').value,
+                Enable2FA: document.getElementById('Enable2FA').checked,
+                SessionTimeout: parseInt(document.getElementById('SessionTimeout').value) || 60,
+                EnableSystemAlert: document.getElementById('EnableSystemAlert').checked,
+                EnableUserReport: document.getElementById('EnableUserReport').checked,
+                EnableAIUpdate: document.getElementById('EnableAIUpdate').checked
+            };
+
+            // Kiểm tra tính hợp lệ đơn giản
+            if (!data.AppName.trim()) {
+                showToast("Tên ứng dụng không được để trống!", false);
+                return;
+            }
+
+            if (data.SessionTimeout < 5 || data.SessionTimeout > 1440) {
+                showToast("Thời gian hết hạn phiên phải nằm trong khoảng từ 5 đến 1440 phút!", false);
+                return;
+            }
+
+            // Gửi dữ liệu qua AJAX POST
+            $.ajax({
+                url: '@Url.Action("SaveSettings", "AdminSetting", new { area = "Admin" })',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    "RequestVerificationToken": token
+                },
+                data: JSON.stringify(data),
+                success: function (response) {
+                    if (response.success) {
+                        showToast(response.message, true);
+                    } else {
+                        showToast(response.message, false);
+                    }
+                },
+                error: function () {
+                    showToast("Lỗi hệ thống khi lưu cài đặt!", false);
+                }
+            });
+        }
+    </script>
+}
