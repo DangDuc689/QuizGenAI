@@ -1,0 +1,304 @@
+@model QuizGenAI.Models.AdminDashboardViewModel
+
+<!-- Tiêu đề trang & Bộ lọc thời gian -->
+<div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+        <h2 class="font-h1 text-h1 text-on-background">Tổng quan Hệ thống</h2>
+        <p class="font-body text-body text-secondary">Theo dõi hoạt động và hiệu suất của QuizGen AI.</p>
+    </div>
+    
+    <!-- Nhóm nút lọc thời gian -->
+    <div class="flex bg-white dark:bg-[#0d1c2f] p-1 rounded-xl border border-slate-200/60 dark:border-outline-variant shadow-sm shrink-0">
+        <button onclick="changeTimeframe('today')" class="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer @(Model.SelectedTimeframe == "today" ? "bg-primary text-white shadow-sm" : "text-secondary hover:text-on-surface dark:text-secondary-fixed-dim")">
+            Hôm nay
+        </button>
+        <button onclick="changeTimeframe('7days')" class="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer border-l border-r border-slate-100 dark:border-outline-variant/30 @(Model.SelectedTimeframe == "7days" ? "bg-primary text-white shadow-sm" : "text-secondary hover:text-on-surface dark:text-secondary-fixed-dim")">
+            7 ngày qua
+        </button>
+        <button onclick="changeTimeframe('30days')" class="px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer @(Model.SelectedTimeframe == "30days" ? "bg-primary text-white shadow-sm" : "text-secondary hover:text-on-surface dark:text-secondary-fixed-dim")">
+            30 ngày qua
+        </button>
+    </div>
+</div>
+
+<!-- Lưới 4 thẻ thống kê (Stats Cards Row) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Card 1: Tổng người dùng -->
+    <div class="bg-surface rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex items-start justify-between">
+        <div>
+            <span class="block text-secondary dark:text-secondary-fixed-dim text-caption font-semibold mb-1">Tổng người dùng</span>
+            <strong class="text-h2 font-h2 text-on-surface">@Model.TotalUsers.ToString("N0")</strong>
+        </div>
+        <div class="flex flex-col items-end gap-3">
+            <div class="bg-primary-fixed p-3 rounded-lg text-primary shadow-sm shrink-0">
+                <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">group</span>
+            </div>
+            <span class="text-[10px] font-bold text-success flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-[12px] font-bold">trending_up</span>
+                @Model.TotalUsersChange
+            </span>
+        </div>
+    </div>
+
+    <!-- Card 2: Tài liệu mới -->
+    <div class="bg-surface rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex items-start justify-between">
+        <div>
+            <span class="block text-secondary dark:text-secondary-fixed-dim text-caption font-semibold mb-1">Tài liệu mới</span>
+            <strong class="text-h2 font-h2 text-on-surface">@Model.NewDocuments.ToString("N0")</strong>
+        </div>
+        <div class="flex flex-col items-end gap-3">
+            <div class="bg-secondary-fixed p-3 rounded-lg text-secondary shadow-sm shrink-0">
+                <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">description</span>
+            </div>
+            <span class="text-[10px] font-bold text-success flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-[12px] font-bold">trending_up</span>
+                @Model.NewDocumentsChange
+            </span>
+        </div>
+    </div>
+
+    <!-- Card 3: Câu hỏi đã tạo -->
+    <div class="bg-surface rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex items-start justify-between">
+        <div>
+            <span class="block text-secondary dark:text-secondary-fixed-dim text-caption font-semibold mb-1">Câu hỏi đã tạo</span>
+            <strong class="text-h2 font-h2 text-on-surface">@Model.QuestionsCreated.ToString("N0")</strong>
+        </div>
+        <div class="flex flex-col items-end gap-3">
+            <div class="bg-tertiary-fixed p-3 rounded-lg text-tertiary shadow-sm shrink-0">
+                <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">quiz</span>
+            </div>
+            <span class="text-[10px] font-bold text-success flex items-center gap-0.5">
+                <span class="material-symbols-outlined text-[12px] font-bold">trending_up</span>
+                @Model.QuestionsCreatedChange
+            </span>
+        </div>
+    </div>
+
+    <!-- Card 4: Tỷ lệ thành công -->
+    <div class="bg-surface rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex items-start justify-between">
+        <div>
+            <span class="block text-secondary dark:text-secondary-fixed-dim text-caption font-semibold mb-1">Tỷ lệ thành công</span>
+            <strong class="text-h2 font-h2 text-on-surface">@Model.SuccessRate%</strong>
+        </div>
+        <div class="flex flex-col items-end gap-3">
+            <div class="bg-success-light p-3 rounded-lg text-success shadow-sm shrink-0">
+                <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">verified</span>
+            </div>
+            <span class="text-[10px] font-bold text-secondary dark:text-secondary-fixed-dim">
+                @Model.SuccessRateChange
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Bố cục lưới 2 cột chính (Grid Layout) -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <!-- Cột trái: Tài liệu mới nhất (Chiếm 2/3 width) -->
+    <div class="lg:col-span-2 bg-surface rounded-xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-6 flex flex-col justify-between">
+        <div>
+            <h3 class="font-h3 text-h3 text-on-surface mb-6">Tài liệu mới nhất</h3>
+            
+            <div class="space-y-4 mb-6" id="documents-container">
+                @foreach (var doc in Model.RecentDocuments)
+                {
+                    <div class="flex items-center justify-between p-4 rounded-xl border border-slate-100 dark:border-outline-variant/30 hover:shadow-sm transition-all duration-200">
+                        <div class="flex items-center gap-4">
+                            <!-- Icon theo định dạng file -->
+                            <div class="w-12 h-12 rounded-lg flex items-center justify-center shadow-sm shrink-0 @(doc.FileType == "pdf" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600")">
+                                <span class="material-symbols-outlined text-[24px]">
+                                    @(doc.FileType == "pdf" ? "picture_as_pdf" : "description")
+                                </span>
+                            </div>
+                            <div>
+                                <h4 class="font-button text-on-surface font-semibold mb-1">@doc.Filename</h4>
+                                <p class="text-xs text-outline font-semibold">
+                                    @doc.UploadedTime &nbsp;•&nbsp; @doc.QuestionsCount câu hỏi &nbsp;•&nbsp; @doc.FileSize
+                                </p>
+                            </div>
+                        </div>
+                        <div>
+                            <button type="button" onclick="showDocumentDetail('@doc.Filename')" class="text-xs font-bold text-primary hover:text-primary-container px-3 py-1.5 rounded-lg hover:bg-slate-50 transition cursor-pointer">
+                                Chi tiết
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <!-- Nút rộng ở đáy card tài liệu mới nhất -->
+        <button type="button" onclick="viewAllDocuments()" class="w-full py-3 border border-slate-200 dark:border-outline-variant text-center rounded-xl font-bold text-sm text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition shadow-sm cursor-pointer mt-auto">
+            Xem tất cả tài liệu
+        </button>
+    </div>
+
+    <!-- Cột phải: Phân bổ Bloom & Log hệ thống (Chiếm 1/3 width) -->
+    <div class="space-y-8">
+        
+        <!-- Khối 1: Phân bổ Bloom -->
+        <div class="bg-surface rounded-xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-6">
+            <h3 class="font-h3 text-h3 text-on-surface mb-6">Phân bổ Cấp độ Bloom</h3>
+            
+            <div class="space-y-6">
+                <!-- Ghi nhớ -->
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-xs font-bold text-primary uppercase tracking-wide">Ghi nhớ (Remembering)</span>
+                        <span class="text-xs font-bold text-on-surface">@Model.BloomRememberPercent%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden shadow-inner">
+                        <div class="bg-primary h-full rounded-full" style="width: @Model.BloomRememberPercent%"></div>
+                    </div>
+                </div>
+
+                <!-- Hiểu -->
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-xs font-bold text-bloom-understand uppercase tracking-wide">Hiểu (Understanding)</span>
+                        <span class="text-xs font-bold text-on-surface">@Model.BloomUnderstandPercent%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden shadow-inner">
+                        <div class="bg-bloom-understand h-full rounded-full" style="width: @Model.BloomUnderstandPercent%"></div>
+                    </div>
+                </div>
+
+                <!-- Vận dụng -->
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-xs font-bold text-bloom-apply uppercase tracking-wide">Vận dụng (Applying)</span>
+                        <span class="text-xs font-bold text-on-surface">@Model.BloomApplyPercent%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden shadow-inner">
+                        <div class="bg-bloom-apply h-full rounded-full" style="width: @Model.BloomApplyPercent%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Khối 2: Thông báo Hệ thống (Logs) -->
+        <div class="bg-surface rounded-xl border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="font-h3 text-h3 text-on-surface">Thông báo Hệ thống</h3>
+                <span class="material-symbols-outlined text-outline cursor-pointer hover:text-on-surface transition-colors" title="Lịch sử thông báo">history</span>
+            </div>
+            
+            <div class="space-y-6">
+                @foreach (var log in Model.SystemLogs)
+                {
+                    <div class="flex items-start gap-3">
+                        <!-- Chấm tròn màu chỉ định trạng thái -->
+                        <div class="w-2 h-2 rounded-full mt-2 shrink-0 @(log.LogType == "Warning" ? "bg-warning" : log.LogType == "Success" ? "bg-success" : "bg-primary")"></div>
+                        <div class="flex-1">
+                            <p class="font-body text-body text-on-surface leading-normal">
+                                @if (log.Message.Contains("\""))
+                                {
+                                    // Bôi đậm văn bản nằm trong dấu nháy kép cho nổi bật như mockup
+                                    var parts = log.Message.Split('"');
+                                    for (int i = 0; i < parts.Length; i++)
+                                    {
+                                        if (i % 2 == 1)
+                                        {
+                                            <strong>"@parts[i]"</strong>
+                                        }
+                                        else
+                                        {
+                                            <span>@parts[i]</span>
+                                        }
+                                    }
+                                }
+                                else if (log.Message.Contains("v2.4.1"))
+                                {
+                                    var parts = log.Message.Split("v2.4.1");
+                                    <span>@parts[0]</span><strong class="text-success">v2.4.1</strong><span>@parts[1]</span>
+                                }
+                                else if (log.Message.Contains("192.168.1.1"))
+                                {
+                                    var parts = log.Message.Split("192.168.1.1");
+                                    <span>@parts[0]</span><strong class="text-error">192.168.1.1</strong>
+                                }
+                                else
+                                {
+                                    <span>@log.Message</span>
+                                }
+                            </p>
+                            <p class="text-[11px] text-outline font-semibold mt-1 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[12px] font-bold">schedule</span>
+                                <span>@log.TimeString</span>
+                            </p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ==========================================
+     TOAST THÔNG BÁO PHẢN HỒI (POPUP TIN NHẮN)
+     ========================================== -->
+<div id="status-toast" class="fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 transition-all duration-300 flex items-center gap-3 bg-white dark:bg-[#132337] border border-slate-200 dark:border-outline-variant rounded-xl p-4 shadow-lg max-w-sm pointer-events-none">
+    <div id="toast-icon-container" class="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0">
+        <span id="toast-icon" class="material-symbols-outlined text-[18px]">check</span>
+    </div>
+    <p id="toast-message" class="text-xs font-semibold text-on-surface dark:text-on-primary-container leading-normal"></p>
+</div>
+
+@section Scripts {
+    <script>
+        // Chuyển đổi bộ lọc thời gian
+        function changeTimeframe(value) {
+            window.location.href = '@Url.Action("Index", "AdminDashboard", new { area = "Admin" })?timeframe=' + value;
+        }
+
+        // Hiện thông báo phản hồi (Toast)
+        function showToast(message, isSuccess = true) {
+            const toast = document.getElementById('status-toast');
+            const toastIconContainer = document.getElementById('toast-icon-container');
+            const toastIcon = document.getElementById('toast-icon');
+            const toastMsg = document.getElementById('toast-message');
+
+            toastMsg.innerText = message;
+
+            if (isSuccess) {
+                toastIconContainer.className = "w-8 h-8 rounded-lg bg-success text-white flex items-center justify-center shrink-0 shadow-sm";
+                toastIcon.innerText = "check";
+            } else {
+                toastIconContainer.className = "w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0 shadow-sm";
+                toastIcon.innerText = "error";
+            }
+
+            // Slide up toast
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0');
+            }, 3000);
+        }
+
+        // Xem chi tiết tài liệu
+        function showDocumentDetail(filename) {
+            showToast("Đang mở chi tiết tài liệu: " + filename, true);
+        }
+
+        // Gọi API xem tất cả tài liệu
+        function viewAllDocuments() {
+            $.get('/Admin/AdminDashboard/ViewAllDocuments', function (response) {
+                if (response.success) {
+                    showToast(response.message, true);
+                    // Có thể thực hiện chuyển hướng sau 1s
+                    setTimeout(() => {
+                        window.location.href = response.redirectUrl;
+                    }, 1000);
+                } else {
+                    showToast("Có lỗi xảy ra.", false);
+                }
+            }).fail(function () {
+                showToast("Lỗi kết nối máy chủ.", false);
+            });
+        }
+    </script>
+}

@@ -121,6 +121,21 @@ namespace QuizGenAI.Areas.Identity.Pages.Account
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in.");
+                    if (returnUrl == "~/" || string.IsNullOrEmpty(returnUrl))
+                    {
+                        var user = await _signInManager.UserManager.FindByEmailAsync(Input.Email);
+                        if (user != null)
+                        {
+                            if (await _signInManager.UserManager.IsInRoleAsync(user, SD.Role_Admin))
+                            {
+                                return RedirectToAction("Index", "AdminDashboard", new { area = "Admin" });
+                            }
+                            else
+                            {
+                                return RedirectToAction("Index", "Dashboard");
+                            }
+                        }
+                    }
                     return LocalRedirect(returnUrl);
                 }
                 if (result.RequiresTwoFactor)
