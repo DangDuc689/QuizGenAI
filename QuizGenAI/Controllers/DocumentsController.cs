@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuizGenAI.Models;
 using System.Text;
-using UglyToad.PdfPig;
 using DocumentFormat.OpenXml.Packaging;
 using Microsoft.AspNetCore.Authorization;
 using QuizGenAI.Services;
@@ -16,17 +15,20 @@ namespace QuizGenAI.Controllers
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly DocxExtractionService _docxExtractionService;
+        private readonly PdfExtractionService _pdfExtractionService;
         private readonly UrlExtractionService _urlExtractionService;
 
         public DocumentsController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             DocxExtractionService docxExtractionService,
+            PdfExtractionService pdfExtractionService,
             UrlExtractionService urlExtractionService)
         {
             _context = context;
             _userManager = userManager;
             _docxExtractionService = docxExtractionService;
+            _pdfExtractionService = pdfExtractionService;
             _urlExtractionService = urlExtractionService;
         }
 
@@ -173,18 +175,12 @@ namespace QuizGenAI.Controllers
 
                 if (documentSourceType == DocumentSourceType.PDF)
                 {
-                    using var pdfDocument = PdfDocument.Open(fullPath);
+                    var pdfExtraction = await _pdfExtractionService.ExtractAsync(
+                        fullPath,
+                        HttpContext.RequestAborted);
 
-                    pageCount = pdfDocument.NumberOfPages;
-
-                    var textBuilder = new StringBuilder();
-
-                    foreach (var page in pdfDocument.GetPages())
-                    {
-                        textBuilder.AppendLine(page.Text);
-                    }
-
-                    extractedTextFromFile = textBuilder.ToString().Trim();
+                    pageCount = pdfExtraction.PageCount;
+                    extractedTextFromFile = pdfExtraction.Text;
                 }
 
                 if (documentSourceType == DocumentSourceType.Word)

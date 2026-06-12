@@ -3,7 +3,9 @@
 @{
     ViewData["Title"] = "Chi tiết tài liệu";
 
-    var textLength = Model.ExtractedText?.Length ?? 0;
+    var textLength = Model.SourceType == QuizGenAI.Models.DocumentSourceType.PDF
+        ? RemovePdfMetadataBlock(Model.ExtractedText).Length
+        : (Model.ExtractedText?.Length ?? 0);
 
     var estimatedQuestions = textLength switch
     {
@@ -32,12 +34,33 @@
     };
 
     var isUrlDocument = Model.SourceType == QuizGenAI.Models.DocumentSourceType.URL;
-    var extractedText = Model.ExtractedText ?? string.Empty;
+    var isPdfDocument = Model.SourceType == QuizGenAI.Models.DocumentSourceType.PDF;
+    var rawExtractedText = Model.ExtractedText ?? string.Empty;
+    var pdfMetadata = isPdfDocument
+        ? ParsePdfExtractionMetadata(rawExtractedText)
+        : null;
+    var extractedText = isPdfDocument
+        ? RemovePdfMetadataBlock(rawExtractedText)
+        : rawExtractedText;
     var hasExtractedText = !string.IsNullOrWhiteSpace(extractedText);
-    var normalTextSectionHeading = QuizGenAI.Services.DocxExtractionService.NormalTextSectionHeading;
-    var imageTextSectionHeading = QuizGenAI.Services.DocxExtractionService.ImageTextSectionHeading;
-    var imageUnreadableMessage = QuizGenAI.Services.DocxExtractionService.ImageUnreadableMessage;
-    var imageVisionTroubleshootingMessage = QuizGenAI.Services.DocxExtractionService.ImageVisionTroubleshootingMessage;
+    var normalTextSectionHeading = isPdfDocument
+        ? QuizGenAI.Services.PdfExtractionService.NormalTextSectionHeading
+        : QuizGenAI.Services.DocxExtractionService.NormalTextSectionHeading;
+    var imageTextSectionHeading = isPdfDocument
+        ? QuizGenAI.Services.PdfExtractionService.ImageTextSectionHeading
+        : QuizGenAI.Services.DocxExtractionService.ImageTextSectionHeading;
+    var imageUnreadableMessage = isPdfDocument
+        ? QuizGenAI.Services.PdfExtractionService.ImageUnreadableMessage
+        : QuizGenAI.Services.DocxExtractionService.ImageUnreadableMessage;
+    var imageVisionTroubleshootingMessage = isPdfDocument
+        ? "__PDF_IMAGE_VISION_TROUBLESHOOTING_UNUSED__"
+        : QuizGenAI.Services.DocxExtractionService.ImageVisionTroubleshootingMessage;
+    var sourceTextSectionTitle = isPdfDocument
+        ? "Nội dung văn bản trích xuất từ PDF"
+        : "Nội dung văn bản trích xuất từ Word";
+    var imageTextSectionTitle = isPdfDocument
+        ? "Nội dung nhận diện từ hình ảnh trong PDF"
+        : "Nội dung nhận diện từ hình ảnh trong tài liệu";
     var imageSectionStart = extractedText.IndexOf(imageTextSectionHeading, StringComparison.Ordinal);
     var hasImageTextSection = imageSectionStart >= 0;
     var normalExtractedText = extractedText;
@@ -58,13 +81,28 @@
     var cleanImageTextForDisplay = CleanImageTextForDisplay(imageExtractedText, imageUnreadableMessage, imageVisionTroubleshootingMessage);
     var normalUsefulWords = CountUsefulWords(cleanNormalText);
     var imageUsefulWords = CountUsefulWords(cleanImageTextForDisplay);
-    var readableImageCount = CountReadableImageSections(imageExtractedText);
-    var detectedImageCount = GetDetectedImageCount(imageExtractedText, readableImageCount, hasImageTextSection);
+    var hasPdfMetadata = pdfMetadata?.IsPresent == true;
+    var pdfHasEnoughRawText = hasPdfMetadata
+        ? pdfMetadata!.HasEnoughRawText
+        : normalUsefulWords >= 80 || HasEnoughMathLearningSignals(cleanNormalText);
+    var metadataHasImageContent = hasPdfMetadata && pdfMetadata!.HasImageContent;
+    var parsedReadableImageCount = CountReadableImageSections(imageExtractedText);
+    var parsedDetectedImageCount = GetDetectedImageCount(imageExtractedText, parsedReadableImageCount, hasImageTextSection);
+    var readableImageCount = isPdfDocument && hasPdfMetadata
+        ? pdfMetadata!.RecognizedImageCount
+        : parsedReadableImageCount;
+    var detectedImageCount = isPdfDocument && hasPdfMetadata
+        ? (metadataHasImageContent ? Math.Max(pdfMetadata!.DetectedImageCount, readableImageCount) : 0)
+        : parsedDetectedImageCount;
     var imageTextHasUnreadableMessage = imageExtractedText.Contains(imageUnreadableMessage, StringComparison.OrdinalIgnoreCase);
-    var hasReadableImageText = hasImageTextSection
-        && !string.IsNullOrWhiteSpace(cleanImageTextForDisplay)
-        && !imageTextHasUnreadableMessage;
-    var normalTextIsShort = hasImageTextSection && hasReadableImageText && normalUsefulWords < 80;
+    var hasReadableImageText = isPdfDocument && hasPdfMetadata
+        ? metadataHasImageContent
+        : hasImageTextSection
+            && !string.IsNullOrWhiteSpace(cleanImageTextForDisplay)
+            && !imageTextHasUnreadableMessage;
+    var normalTextIsShort = isPdfDocument
+        ? hasReadableImageText && !pdfHasEnoughRawText
+        : hasImageTextSection && hasReadableImageText && normalUsefulWords < 80;
     var mainUsefulWords = CountUsefulWords($"{cleanNormalText} {cleanImageTextForDisplay}");
     var contentTypeLabel = (isUrlDocument, hasExtractedText, hasImageTextSection, normalUsefulWords < 80) switch
     {
@@ -83,10 +121,30 @@
         (_, _, true, _, true) => "Văn bản + hình ảnh",
         _ => "Văn bản"
     };
+    if (isPdfDocument)
+    {
+        if (hasReadableImageText)
+        {
+            contentTypeLabel = pdfHasEnoughRawText
+                ? "Văn bản + hình ảnh"
+                : "Chủ yếu là hình ảnh";
+            mainContentSource = pdfHasEnoughRawText
+                ? "Văn bản + hình ảnh"
+                : "Hình ảnh";
+        }
+        else
+        {
+            contentTypeLabel = "Văn bản";
+            mainContentSource = "Văn bản";
+            detectedImageCount = 0;
+            readableImageCount = 0;
+        }
+    }
+
     var quizLearningText = $"{cleanNormalText} {cleanImageTextForDisplay}";
     var hasMathLearningSignals = HasEnoughMathLearningSignals(quizLearningText);
     var hasEnoughQuizContent = mainUsefulWords >= 80 || hasMathLearningSignals;
-    var contentTypeHasImages = contentTypeLabel.Contains("hình ảnh", StringComparison.OrdinalIgnoreCase);
+    var contentTypeHasImages = hasReadableImageText;
     var quizContentStatus = !hasEnoughQuizContent
         ? "Chưa đủ nội dung"
         : mainUsefulWords < 200
@@ -121,6 +179,124 @@
 }
 
 @functions {
+    private sealed class PdfExtractionMetadata
+    {
+        public bool IsPresent { get; init; }
+        public int PageCount { get; init; }
+        public int RawTextLength { get; init; }
+        public bool HasEnoughRawText { get; init; }
+        public bool IsScanPdf { get; init; }
+        public int TotalImageCount { get; init; }
+        public int DetectedImageCount { get; init; }
+        public int ProcessedImageCount { get; init; }
+        public int RecognizedImageCount { get; init; }
+        public bool HasImageContent { get; init; }
+    }
+
+    private static PdfExtractionMetadata? ParsePdfExtractionMetadata(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var metadataText = ExtractPdfMetadataBlock(text);
+        if (string.IsNullOrWhiteSpace(metadataText))
+        {
+            return null;
+        }
+
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var line in metadataText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separatorIndex = line.IndexOf('=', StringComparison.Ordinal);
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            values[line[..separatorIndex].Trim()] = line[(separatorIndex + 1)..].Trim();
+        }
+
+        return new PdfExtractionMetadata
+        {
+            IsPresent = true,
+            PageCount = GetMetadataInt(values, "PageCount"),
+            RawTextLength = GetMetadataInt(values, "RawTextLength"),
+            HasEnoughRawText = GetMetadataBool(values, "HasEnoughRawText"),
+            IsScanPdf = GetMetadataBool(values, "IsScanPdf"),
+            TotalImageCount = GetMetadataInt(values, "TotalImageCount"),
+            DetectedImageCount = GetMetadataInt(values, "DetectedImageCount"),
+            ProcessedImageCount = GetMetadataInt(values, "ProcessedImageCount"),
+            RecognizedImageCount = GetMetadataInt(values, "RecognizedImageCount"),
+            HasImageContent = GetMetadataBool(values, "HasImageContent")
+        };
+    }
+
+    private static string RemovePdfMetadataBlock(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        var start = text.IndexOf(QuizGenAI.Services.PdfExtractionService.MetadataSectionHeading, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return text.Trim();
+        }
+
+        var end = text.IndexOf(
+            QuizGenAI.Services.PdfExtractionService.MetadataSectionEndHeading,
+            start,
+            StringComparison.Ordinal);
+
+        if (end < 0)
+        {
+            return text[..start].Trim();
+        }
+
+        end += QuizGenAI.Services.PdfExtractionService.MetadataSectionEndHeading.Length;
+
+        return (text[..start] + text[end..]).Trim();
+    }
+
+    private static string? ExtractPdfMetadataBlock(string text)
+    {
+        var start = text.IndexOf(QuizGenAI.Services.PdfExtractionService.MetadataSectionHeading, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return null;
+        }
+
+        start += QuizGenAI.Services.PdfExtractionService.MetadataSectionHeading.Length;
+
+        var end = text.IndexOf(
+            QuizGenAI.Services.PdfExtractionService.MetadataSectionEndHeading,
+            start,
+            StringComparison.Ordinal);
+
+        if (end < 0)
+        {
+            return text[start..].Trim();
+        }
+
+        return text[start..end].Trim();
+    }
+
+    private static int GetMetadataInt(IReadOnlyDictionary<string, string> values, string key)
+    {
+        return values.TryGetValue(key, out var value) && int.TryParse(value, out var number)
+            ? number
+            : 0;
+    }
+
+    private static bool GetMetadataBool(IReadOnlyDictionary<string, string> values, string key)
+    {
+        return values.TryGetValue(key, out var value) && bool.TryParse(value, out var flag) && flag;
+    }
+
     private static int CountUsefulWords(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -184,9 +360,15 @@
         var cleaned = text
             .Replace(QuizGenAI.Services.DocxExtractionService.NormalTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
             .Replace(QuizGenAI.Services.DocxExtractionService.ImageTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.PdfExtractionService.NormalTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.PdfExtractionService.ImageTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.PdfExtractionService.ScannedPdfMessage, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.PdfExtractionService.ImageUnreadableMessage, " ", StringComparison.OrdinalIgnoreCase)
             .Replace(imageUnreadableMessage, " ", StringComparison.OrdinalIgnoreCase)
             .Replace(imageVisionTroubleshootingMessage, " ", StringComparison.OrdinalIgnoreCase)
             .Replace("KHONG_DOC_DUOC_NOI_DUNG_ANH", " ", StringComparison.OrdinalIgnoreCase);
+
+        cleaned = RemovePdfMetadataBlock(cleaned);
 
         cleaned = System.Text.RegularExpressions.Regex.Replace(
             cleaned,
@@ -197,6 +379,12 @@
         cleaned = System.Text.RegularExpressions.Regex.Replace(
             cleaned,
             @"\(Không có nội dung văn bản thường được trích xuất từ Word\.\)",
+            " ",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        cleaned = System.Text.RegularExpressions.Regex.Replace(
+            cleaned,
+            @"\(KhÃ´ng cÃ³ ná»™i dung vÄƒn báº£n .*PDF\.\)",
             " ",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
@@ -428,7 +616,7 @@
 
                         <h3>Nội dung tài liệu</h3>
 
-                        @if (!string.IsNullOrWhiteSpace(Model.ExtractedText))
+                        @if (hasExtractedText)
                         {
                             <div class="stitch-document-text-wrapper collapsed">
                                 @if (hasImageTextSection)
@@ -451,7 +639,7 @@
                                     @if (!string.IsNullOrWhiteSpace(cleanNormalText))
                                     {
                                     <div class="stitch-document-text-section stitch-source-text-section @(normalTextIsShort ? "is-secondary" : "")">
-                                        <h4>Nội dung văn bản trích xuất từ Word</h4>
+                                        <h4>@sourceTextSectionTitle</h4>
                                         <div class="stitch-document-text">
                                             @normalExtractedText
                                         </div>
@@ -460,7 +648,7 @@
                                     }
 
                                     <div class="stitch-document-text-section stitch-image-text-section">
-                                        <h4>Nội dung nhận diện từ hình ảnh trong tài liệu</h4>
+                                        <h4>@imageTextSectionTitle</h4>
 
                                         @if (!string.IsNullOrWhiteSpace(cleanImageTextForDisplay))
                                         {
@@ -479,7 +667,7 @@
                                 else
                                 {
                                     <div class="stitch-document-text">
-                                        @Model.ExtractedText
+                                        @extractedText
                                     </div>
                                 }
 

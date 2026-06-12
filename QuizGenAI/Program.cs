@@ -11,6 +11,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<UrlExtractionService>();
 builder.Services.AddTransient<QuizGenAI.Services.GeminiService>();
 builder.Services.AddTransient<DocxExtractionService>();
+builder.Services.AddTransient<PdfExtractionService>();
 
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings"));

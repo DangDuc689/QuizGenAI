@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuizGenAI.Models;
 using QuizGenAI.Services;
-using UglyToad.PdfPig;
 using DocumentFormat.OpenXml.Packaging;
 
 namespace QuizGenAI.Controllers
@@ -36,6 +35,7 @@ namespace QuizGenAI.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly GeminiService _geminiService;
         private readonly DocxExtractionService _docxExtractionService;
+        private readonly PdfExtractionService _pdfExtractionService;
         private readonly ILogger<ExamController> _logger;
 
         public ExamController(
@@ -43,12 +43,14 @@ namespace QuizGenAI.Controllers
             UserManager<ApplicationUser> userManager,
             GeminiService geminiService,
             DocxExtractionService docxExtractionService,
+            PdfExtractionService pdfExtractionService,
             ILogger<ExamController> logger)
         {
             _context = context;
             _userManager = userManager;
             _geminiService = geminiService;
             _docxExtractionService = docxExtractionService;
+            _pdfExtractionService = pdfExtractionService;
             _logger = logger;
         }
 
@@ -259,14 +261,12 @@ namespace QuizGenAI.Controllers
 
                 if (fileExtension == ".pdf")
                 {
-                    using var pdfDocument = PdfDocument.Open(fullPath);
-                    pageCount = pdfDocument.NumberOfPages;
-                    var textBuilder = new StringBuilder();
-                    foreach (var page in pdfDocument.GetPages())
-                    {
-                        textBuilder.AppendLine(page.Text);
-                    }
-                    extractedText = textBuilder.ToString().Trim();
+                    var pdfExtraction = await _pdfExtractionService.ExtractAsync(
+                        fullPath,
+                        HttpContext.RequestAborted);
+
+                    pageCount = pdfExtraction.PageCount;
+                    extractedText = pdfExtraction.Text;
                 }
                 else if (fileExtension == ".docx")
                 {
@@ -754,8 +754,14 @@ namespace QuizGenAI.Controllers
             var cleaned = text
                 .Replace(DocxExtractionService.NormalTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
                 .Replace(DocxExtractionService.ImageTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+                .Replace(PdfExtractionService.NormalTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+                .Replace(PdfExtractionService.ImageTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+                .Replace(PdfExtractionService.ScannedPdfMessage, " ", StringComparison.OrdinalIgnoreCase)
+                .Replace(PdfExtractionService.ImageUnreadableMessage, " ", StringComparison.OrdinalIgnoreCase)
                 .Replace(DocxExtractionService.ImageVisionTroubleshootingMessage, " ", StringComparison.OrdinalIgnoreCase)
                 .Replace("KHONG_DOC_DUOC_NOI_DUNG_ANH", " ", StringComparison.OrdinalIgnoreCase);
+
+            cleaned = RemovePdfExtractionMetadata(cleaned);
 
             cleaned = Regex.Replace(
                 cleaned,
@@ -782,6 +788,29 @@ namespace QuizGenAI.Controllers
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
             return cleaned;
+        }
+
+        private static string RemovePdfExtractionMetadata(string text)
+        {
+            var start = text.IndexOf(PdfExtractionService.MetadataSectionHeading, StringComparison.Ordinal);
+            if (start < 0)
+            {
+                return text;
+            }
+
+            var end = text.IndexOf(
+                PdfExtractionService.MetadataSectionEndHeading,
+                start,
+                StringComparison.Ordinal);
+
+            if (end < 0)
+            {
+                return text[..start];
+            }
+
+            end += PdfExtractionService.MetadataSectionEndHeading.Length;
+
+            return text[..start] + text[end..];
         }
 
         private static int CountUsefulWords(string? text)
