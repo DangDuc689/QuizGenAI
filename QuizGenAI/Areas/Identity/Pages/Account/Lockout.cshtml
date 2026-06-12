@@ -1,0 +1,29 @@
+@page
+@model QuizGenAI.Areas.Identity.Pages.Account.LockoutModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Tài khoản bị khóa";
+}
+
+<main class="auth-shell">
+    <div class="auth-brand">
+        <a asp-area="" asp-controller="Home" asp-action="Index">QuizGen AI</a>
+        <p>Academic Excellence</p>
+    </div>
+
+    <section class="auth-card" style="text-align: center; padding: 3rem 2rem;">
+        <span class="material-symbols-outlined" style="font-size: 64px; color: #ef4444; margin-bottom: 1rem;">lock</span>
+
+        <h1 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Tài khoản bị khóa tạm thời</h1>
+
+        <p style="color: #6b7280; margin-bottom: 2rem;">
+            Tài khoản của bạn đã bị khóa do nhập sai mật khẩu nhiều lần.<br/>
+            Vui lòng thử lại sau <strong>15 phút</strong>.
+        </p>
+
+        <a asp-page="./Login" class="auth-primary-button" style="display: inline-block; text-decoration: none;">
+            Quay lại trang đăng nhập
+            <span class="material-symbols-outlined">arrow_forward</span>
+        </a>
+    </section>
+</main>

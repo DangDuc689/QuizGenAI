@@ -7,24 +7,43 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddHttpClient();
+builder.Services.AddTransient<QuizGenAI.Services.GeminiService>();
 
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, SmtpEmailSender>();
 
 // Database Context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ASP.NET Core Identity
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+    // Password settings
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 8;
+
+    // Lockout settings
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.AllowedForNewUsers = true;
+
+    // User settings
+    options.User.RequireUniqueEmail = true;
+})
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.LoginPath = "/Login";
-    options.AccessDeniedPath = "/Login/AccessDenied";
+    options.LoginPath = "/Identity/Account/Login";
+    options.AccessDeniedPath = "/Identity/Account/AccessDenied";
 });
 
 // Enable Razor Pages (needed for Default Identity UI if used)
@@ -43,6 +62,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+// Serve files uploaded at runtime, such as user avatars and documents.
+app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthentication();
@@ -57,7 +78,7 @@ app.MapControllerRoute(
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}")
+    pattern: "{controller=Landing}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 app.MapRazorPages();
@@ -109,6 +130,21 @@ static async Task SeedIdentityAsync(WebApplication app)
             {
                 logger.LogWarning("Admin account seed failed: {Errors}", string.Join("; ", createResult.Errors.Select(e => e.Description)));
                 return;
+            }
+        }
+        else
+        {
+            var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<ApplicationUser>>();
+            var verifyResult = passwordHasher.VerifyHashedPassword(adminUser, adminUser.PasswordHash, adminPassword);
+            if (verifyResult == PasswordVerificationResult.Failed)
+            {
+                logger.LogInformation("Updating admin password to configured password...");
+                adminUser.PasswordHash = passwordHasher.HashPassword(adminUser, adminPassword);
+                var updateResult = await userManager.UpdateAsync(adminUser);
+                if (!updateResult.Succeeded)
+                {
+                    logger.LogWarning("Failed to update admin password: {Errors}", string.Join("; ", updateResult.Errors.Select(e => e.Description)));
+                }
             }
         }
 

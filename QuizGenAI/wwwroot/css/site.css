@@ -34,7 +34,6 @@ body {
     white-space: nowrap;
     word-wrap: normal;
     direction: ltr;
-    -webkit-font-feature-settings: 'liga';
     -webkit-font-smoothing: antialiased;
     transition: transform 0.2s ease, font-variation-settings 0.2s ease;
 }
@@ -981,6 +980,15 @@ main:has(.documents-page) {
     font-size: 18px;
 }
 
+.document-more-menu button.delete-document-btn {
+    color: #ef4444;
+}
+
+.document-more-menu button.delete-document-btn:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
 /* =========================================================
    7. MODULE TÀI LIỆU - DOCUMENT DETAIL PAGE
    Người thực hiện: Lê An
@@ -1589,8 +1597,8 @@ main:has(.documents-page) {
 }
 
 .stitch-file-badge.text {
-    background: #ede9fe;
-    color: #6d28d9;
+    background: #ffedd5;
+    color: #ea580c;
 }
 
 /* Document Detail - compact URL preview */
@@ -1736,8 +1744,9 @@ main:has(.documents-page) {
     font-size: 0.9rem;
     line-height: 1.5;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
 }
 
@@ -1789,11 +1798,15 @@ main:has(.documents-page) {
 }
 
 .auth-shell-login {
-    padding-top: 0;
+    justify-content: center;
+    padding-top: 32px;
+    padding-bottom: 32px;
 }
 
 .auth-shell-register {
-    padding-top: 14px;
+    justify-content: center;
+    padding-top: 32px;
+    padding-bottom: 32px;
     background: #f7f9fc;
 }
 
@@ -2051,6 +2064,21 @@ main:has(.documents-page) {
     line-height: 1.45;
 }
 
+.auth-action-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 2px 0 22px;
+}
+
+.auth-action-row .auth-checkline {
+    margin: 0;
+}
+
+.auth-action-row .auth-small-link {
+    margin-bottom: 0;
+}
+
 .auth-checkbox {
     width: 16px;
     height: 16px;
@@ -2305,4 +2333,42 @@ main:has(.documents-page) {
         margin-left: 22px;
         margin-right: 22px;
     }
+}
+
+/* Option Card Transition in Exam Page */
+.option-card {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Custom CSS for Public/Private Toggle button */
+.btn-toggle-public {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+}
+.btn-toggle-public.public {
+    background-color: #dcfce7;
+    color: #15803d;
+    border-color: #bbf7d0;
+}
+.btn-toggle-public.public:hover {
+    background-color: #bbf7d0;
+}
+.btn-toggle-public.private {
+    background-color: #f1f5f9;
+    color: #475569;
+    border-color: #cbd5e1;
+}
+.btn-toggle-public.private:hover {
+    background-color: #e2e8f0;
+}
+.btn-toggle-public .material-symbols-outlined {
+    font-size: 16px;
 }

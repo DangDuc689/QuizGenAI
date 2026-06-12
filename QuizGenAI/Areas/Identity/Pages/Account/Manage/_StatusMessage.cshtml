@@ -1,0 +1,13 @@
+@model string
+
+@if (!string.IsNullOrWhiteSpace(Model))
+{
+    var isError = Model.StartsWith("Error:", StringComparison.OrdinalIgnoreCase);
+    var message = isError ? Model["Error:".Length..].Trim() : Model;
+
+    <div class="mb-6 flex items-start gap-3 rounded-xl border px-4 py-3 text-sm @(isError ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700")"
+         role="alert">
+        <span class="material-symbols-outlined text-[20px]">@(isError ? "error" : "check_circle")</span>
+        <span>@message</span>
+    </div>
+}

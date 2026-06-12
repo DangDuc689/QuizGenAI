@@ -1,0 +1,21 @@
+@{
+    var activePage = ViewData["ManagePage"]?.ToString() ?? "Profile";
+}
+
+<nav class="space-y-1" aria-label="Cài đặt tài khoản">
+    <a asp-page="./Index"
+       class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-colors @(activePage == "Profile" ? "bg-primary text-white shadow-sm" : "text-secondary hover:bg-slate-100 dark:text-secondary-fixed-dim dark:hover:bg-secondary-container")">
+        <span class="material-symbols-outlined text-[20px]">person</span>
+        Thông tin cá nhân
+    </a>
+    <a asp-page="./Email"
+       class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-colors @(activePage == "Email" ? "bg-primary text-white shadow-sm" : "text-secondary hover:bg-slate-100 dark:text-secondary-fixed-dim dark:hover:bg-secondary-container")">
+        <span class="material-symbols-outlined text-[20px]">mail</span>
+        Đổi email
+    </a>
+    <a asp-page="./ChangePassword"
+       class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition-colors @(activePage == "Password" ? "bg-primary text-white shadow-sm" : "text-secondary hover:bg-slate-100 dark:text-secondary-fixed-dim dark:hover:bg-secondary-container")">
+        <span class="material-symbols-outlined text-[20px]">lock</span>
+        Đổi mật khẩu
+    </a>
+</nav>

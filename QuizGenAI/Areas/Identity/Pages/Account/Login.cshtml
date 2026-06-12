@@ -1,0 +1,65 @@
+@page
+@model LoginModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Đăng nhập";
+}
+
+<main class="auth-shell auth-shell-login">
+    <div class="auth-brand">
+        <a asp-area="" asp-controller="Home" asp-action="Index">QuizGen AI</a>
+        <p>Academic Excellence</p>
+    </div>
+
+    <section class="auth-card auth-card-login" aria-labelledby="login-title">
+        <div class="auth-tabs">
+            <a class="auth-tab active" asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Đăng nhập</a>
+            <a class="auth-tab" asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Đăng ký</a>
+        </div>
+
+        <form asp-route-returnUrl="@Model.ReturnUrl" method="post" class="auth-form" novalidate>
+            @Html.AntiForgeryToken()
+            <h1 id="login-title" class="sr-only">Đăng nhập QuizGen AI</h1>
+            <div asp-validation-summary="ModelOnly" class="auth-validation-summary"></div>
+
+            <div class="auth-field">
+                <label asp-for="Input.Email" class="auth-label"></label>
+                <div class="auth-input-wrap">
+                    <span class="material-symbols-outlined auth-input-icon">mail</span>
+                    <input asp-for="Input.Email" class="auth-input has-leading-icon" autocomplete="username" placeholder="name@university.edu" />
+                </div>
+                <span asp-validation-for="Input.Email" class="auth-error"></span>
+            </div>
+
+            <div class="auth-field">
+                <label asp-for="Input.Password" class="auth-label"></label>
+                <div class="auth-input-wrap">
+                    <span class="material-symbols-outlined auth-input-icon">lock</span>
+                    <input asp-for="Input.Password" id="login-password" class="auth-input has-leading-icon has-trailing-icon" autocomplete="current-password" placeholder="Nhập mật khẩu" />
+                    <button class="auth-icon-button" type="button" data-password-toggle="#login-password" aria-label="Hiện hoặc ẩn mật khẩu">
+                        <span class="material-symbols-outlined">visibility</span>
+                    </button>
+                </div>
+                <span asp-validation-for="Input.Password" class="auth-error"></span>
+            </div>
+
+            <div class="auth-action-row">
+                <label class="auth-checkline">
+                    <input asp-for="Input.RememberMe" class="auth-checkbox" />
+                    <span>Ghi nhớ đăng nhập</span>
+                </label>
+                <a class="auth-small-link" href="/ForgotPassword">Quên mật khẩu?</a>
+            </div>
+
+            <button type="submit" class="auth-primary-button">
+                Đăng nhập
+                <span class="material-symbols-outlined">arrow_forward</span>
+            </button>
+
+        </form>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,13 +1,15 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuizGenAI.Models;
 using System.Text;
 using UglyToad.PdfPig;
 using DocumentFormat.OpenXml.Packaging;
+using Microsoft.AspNetCore.Authorization;
 
 namespace QuizGenAI.Controllers
 {
+    [Authorize]
     public class DocumentsController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -104,38 +106,11 @@ namespace QuizGenAI.Controllers
                 }
             }
 
-            var devEmail = "lean@quizgen.local";
             var userId = _userManager.GetUserId(User);
 
             if (string.IsNullOrEmpty(userId))
             {
-                var existingUser = await _userManager.FindByEmailAsync(devEmail);
-
-                if (existingUser == null)
-                {
-                    var devUser = new ApplicationUser
-                    {
-                        UserName = devEmail,
-                        Email = devEmail,
-                        EmailConfirmed = true
-                    };
-
-                    var createUserResult = await _userManager.CreateAsync(devUser, "Dev@123456");
-
-                    if (!createUserResult.Succeeded)
-                    {
-                        foreach (var error in createUserResult.Errors)
-                        {
-                            ModelState.AddModelError("", error.Description);
-                        }
-
-                        return View();
-                    }
-
-                    existingUser = devUser;
-                }
-
-                userId = existingUser.Id;
+                return RedirectToAction("Login", "Account");
             }
 
             var documentSourceType = SourceType switch
@@ -260,6 +235,36 @@ namespace QuizGenAI.Controllers
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TogglePublic(int quizSetId)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Json(new { success = false, message = "Bạn chưa đăng nhập." });
+            }
+
+            var quizSet = await _context.QuizSets.FirstOrDefaultAsync(qs => qs.Id == quizSetId);
+            if (quizSet == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy bộ đề." });
+            }
+
+            if (quizSet.UserId != userId)
+            {
+                return Json(new { success = false, message = "Bạn không có quyền chỉnh sửa bộ đề này." });
+            }
+
+            quizSet.IsPublic = !quizSet.IsPublic;
+            quizSet.UpdatedAt = DateTime.Now;
+
+            _context.QuizSets.Update(quizSet);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, isPublic = quizSet.IsPublic, message = "Cập nhật trạng thái thành công." });
         }
 
         private static string? ExtractTextFromWord(string filePath)

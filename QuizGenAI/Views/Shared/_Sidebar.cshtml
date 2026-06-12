@@ -6,7 +6,7 @@
     // Tự động nhận diện trang hoạt động dựa trên Controller/Action nếu chưa được chỉ định tường minh
     if (string.IsNullOrEmpty(activePage))
     {
-        if (controller == "Home" && action == "Index")
+        if ((controller == "Home" || controller == "Dashboard") && action == "Index")
         {
             activePage = "Dashboard";
         }
@@ -55,67 +55,113 @@
         
         <!-- Dashboard -->
         <li>
-            <a asp-area="" asp-controller="Home" asp-action="Index" 
-               class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Dashboard" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
-                <span class="material-symbols-outlined" style="@(activePage == "Dashboard" ? "font-variation-settings: 'FILL' 1;" : "")">dashboard</span>
-                <span class="font-label-sm text-label-sm">Dashboard</span>
-            </a>
+            @if (User.Identity?.IsAuthenticated == true && User.IsInRole(SD.Role_Admin))
+            {
+                <a asp-area="Admin" asp-controller="AdminDashboard" asp-action="Index" 
+                   class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "AdminDashboard" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
+                    <span class="material-symbols-outlined" style="@(activePage == "AdminDashboard" ? "font-variation-settings: 'FILL' 1;" : "")">dashboard</span>
+                    <span class="font-label-sm text-label-sm">Tổng quan</span>
+                </a>
+            }
+            else
+            {
+                <a asp-area="" asp-controller="Dashboard" asp-action="Index" 
+                   class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Dashboard" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
+                    <span class="material-symbols-outlined" style="@(activePage == "Dashboard" ? "font-variation-settings: 'FILL' 1;" : "")">dashboard</span>
+                    <span class="font-label-sm text-label-sm">Dashboard</span>
+                </a>
+            }
         </li>
         
-        <!-- Tài liệu -->
-        <li>
-            <a asp-area="" asp-controller="Documents" asp-action="Index"
-               class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Documents" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
-                <span class="material-symbols-outlined" style="@(activePage == "Documents" ? "font-variation-settings: 'FILL' 1;" : "")">description</span>
-                <span class="font-label-sm text-label-sm">Tài liệu</span>
-            </a>
-        </li>
-        
-        <!-- Ôn tập -->
-        <li>
-            <a asp-area="" asp-controller="Exam" asp-action="Review" 
-               class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Review" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
-                <span class="material-symbols-outlined" style="@(activePage == "Review" ? "font-variation-settings: 'FILL' 1;" : "")">auto_stories</span>
-                <span class="font-label-sm text-label-sm">Ôn tập</span>
-            </a>
-        </li>
-        
-        <!-- Khám phá -->
-        <li>
-            <a asp-area="" asp-controller="Explore" asp-action="Index" 
-               class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Explore" ? "bg-surface-container-low dark:bg-secondary-container text-primary border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
-                <span class="material-symbols-outlined" style="@(activePage == "Explore" ? "font-variation-settings: 'FILL' 1;" : "")">explore</span>
-                <span class="font-label-sm text-label-sm">Khám phá</span>
-            </a>
-        </li>
-        
-        <!-- Phân tích -->
-        <li>
-            <a href="#" 
-               class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Analytics" ? "bg-surface-container-low dark:bg-secondary-container text-primary border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
-                <span class="material-symbols-outlined" style="@(activePage == "Analytics" ? "font-variation-settings: 'FILL' 1;" : "")">analytics</span>
-                <span class="font-label-sm text-label-sm">Phân tích</span>
-            </a>
-        </li>
-        
-        <!-- Lịch sử -->
-        <li>
-            <a asp-area="" asp-controller="Exam" asp-action="History"
-               class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "History" ? "bg-surface-container-low dark:bg-secondary-container text-primary border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
-                <span class="material-symbols-outlined" style="@(activePage == "History" ? "font-variation-settings: 'FILL' 1;" : "")">history</span>
-                <span class="font-label-sm text-label-sm">Lịch sử</span>
-            </a>
-        </li>
+        @if (!(User.Identity?.IsAuthenticated == true && User.IsInRole(SD.Role_Admin)))
+        {
+            <!-- Tài liệu -->
+            <li>
+                <a asp-area="" asp-controller="Documents" asp-action="Index"
+                   class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Documents" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
+                    <span class="material-symbols-outlined" style="@(activePage == "Documents" ? "font-variation-settings: 'FILL' 1;" : "")">description</span>
+                    <span class="font-label-sm text-label-sm">Tài liệu</span>
+                </a>
+            </li>
+            
+            <!-- Ôn tập -->
+            <li>
+                <a asp-area="" asp-controller="Exam" asp-action="Review" 
+                   class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Review" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
+                    <span class="material-symbols-outlined" style="@(activePage == "Review" ? "font-variation-settings: 'FILL' 1;" : "")">auto_stories</span>
+                    <span class="font-label-sm text-label-sm">Ôn tập</span>
+                </a>
+            </li>
+            
+            <!-- Khám phá -->
+            <li>
+                <a asp-area="" asp-controller="Explore" asp-action="Index" 
+                   class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Explore" ? "bg-surface-container-low dark:bg-secondary-container text-primary border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
+                    <span class="material-symbols-outlined" style="@(activePage == "Explore" ? "font-variation-settings: 'FILL' 1;" : "")">explore</span>
+                    <span class="font-label-sm text-label-sm">Khám phá</span>
+                </a>
+            </li>
+            
+            <!-- Lịch sử -->
+            <li>
+                <a asp-area="" asp-controller="Exam" asp-action="History"
+                   class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "History" ? "bg-surface-container-low dark:bg-secondary-container text-primary border-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
+                    <span class="material-symbols-outlined" style="@(activePage == "History" ? "font-variation-settings: 'FILL' 1;" : "")">history</span>
+                    <span class="font-label-sm text-label-sm">Lịch sử</span>
+                </a>
+            </li>
+        }
+
+        @if (User.Identity?.IsAuthenticated == true && User.IsInRole(SD.Role_Admin))
+        {
+            <!-- Quản lý người dùng -->
+            <li>
+                <a asp-area="Admin" asp-controller="UserManagement" asp-action="Index"
+                   class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "UserManagement" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
+                    <span class="material-symbols-outlined" style="@(activePage == "UserManagement" ? "font-variation-settings: 'FILL' 1;" : "")">manage_accounts</span>
+                    <span class="font-label-sm text-label-sm">Quản lý người dùng</span>
+                </a>
+            </li>
+
+            <!-- Quản lý tài liệu -->
+            <li>
+                <a asp-area="Admin" asp-controller="ResourceManager" asp-action="Index"
+                   class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "ResourceManager" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
+                    <span class="material-symbols-outlined" style="@(activePage == "ResourceManager" ? "font-variation-settings: 'FILL' 1;" : "")">folder_open</span>
+                    <span class="font-label-sm text-label-sm">Quản lý tài liệu</span>
+                </a>
+            </li>
+
+            <!-- Phân tích Nâng cao -->
+            <li>
+                <a asp-area="Admin" asp-controller="AdvancedAnalysis" asp-action="Index"
+                   class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "AdvancedAnalysis" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
+                    <span class="material-symbols-outlined" style="@(activePage == "AdvancedAnalysis" ? "font-variation-settings: 'FILL' 1;" : "")">analytics</span>
+                    <span class="font-label-sm text-label-sm">Phân tích Nâng cao</span>
+                </a>
+            </li>
+        }
         
     </ul>
     
     <!-- Settings section (Pinned to bottom) -->
     <div class="mt-auto px-6 py-4 border-t border-slate-200 dark:border-outline-variant">
-        <a href="#" 
-           class="flex items-center py-2 text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors gap-3 group">
-            <span class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-300">settings</span>
-            <span class="font-label-sm text-label-sm">Cài đặt</span>
-        </a>
+        @if (User.Identity?.IsAuthenticated == true && User.IsInRole(SD.Role_Admin))
+        {
+            <a asp-area="Admin" asp-controller="AdminSetting" asp-action="Index" 
+               class="flex items-center py-2 transition-colors gap-3 group @(activePage == "AdminSetting" ? "text-primary dark:text-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim")">
+                <span class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-300" style="@(activePage == "AdminSetting" ? "font-variation-settings: 'FILL' 1;" : "")">settings</span>
+                <span class="font-label-sm text-label-sm">Cài đặt hệ thống</span>
+            </a>
+        }
+        else
+        {
+            <a asp-area="Identity" asp-page="/Account/Manage/Index"
+               class="flex items-center py-2 transition-colors gap-3 group @(activePage == "UserSettings" ? "text-primary dark:text-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim")">
+                <span class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-300" style="@(activePage == "UserSettings" ? "font-variation-settings: 'FILL' 1;" : "")">settings</span>
+                <span class="font-label-sm text-label-sm">Cài đặt</span>
+            </a>
+        }
     </div>
     
 </nav>

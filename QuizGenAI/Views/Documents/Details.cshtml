@@ -1,4 +1,6 @@
-﻿@model QuizGenAI.Models.Document
+@model QuizGenAI.Models.Document
+
+@Html.AntiForgeryToken()
 
 @{
     ViewData["Title"] = "Chi tiết tài liệu";
@@ -41,23 +43,26 @@
             </a>
 
             <div class="stitch-header-actions">
-                <form asp-controller="Documents"
+                <form id="deleteDocumentFormDetails"
+                      asp-controller="Documents"
                       asp-action="Delete"
                       asp-route-id="@Model.Id"
-                      method="post"
-                      onsubmit="return confirm('Bạn có chắc chắn muốn xóa tài liệu này không?');">
+                      method="post">
                     @Html.AntiForgeryToken()
 
-                    <button type="submit" class="stitch-delete-btn">
+                    <button type="button" id="btn-delete-document-details" class="stitch-delete-btn">
                         <span class="material-symbols-outlined">delete</span>
                         Xóa tài liệu
                     </button>
                 </form>
 
-                <button type="button" class="stitch-create-quiz-btn">
+                <a asp-controller="Exam"
+                   asp-action="Review"
+                   asp-route-documentId="@Model.Id"
+                   class="stitch-create-quiz-btn flex items-center justify-center">
                     <span class="material-symbols-outlined">add_circle</span>
                     Tạo thêm bộ đề
-                </button>
+                </a>
             </div>
         </div>
 
@@ -216,11 +221,17 @@
                             </p>
 
                             <div class="stitch-quiz-footer">
-                                <span class="stitch-score pending">
-                                    Chưa làm
-                                </span>
+                                <button type="button" 
+                                        class="btn-toggle-public @(quizSet.IsPublic ? "public" : "private")" 
+                                        data-quizset-id="@quizSet.Id"
+                                        title="@(quizSet.IsPublic ? "Đang công khai. Nhấn để chuyển sang riêng tư" : "Đang riêng tư. Nhấn để công khai bộ đề")">
+                                    <span class="material-symbols-outlined">
+                                        @(quizSet.IsPublic ? "public" : "lock")
+                                    </span>
+                                    <span>@(quizSet.IsPublic ? "Công khai" : "Riêng tư")</span>
+                                </button>
 
-                                <a href="#">Làm ngay →</a>
+                                <a href="/Exam/Start/@quizSet.Id">Làm ngay →</a>
                             </div>
                         </div>
                     }
@@ -277,6 +288,72 @@
                 toggleDocumentTextBtn.textContent = isCollapsed
                     ? "Thu gọn nội dung"
                     : "Xem thêm nội dung";
+            });
+        }
+
+        // Xử lý sự kiện click nút toggle public/private
+        document.querySelectorAll(".btn-toggle-public").forEach(button => {
+            button.addEventListener("click", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const btn = this;
+                const quizSetId = btn.dataset.quizsetId;
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+                if (!token) {
+                    alert("Không tìm thấy CSRF token.");
+                    return;
+                }
+
+                fetch('/Documents/TogglePublic', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'quizSetId': quizSetId,
+                        '__RequestVerificationToken': token
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.isPublic) {
+                            btn.className = "btn-toggle-public public";
+                            btn.title = "Đang công khai. Nhấn để chuyển sang riêng tư";
+                            btn.querySelector(".material-symbols-outlined").textContent = "public";
+                            btn.querySelector("span:not(.material-symbols-outlined)").textContent = "Công khai";
+                        } else {
+                            btn.className = "btn-toggle-public private";
+                            btn.title = "Đang riêng tư. Nhấn để công khai bộ đề";
+                            btn.querySelector(".material-symbols-outlined").textContent = "lock";
+                            btn.querySelector("span:not(.material-symbols-outlined)").textContent = "Riêng tư";
+                        }
+                    } else {
+                        alert(data.message || "Đã xảy ra lỗi khi cập nhật trạng thái.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("Không thể kết nối tới máy chủ.");
+                });
+            });
+        });
+
+        // Xử lý sự kiện click nút xóa ở trang chi tiết tài liệu
+        const btnDeleteDocDetails = document.getElementById("btn-delete-document-details");
+        if (btnDeleteDocDetails) {
+            btnDeleteDocDetails.addEventListener("click", function (e) {
+                e.preventDefault();
+                
+                window.showConfirmModal({
+                    title: "Xóa tài liệu",
+                    message: "Bạn có chắc chắn muốn xóa tài liệu này không?<br><br><span class='text-red-600 dark:text-red-400 font-semibold'>Lưu ý:</span> Hành động này cũng sẽ xóa toàn bộ các bộ đề thi liên quan và không thể hoàn tác.",
+                    onConfirm: function () {
+                        document.getElementById("deleteDocumentFormDetails").submit();
+                    }
+                });
             });
         }
     </script>
