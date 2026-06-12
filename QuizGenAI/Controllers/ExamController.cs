@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -12,7 +13,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuizGenAI.Models;
 using QuizGenAI.Services;
-using UglyToad.PdfPig;
 using DocumentFormat.OpenXml.Packaging;
 
 namespace QuizGenAI.Controllers
@@ -20,18 +20,46 @@ namespace QuizGenAI.Controllers
     [Authorize]
     public class ExamController : Controller
     {
+        private const int MinimumUsefulWordsForQuiz = 80;
+        private const int MinimumMathSignalsForBasicQuiz = 3;
+        private const int MinimumMathContentLengthForQuiz = 12;
+        private const int MaxQuizContentCharacters = 12000;
+        private const int MaxUrlQuizContentCharacters = 8000;
+        private const string AiTimeoutMessage = "AI xử lý quá lâu, vui lòng thử lại với số câu ít hơn hoặc tài liệu ngắn hơn.";
+        private const string AiRateLimitMessage = "AI đang quá tải hoặc đã chạm giới hạn gọi API. Vui lòng thử lại sau ít phút hoặc giảm số lượng câu hỏi.";
+        private const string AiInvalidQuizMessage = "AI chưa tạo đủ câu hỏi hợp lệ. Vui lòng thử lại với số câu ít hơn.";
+        private const string AiBadRequestMessage = "AI không nhận được yêu cầu hợp lệ. Vui lòng thử lại với tài liệu ngắn hơn hoặc số câu ít hơn.";
+        private const string EmptyAiContentMessage = "Nội dung gửi sang AI chưa đủ để tạo câu hỏi.";
+
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly GeminiService _geminiService;
+        private readonly DocxExtractionService _docxExtractionService;
+        private readonly PdfExtractionService _pdfExtractionService;
+        private readonly ILogger<ExamController> _logger;
 
         public ExamController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
-            GeminiService geminiService)
+            GeminiService geminiService,
+            DocxExtractionService docxExtractionService,
+            PdfExtractionService pdfExtractionService,
+            ILogger<ExamController> logger)
         {
             _context = context;
             _userManager = userManager;
             _geminiService = geminiService;
+            _docxExtractionService = docxExtractionService;
+            _pdfExtractionService = pdfExtractionService;
+            _logger = logger;
+        }
+
+        /// <summary>Dev test: gọi Gemini với prompt cực nhỏ để kiểm tra quota/rate limit.</summary>
+        [HttpGet]
+        public async Task<IActionResult> PingGemini()
+        {
+            var (success, statusCode, message) = await _geminiService.PingAsync();
+            return Json(new { success, statusCode, message });
         }
 
         [HttpGet("Exam/Start/{id}")]
@@ -59,6 +87,11 @@ namespace QuizGenAI.Controllers
             if (quizSet == null)
             {
                 return NotFound("Không tìm thấy bộ đề thi yêu cầu.");
+            }
+
+            if (!HasCompleteQuizData(quizSet))
+            {
+                return BadRequest("Bộ đề này chưa có đủ câu hỏi hợp lệ. Vui lòng tạo lại bộ đề với số câu ít hơn.");
             }
 
             // Sắp xếp câu hỏi và các đáp án theo thứ tự nhãn A, B, C, D
@@ -234,18 +267,20 @@ namespace QuizGenAI.Controllers
 
                 if (fileExtension == ".pdf")
                 {
-                    using var pdfDocument = PdfDocument.Open(fullPath);
-                    pageCount = pdfDocument.NumberOfPages;
-                    var textBuilder = new StringBuilder();
-                    foreach (var page in pdfDocument.GetPages())
-                    {
-                        textBuilder.AppendLine(page.Text);
-                    }
-                    extractedText = textBuilder.ToString().Trim();
+                    var pdfExtraction = await _pdfExtractionService.ExtractAsync(
+                        fullPath,
+                        HttpContext.RequestAborted);
+
+                    pageCount = pdfExtraction.PageCount;
+                    extractedText = pdfExtraction.Text;
                 }
                 else if (fileExtension == ".docx")
                 {
-                    extractedText = ExtractTextFromWord(fullPath);
+                    var docxExtraction = await _docxExtractionService.ExtractTextFromDocxAsync(
+                        fullPath,
+                        HttpContext.RequestAborted);
+
+                    extractedText = docxExtraction.ExtractedText;
                     pageCount = GetWordPageCountFromMetadata(fullPath);
                 }
                 else if (fileExtension == ".txt")
@@ -283,6 +318,10 @@ namespace QuizGenAI.Controllers
                     fileSize = FormatFileSize(document.FileSizeBytes)
                 });
             }
+            catch (GeminiServiceUnavailableException ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
             catch (Exception ex)
             {
                 return Json(new { success = false, message = $"Lỗi khi xử lý file: {ex.Message}" });
@@ -319,34 +358,63 @@ namespace QuizGenAI.Controllers
                 return Json(new { success = false, message = "Không tìm thấy các tài liệu đã chọn hoặc tài liệu không thuộc quyền sở hữu của bạn." });
             }
 
+            var containsUrlDocument = documents.Any(d => d.SourceType == DocumentSourceType.URL);
+
             // Gộp nội dung văn bản
             var textBuilder = new StringBuilder();
             foreach (var doc in documents)
             {
                 if (!string.IsNullOrWhiteSpace(doc.ExtractedText))
                 {
-                    textBuilder.AppendLine(doc.ExtractedText);
+                    var preparedDocumentText = PrepareContentForQuizGeneration(
+                        doc.ExtractedText,
+                        doc.SourceType);
+
+                    if (!string.IsNullOrWhiteSpace(preparedDocumentText))
+                    {
+                        textBuilder.AppendLine(preparedDocumentText);
+                    }
+
                     textBuilder.AppendLine();
                 }
             }
 
-            var mergedText = textBuilder.ToString().Trim();
-            if (string.IsNullOrWhiteSpace(mergedText))
+            var mergedText = TrimContentForAi(
+                textBuilder.ToString().Trim(),
+                containsUrlDocument ? MaxUrlQuizContentCharacters : MaxQuizContentCharacters);
+            // Làm sạch warning text/heading markers trước khi check và gửi AI
+            var usefulTextForQuiz = RemoveDocxImageWarningText(mergedText);
+            if (string.IsNullOrWhiteSpace(usefulTextForQuiz))
             {
-                return Json(new { success = false, message = "Nội dung của các tài liệu đã chọn trống. Không thể tạo câu hỏi." });
+                return Json(new { success = false, message = EmptyAiContentMessage });
             }
 
-            // Giới hạn ký tự để tránh quá tải token của free API
-            if (mergedText.Length > 50000)
+            // Giới hạn và làm sạch nội dung trước khi gửi AI để tránh prompt quá nặng/timeout.
+            if (!HasEnoughQuizContent(usefulTextForQuiz))
             {
-                mergedText = mergedText.Substring(0, 50000) + "... [Nội dung bị cắt bớt do quá dài]";
+                return Json(new
+                {
+                    success = false,
+                    message = "Tài liệu này chưa đủ nội dung học tập để tạo đề. Nếu tài liệu chủ yếu là hình ảnh, vui lòng thử ảnh rõ hơn hoặc bổ sung thêm nội dung bằng Paste Text."
+                });
             }
+
+            var requestId = Guid.NewGuid().ToString("N")[..8];
+
+            _logger.LogInformation(
+                "[CREATE_QUIZ] RequestId={RequestId}, UserId={UserId}, Documents={DocumentCount}, TotalQuestions={TotalQuestions}, ContentLength={ContentLength}, ContainsUrl={ContainsUrl}",
+                requestId,
+                userId,
+                documents.Count,
+                model.TotalQuestions,
+                usefulTextForQuiz.Length,
+                containsUrlDocument);
 
             try
             {
-                // Gọi AI sinh câu hỏi
+                // Gọi AI sinh câu hỏi - dùng usefulTextForQuiz (đã cleaned) thay vì mergedText
                 var generatedQuestions = await _geminiService.GenerateQuestionsAsync(
-                    mergedText,
+                    usefulTextForQuiz,
                     model.TotalQuestions,
                     model.BloomRememberPercent,
                     model.BloomUnderstandPercent,
@@ -354,18 +422,31 @@ namespace QuizGenAI.Controllers
                     model.Language,
                     model.Difficulty);
 
-                if (generatedQuestions == null || generatedQuestions.Count == 0)
+                var validQuestions = ValidateGeneratedQuestions(
+                    generatedQuestions,
+                    model.TotalQuestions,
+                    _logger,
+                    out var validationMessage);
+
+                if (validQuestions == null)
                 {
-                    return Json(new { success = false, message = "AI không thể sinh câu hỏi cho tài liệu này. Vui lòng thử lại hoặc chọn tài liệu khác." });
+                    _logger.LogWarning(
+                        "CreateQuizSet: Validate thất bại. Message={ValidationMessage}, GeneratedCount={GeneratedCount}, RequestedCount={RequestedCount}",
+                        validationMessage,
+                        generatedQuestions?.Count ?? 0,
+                        model.TotalQuestions);
+                    return Json(new { success = false, message = validationMessage });
                 }
 
                 // Tạo QuizSet mới
                 var title = model.Title.Trim();
 
+                await using var transaction = await _context.Database.BeginTransactionAsync();
+
                 var quizSet = new QuizSet
                 {
                     Title = title,
-                    TotalQuestions = generatedQuestions.Count,
+                    TotalQuestions = validQuestions.Count,
                     BloomRememberPercent = model.BloomRememberPercent,
                     BloomUnderstandPercent = model.BloomUnderstandPercent,
                     BloomApplyPercent = model.BloomApplyPercent,
@@ -378,16 +459,12 @@ namespace QuizGenAI.Controllers
                     DocumentId = documents.Count == 1 ? documents[0].Id : null
                 };
 
-                _context.QuizSets.Add(quizSet);
-                await _context.SaveChangesAsync();
-
                 // Lưu các Question và AnswerOption
                 int orderIndex = 1;
-                foreach (var gq in generatedQuestions)
+                foreach (var gq in validQuestions)
                 {
                     var question = new Question
                     {
-                        QuizSetId = quizSet.Id,
                         Content = gq.Content,
                         BloomLevel = gq.BloomLevel == 0 ? BloomLevel.Remember :
                                      gq.BloomLevel == 1 ? BloomLevel.Understand :
@@ -397,28 +474,67 @@ namespace QuizGenAI.Controllers
                         CreatedAt = DateTime.UtcNow
                     };
 
-                    _context.Questions.Add(question);
-                    await _context.SaveChangesAsync();
-
                     foreach (var go in gq.Options)
                     {
                         var option = new AnswerOption
                         {
-                            QuestionId = question.Id,
                             Label = go.Label,
                             Content = go.Content,
                             IsCorrect = go.IsCorrect
                         };
-                        _context.AnswerOptions.Add(option);
+                        question.AnswerOptions.Add(option);
                     }
+
+                    quizSet.Questions.Add(question);
                 }
 
+                _context.QuizSets.Add(quizSet);
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation(
+                    "[CREATE_QUIZ] RequestId={RequestId}, Thành công. QuizSetId={QuizSetId}, ValidQuestions={ValidQuestions}",
+                    requestId, quizSet.Id, validQuestions.Count);
 
                 return Json(new { success = true, quizSetId = quizSet.Id });
             }
+            catch (GeminiRateLimitException)
+            {
+                return Json(new { success = false, message = AiRateLimitMessage });
+            }
+            catch (GeminiBadRequestException)
+            {
+                return Json(new { success = false, message = AiBadRequestMessage });
+            }
+            catch (GeminiTruncatedResponseException ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            catch (GeminiServiceUnavailableException ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            catch (TaskCanceledException)
+            {
+                return Json(new { success = false, message = AiTimeoutMessage });
+            }
             catch (Exception ex)
             {
+                if (IsAiRateLimitException(ex))
+                {
+                    return Json(new { success = false, message = AiRateLimitMessage });
+                }
+
+                if (IsAiBadRequestException(ex))
+                {
+                    return Json(new { success = false, message = AiBadRequestMessage });
+                }
+
+                if (IsAiTimeoutException(ex))
+                {
+                    return Json(new { success = false, message = AiTimeoutMessage });
+                }
+
                 return Json(new { success = false, message = $"Lỗi khi sinh câu hỏi từ AI: {ex.Message}" });
             }
         }
@@ -434,11 +550,18 @@ namespace QuizGenAI.Controllers
             }
 
             var quizSet = await _context.QuizSets
+                .Include(qs => qs.Questions)
+                    .ThenInclude(q => q.AnswerOptions)
                 .FirstOrDefaultAsync(qs => qs.Id == quizSetId && (qs.UserId == userId || qs.IsPublic));
 
             if (quizSet == null)
             {
                 return Json(new { success = false, message = "Không tìm thấy bộ đề thi này." });
+            }
+
+            if (!HasCompleteQuizData(quizSet))
+            {
+                return Json(new { success = false, message = "Bộ đề này chưa có đủ câu hỏi hợp lệ. Vui lòng tạo lại bộ đề với số câu ít hơn." });
             }
 
             // Hủy bỏ các session InProgress cũ của bộ đề này nếu có
@@ -457,7 +580,7 @@ namespace QuizGenAI.Controllers
                 UserId = userId,
                 StartedAt = DateTime.UtcNow,
                 Status = ExamSessionStatus.InProgress,
-                TotalQuestions = await _context.Questions.CountAsync(q => q.QuizSetId == quizSetId)
+                TotalQuestions = quizSet.Questions.Count
             };
 
             _context.ExamSessions.Add(session);
@@ -659,6 +782,368 @@ namespace QuizGenAI.Controllers
                     _context.WeakTopics.Update(existingWeakTopic);
                 }
             }
+        }
+
+        private static string RemoveDocxImageWarningText(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            var cleaned = text
+                .Replace(DocxExtractionService.NormalTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+                .Replace(DocxExtractionService.ImageTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+                .Replace(PdfExtractionService.NormalTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+                .Replace(PdfExtractionService.ImageTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+                .Replace(PdfExtractionService.ScannedPdfMessage, " ", StringComparison.OrdinalIgnoreCase)
+                .Replace(PdfExtractionService.ImageUnreadableMessage, " ", StringComparison.OrdinalIgnoreCase)
+                .Replace(DocxExtractionService.ImageVisionTroubleshootingMessage, " ", StringComparison.OrdinalIgnoreCase)
+                .Replace("KHONG_DOC_DUOC_NOI_DUNG_ANH", " ", StringComparison.OrdinalIgnoreCase);
+
+            cleaned = RemovePdfExtractionMetadata(cleaned);
+
+            cleaned = Regex.Replace(
+                cleaned,
+                @"Tài liệu có chứa hình ảnh,\s*nhưng hệ thống chưa nhận diện được đủ nội dung học tập từ các ảnh này\.[^\r\n]*",
+                " ",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+            cleaned = Regex.Replace(
+                cleaned,
+                @"\(Không có nội dung văn bản thường được trích xuất từ Word\.\)",
+                " ",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+            cleaned = Regex.Replace(
+                cleaned,
+                @"(?:^|\r?\n)\s*Ghi chú(?: kỹ thuật)?:[^\r\n]*",
+                " ",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+            cleaned = Regex.Replace(
+                cleaned,
+                @"(?:^|\r?\n)\s*Ảnh\s+\d+\s*:",
+                " ",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+            return cleaned;
+        }
+
+        private static string RemovePdfExtractionMetadata(string text)
+        {
+            var start = text.IndexOf(PdfExtractionService.MetadataSectionHeading, StringComparison.Ordinal);
+            if (start < 0)
+            {
+                return text;
+            }
+
+            var end = text.IndexOf(
+                PdfExtractionService.MetadataSectionEndHeading,
+                start,
+                StringComparison.Ordinal);
+
+            if (end < 0)
+            {
+                return text[..start];
+            }
+
+            end += PdfExtractionService.MetadataSectionEndHeading.Length;
+
+            return text[..start] + text[end..];
+        }
+
+        private static int CountUsefulWords(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return 0;
+            }
+
+            return Regex.Matches(text, @"\b[\p{L}\p{N}]{2,}\b").Count;
+        }
+
+        private static string PrepareContentForQuizGeneration(string? text, DocumentSourceType sourceType)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            var preparedText = NormalizeQuizText(text);
+
+            if (sourceType == DocumentSourceType.URL)
+            {
+                preparedText = RemoveWebNoiseLines(preparedText);
+            }
+
+            return TrimContentForAi(
+                preparedText,
+                sourceType == DocumentSourceType.URL
+                    ? MaxUrlQuizContentCharacters
+                    : MaxQuizContentCharacters);
+        }
+
+        private static List<GeneratedQuestionDto>? ValidateGeneratedQuestions(
+            List<GeneratedQuestionDto>? generatedQuestions,
+            int requestedQuestionCount,
+            ILogger<ExamController> logger,
+            out string message)
+        {
+            message = AiInvalidQuizMessage;
+
+            if (generatedQuestions == null || generatedQuestions.Count < requestedQuestionCount)
+            {
+                logger.LogWarning(
+                    "ValidateGeneratedQuestions: Không đủ câu. GeneratedCount={GeneratedCount}, RequestedCount={RequestedCount}",
+                    generatedQuestions?.Count ?? 0,
+                    requestedQuestionCount);
+                return null;
+            }
+
+            var normalizedQuestions = new List<GeneratedQuestionDto>();
+            var optionLabels = new[] { "A", "B", "C", "D" };
+            var questionIndex = 0;
+
+            foreach (var generatedQuestion in generatedQuestions.Take(requestedQuestionCount))
+            {
+                questionIndex++;
+
+                if (string.IsNullOrWhiteSpace(generatedQuestion.Content))
+                {
+                    logger.LogWarning(
+                        "ValidateGeneratedQuestions: Câu {Index}/{Total} có content trống.",
+                        questionIndex, requestedQuestionCount);
+                    return null;
+                }
+
+                var validOptions = (generatedQuestion.Options ?? new List<GeneratedOptionDto>())
+                    .Where(option => !string.IsNullOrWhiteSpace(option.Content))
+                    .Take(4)
+                    .ToList();
+
+                var correctCount = validOptions.Count(option => option.IsCorrect);
+                if (validOptions.Count != 4 || correctCount != 1)
+                {
+                    logger.LogWarning(
+                        "ValidateGeneratedQuestions: Câu {Index}/{Total} fail. OptionCount={OptionCount}, CorrectCount={CorrectCount}. Content={ContentPreview}",
+                        questionIndex, requestedQuestionCount,
+                        validOptions.Count, correctCount,
+                        generatedQuestion.Content.Length > 80
+                            ? generatedQuestion.Content[..80] + "..."
+                            : generatedQuestion.Content);
+                    return null;
+                }
+
+                var normalizedOptions = validOptions
+                    .Select((option, index) => new GeneratedOptionDto
+                    {
+                        Label = optionLabels[index],
+                        Content = option.Content.Trim(),
+                        IsCorrect = option.IsCorrect
+                    })
+                    .ToList();
+
+                normalizedQuestions.Add(new GeneratedQuestionDto
+                {
+                    Content = generatedQuestion.Content.Trim(),
+                    BloomLevel = generatedQuestion.BloomLevel is >= 0 and <= 2
+                        ? generatedQuestion.BloomLevel
+                        : 1,
+                    Explanation = generatedQuestion.Explanation?.Trim() ?? string.Empty,
+                    Options = normalizedOptions
+                });
+            }
+
+            message = string.Empty;
+            return normalizedQuestions;
+        }
+
+        private static bool HasCompleteQuizData(QuizSet quizSet)
+        {
+            if (quizSet.TotalQuestions <= 0 || quizSet.Questions.Count < quizSet.TotalQuestions)
+            {
+                return false;
+            }
+
+            return quizSet.Questions.All(question =>
+                !string.IsNullOrWhiteSpace(question.Content)
+                && question.AnswerOptions.Count >= 4
+                && question.AnswerOptions.Count(option => option.IsCorrect) == 1
+                && question.AnswerOptions.All(option =>
+                    !string.IsNullOrWhiteSpace(option.Label)
+                    && !string.IsNullOrWhiteSpace(option.Content)));
+        }
+
+        private static string RemoveWebNoiseLines(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            var noisePatterns = new[]
+            {
+                @"^table of contents$",
+                @"^exit editor mode$",
+                @"^ask learn$",
+                @"^reading mode$",
+                @"^read in english$",
+                @"^add to plan$",
+                @"^copy markdown$",
+                @"^print$",
+                @"^feedback$",
+                @"^summarize this article for me$",
+                @"^access to this page requires authorization$"
+            };
+
+            var builder = new StringBuilder();
+            var lines = Regex.Split(text, @"\r?\n");
+
+            foreach (var line in lines)
+            {
+                var normalizedLine = Regex.Replace(line.Trim(), @"\s+", " ");
+                if (string.IsNullOrWhiteSpace(normalizedLine))
+                {
+                    continue;
+                }
+
+                if (noisePatterns.Any(pattern => Regex.IsMatch(
+                    normalizedLine,
+                    pattern,
+                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)))
+                {
+                    continue;
+                }
+
+                builder.AppendLine(normalizedLine);
+            }
+
+            return NormalizeQuizText(builder.ToString());
+        }
+
+        private static string TrimContentForAi(string text, int maxCharacters)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            var normalized = NormalizeQuizText(text);
+
+            if (normalized.Length <= maxCharacters)
+            {
+                return normalized;
+            }
+
+            var trimmed = normalized[..maxCharacters];
+            var lastParagraphBreak = trimmed.LastIndexOf("\n\n", StringComparison.Ordinal);
+            var lastSentenceBreak = Math.Max(
+                trimmed.LastIndexOf(". ", StringComparison.Ordinal),
+                Math.Max(
+                    trimmed.LastIndexOf("? ", StringComparison.Ordinal),
+                    trimmed.LastIndexOf("! ", StringComparison.Ordinal)));
+
+            var cutIndex = lastParagraphBreak > maxCharacters * 0.55
+                ? lastParagraphBreak
+                : lastSentenceBreak > maxCharacters * 0.55
+                    ? lastSentenceBreak + 1
+                    : maxCharacters;
+
+            return trimmed[..cutIndex].Trim() + "\n\n[Nội dung đã được rút gọn trước khi gửi AI để tránh quá tải.]";
+        }
+
+        private static string NormalizeQuizText(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            var normalized = Regex.Replace(text, @"[ \t\f\v]+", " ");
+            normalized = Regex.Replace(normalized, @"\s*\r?\n\s*", "\n");
+            normalized = Regex.Replace(normalized, @"\n{3,}", "\n\n");
+
+            return normalized.Trim();
+        }
+
+        private static bool IsAiTimeoutException(Exception ex)
+        {
+            return ex is TaskCanceledException
+                || ex is TimeoutException
+                || ex.Message.Contains("HttpClient.Timeout", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("request was canceled", StringComparison.OrdinalIgnoreCase)
+                || (ex.InnerException != null && IsAiTimeoutException(ex.InnerException));
+        }
+
+        private static bool IsAiRateLimitException(Exception ex)
+        {
+            return ex is GeminiRateLimitException
+                || ex.Message.Contains("TooManyRequests", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("429", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("RESOURCE_EXHAUSTED", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("rate limit", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase)
+                || (ex.InnerException != null && IsAiRateLimitException(ex.InnerException));
+        }
+
+        private static bool IsAiBadRequestException(Exception ex)
+        {
+            return ex is GeminiBadRequestException
+                || ex.Message.Contains("BadRequest", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("400", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("INVALID_ARGUMENT", StringComparison.OrdinalIgnoreCase)
+                || (ex.InnerException != null && IsAiBadRequestException(ex.InnerException));
+        }
+
+        private static bool HasEnoughQuizContent(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return false;
+            }
+
+            if (CountUsefulWords(text) >= MinimumUsefulWordsForQuiz)
+            {
+                return true;
+            }
+
+            return HasEnoughMathLearningSignals(text);
+        }
+
+        private static bool HasEnoughMathLearningSignals(string text)
+        {
+            var normalized = Regex.Replace(text, @"\s+", " ").Trim();
+            var compactLength = Regex.Replace(normalized, @"\s+", string.Empty).Length;
+
+            if (compactLength < MinimumMathContentLengthForQuiz)
+            {
+                return false;
+            }
+
+            var signalCount = 0;
+
+            signalCount += Regex.Matches(
+                normalized,
+                @"[\p{L}\p{N}]\s*[=+\-*/÷×]\s*[\p{L}\p{N}]",
+                RegexOptions.CultureInvariant).Count;
+
+            signalCount += Regex.Matches(
+                normalized,
+                @"\b\d+\s*/\s*\d+\b|\\frac\s*\{|[¼½¾⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).Count;
+
+            signalCount += Regex.Matches(
+                normalized,
+                @"\b(?:[\p{L}\p{N}]\s*\^\s*\d+|\d+\s*\^\s*[\p{L}\p{N}])|[⁰¹²³⁴⁵⁶⁷⁸⁹]",
+                RegexOptions.CultureInvariant).Count;
+
+            signalCount += Regex.Matches(
+                normalized,
+                @"√|\\sqrt|π|∞|≤|≥|≠|≈|∑|∫|∆|Δ|α|β|γ|θ|\b(?:sin|cos|tan|log|ln)\b",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).Count;
+
+            return signalCount >= MinimumMathSignalsForBasicQuiz;
         }
 
         private static string? ExtractTextFromWord(string filePath)

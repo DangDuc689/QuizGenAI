@@ -5,7 +5,9 @@
 @{
     ViewData["Title"] = "Chi tiết tài liệu";
 
-    var textLength = Model.ExtractedText?.Length ?? 0;
+    var textLength = Model.SourceType == QuizGenAI.Models.DocumentSourceType.PDF
+        ? RemovePdfMetadataBlock(Model.ExtractedText).Length
+        : (Model.ExtractedText?.Length ?? 0);
 
     var estimatedQuestions = textLength switch
     {
@@ -32,6 +34,428 @@
         QuizGenAI.Models.DocumentSourceType.Excel => "excel",
         _ => "text"
     };
+
+    var isUrlDocument = Model.SourceType == QuizGenAI.Models.DocumentSourceType.URL;
+    var isPdfDocument = Model.SourceType == QuizGenAI.Models.DocumentSourceType.PDF;
+    var rawExtractedText = Model.ExtractedText ?? string.Empty;
+    var pdfMetadata = isPdfDocument
+        ? ParsePdfExtractionMetadata(rawExtractedText)
+        : null;
+    var extractedText = isPdfDocument
+        ? RemovePdfMetadataBlock(rawExtractedText)
+        : rawExtractedText;
+    var hasExtractedText = !string.IsNullOrWhiteSpace(extractedText);
+    var normalTextSectionHeading = isPdfDocument
+        ? QuizGenAI.Services.PdfExtractionService.NormalTextSectionHeading
+        : QuizGenAI.Services.DocxExtractionService.NormalTextSectionHeading;
+    var imageTextSectionHeading = isPdfDocument
+        ? QuizGenAI.Services.PdfExtractionService.ImageTextSectionHeading
+        : QuizGenAI.Services.DocxExtractionService.ImageTextSectionHeading;
+    var imageUnreadableMessage = isPdfDocument
+        ? QuizGenAI.Services.PdfExtractionService.ImageUnreadableMessage
+        : QuizGenAI.Services.DocxExtractionService.ImageUnreadableMessage;
+    var imageVisionTroubleshootingMessage = isPdfDocument
+        ? "__PDF_IMAGE_VISION_TROUBLESHOOTING_UNUSED__"
+        : QuizGenAI.Services.DocxExtractionService.ImageVisionTroubleshootingMessage;
+    var sourceTextSectionTitle = isPdfDocument
+        ? "Nội dung văn bản trích xuất từ PDF"
+        : "Nội dung văn bản trích xuất từ Word";
+    var imageTextSectionTitle = isPdfDocument
+        ? "Nội dung nhận diện từ hình ảnh trong PDF"
+        : "Nội dung nhận diện từ hình ảnh trong tài liệu";
+    var imageSectionStart = extractedText.IndexOf(imageTextSectionHeading, StringComparison.Ordinal);
+    var hasImageTextSection = imageSectionStart >= 0;
+    var normalExtractedText = extractedText;
+    var imageExtractedText = string.Empty;
+
+    if (hasImageTextSection)
+    {
+        normalExtractedText = extractedText[..imageSectionStart].Trim();
+        imageExtractedText = extractedText[(imageSectionStart + imageTextSectionHeading.Length)..].Trim();
+
+        if (normalExtractedText.StartsWith(normalTextSectionHeading, StringComparison.Ordinal))
+        {
+            normalExtractedText = normalExtractedText[normalTextSectionHeading.Length..].Trim();
+        }
+    }
+
+    var cleanNormalText = CleanDocumentTextForCounting(normalExtractedText, imageUnreadableMessage, imageVisionTroubleshootingMessage);
+    var cleanImageTextForDisplay = CleanImageTextForDisplay(imageExtractedText, imageUnreadableMessage, imageVisionTroubleshootingMessage);
+    var normalUsefulWords = CountUsefulWords(cleanNormalText);
+    var imageUsefulWords = CountUsefulWords(cleanImageTextForDisplay);
+    var hasPdfMetadata = pdfMetadata?.IsPresent == true;
+    var pdfHasEnoughRawText = hasPdfMetadata
+        ? pdfMetadata!.HasEnoughRawText
+        : normalUsefulWords >= 80 || HasEnoughMathLearningSignals(cleanNormalText);
+    var metadataHasImageContent = hasPdfMetadata && pdfMetadata!.HasImageContent;
+    var parsedReadableImageCount = CountReadableImageSections(imageExtractedText);
+    var parsedDetectedImageCount = GetDetectedImageCount(imageExtractedText, parsedReadableImageCount, hasImageTextSection);
+    var readableImageCount = isPdfDocument && hasPdfMetadata
+        ? pdfMetadata!.RecognizedImageCount
+        : parsedReadableImageCount;
+    var detectedImageCount = isPdfDocument && hasPdfMetadata
+        ? (metadataHasImageContent ? Math.Max(pdfMetadata!.DetectedImageCount, readableImageCount) : 0)
+        : parsedDetectedImageCount;
+    var imageTextHasUnreadableMessage = imageExtractedText.Contains(imageUnreadableMessage, StringComparison.OrdinalIgnoreCase);
+    var hasReadableImageText = isPdfDocument && hasPdfMetadata
+        ? metadataHasImageContent
+        : hasImageTextSection
+            && !string.IsNullOrWhiteSpace(cleanImageTextForDisplay)
+            && !imageTextHasUnreadableMessage;
+    var normalTextIsShort = isPdfDocument
+        ? hasReadableImageText && !pdfHasEnoughRawText
+        : hasImageTextSection && hasReadableImageText && normalUsefulWords < 80;
+    var mainUsefulWords = CountUsefulWords($"{cleanNormalText} {cleanImageTextForDisplay}");
+    var contentTypeLabel = (isUrlDocument, hasExtractedText, hasImageTextSection, normalUsefulWords < 80) switch
+    {
+        (true, true, _, _) => "Văn bản từ liên kết",
+        (true, false, _, _) => "Chưa lấy được nội dung",
+        (_, _, false, _) => "Văn bản",
+        (_, _, true, true) => "Chủ yếu là hình ảnh",
+        _ => "Văn bản + hình ảnh"
+    };
+    var mainContentSource = (isUrlDocument, hasExtractedText, hasImageTextSection, normalTextIsShort, hasReadableImageText && normalUsefulWords >= 80) switch
+    {
+        (true, true, _, _, _) => "Văn bản từ liên kết",
+        (true, false, _, _, _) => "Liên kết URL",
+        (_, _, false, _, _) => "Văn bản",
+        (_, _, true, true, _) => "Hình ảnh",
+        (_, _, true, _, true) => "Văn bản + hình ảnh",
+        _ => "Văn bản"
+    };
+    if (isPdfDocument)
+    {
+        if (hasReadableImageText)
+        {
+            contentTypeLabel = pdfHasEnoughRawText
+                ? "Văn bản + hình ảnh"
+                : "Chủ yếu là hình ảnh";
+            mainContentSource = pdfHasEnoughRawText
+                ? "Văn bản + hình ảnh"
+                : "Hình ảnh";
+        }
+        else
+        {
+            contentTypeLabel = "Văn bản";
+            mainContentSource = "Văn bản";
+            detectedImageCount = 0;
+            readableImageCount = 0;
+        }
+    }
+
+    var quizLearningText = $"{cleanNormalText} {cleanImageTextForDisplay}";
+    var hasMathLearningSignals = HasEnoughMathLearningSignals(quizLearningText);
+    var hasEnoughQuizContent = mainUsefulWords >= 80 || hasMathLearningSignals;
+    var contentTypeHasImages = hasReadableImageText;
+    var quizContentStatus = !hasEnoughQuizContent
+        ? "Chưa đủ nội dung"
+        : mainUsefulWords < 200
+            ? "Đủ tạo quiz cơ bản"
+            : "Đủ nội dung";
+    var quizStatusClass = !hasEnoughQuizContent
+        ? "danger"
+        : mainUsefulWords < 200
+            ? "warning"
+            : "success";
+    var usageSuggestionTitle = quizStatusClass switch
+    {
+        "danger" => "Cần bổ sung nội dung",
+        "warning" => "Phù hợp tạo quiz cơ bản",
+        _ => "Sẵn sàng tạo quiz"
+    };
+    var usageSuggestionText = quizStatusClass switch
+    {
+        "danger" => "Tài liệu hiện còn ít nội dung học tập. Bạn nên bổ sung thêm văn bản, dùng ảnh rõ chữ hơn hoặc nhập thêm nội dung bằng Paste Text để AI tạo đề chính xác hơn.",
+        "warning" => "Tài liệu có thể tạo quiz ở mức cơ bản. Nên chọn số lượng câu hỏi vừa phải để tránh AI phải suy luận quá nhiều ngoài nội dung tài liệu.",
+        _ => "Tài liệu có đủ nội dung để tạo quiz. Bạn có thể tạo bộ đề với số lượng câu hỏi nhiều hơn và phân bổ mức độ Bloom phù hợp."
+    };
+    var usageSuggestionHint = contentTypeHasImages
+        ? "Với tài liệu dạng ảnh, hãy ưu tiên ảnh rõ nét, không bị cắt chữ và có đủ ngữ cảnh học tập."
+        : "Với tài liệu dạng văn bản, nội dung càng rõ chủ đề thì câu hỏi AI tạo ra càng sát tài liệu.";
+    var urlLooksLikePdf = isUrlDocument
+        && !string.IsNullOrWhiteSpace(Model.SourceUrl)
+        && Model.SourceUrl.Contains(".pdf", StringComparison.OrdinalIgnoreCase);
+    var urlExtractionWarning = urlLooksLikePdf
+        ? "Hiện tại hệ thống chưa trích xuất trực tiếp PDF từ URL. Bạn có thể tải PDF về và upload file PDF để AI đọc nội dung."
+        : "Không lấy được nội dung học tập rõ ràng từ liên kết này. Bạn có thể mở link gốc, copy nội dung và dùng Paste Text hoặc upload file.";
+}
+
+@functions {
+    private sealed class PdfExtractionMetadata
+    {
+        public bool IsPresent { get; init; }
+        public int PageCount { get; init; }
+        public int RawTextLength { get; init; }
+        public bool HasEnoughRawText { get; init; }
+        public bool IsScanPdf { get; init; }
+        public int TotalImageCount { get; init; }
+        public int DetectedImageCount { get; init; }
+        public int ProcessedImageCount { get; init; }
+        public int RecognizedImageCount { get; init; }
+        public bool HasImageContent { get; init; }
+    }
+
+    private static PdfExtractionMetadata? ParsePdfExtractionMetadata(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var metadataText = ExtractPdfMetadataBlock(text);
+        if (string.IsNullOrWhiteSpace(metadataText))
+        {
+            return null;
+        }
+
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var line in metadataText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separatorIndex = line.IndexOf('=', StringComparison.Ordinal);
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            values[line[..separatorIndex].Trim()] = line[(separatorIndex + 1)..].Trim();
+        }
+
+        return new PdfExtractionMetadata
+        {
+            IsPresent = true,
+            PageCount = GetMetadataInt(values, "PageCount"),
+            RawTextLength = GetMetadataInt(values, "RawTextLength"),
+            HasEnoughRawText = GetMetadataBool(values, "HasEnoughRawText"),
+            IsScanPdf = GetMetadataBool(values, "IsScanPdf"),
+            TotalImageCount = GetMetadataInt(values, "TotalImageCount"),
+            DetectedImageCount = GetMetadataInt(values, "DetectedImageCount"),
+            ProcessedImageCount = GetMetadataInt(values, "ProcessedImageCount"),
+            RecognizedImageCount = GetMetadataInt(values, "RecognizedImageCount"),
+            HasImageContent = GetMetadataBool(values, "HasImageContent")
+        };
+    }
+
+    private static string RemovePdfMetadataBlock(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        var start = text.IndexOf(QuizGenAI.Services.PdfExtractionService.MetadataSectionHeading, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return text.Trim();
+        }
+
+        var end = text.IndexOf(
+            QuizGenAI.Services.PdfExtractionService.MetadataSectionEndHeading,
+            start,
+            StringComparison.Ordinal);
+
+        if (end < 0)
+        {
+            return text[..start].Trim();
+        }
+
+        end += QuizGenAI.Services.PdfExtractionService.MetadataSectionEndHeading.Length;
+
+        return (text[..start] + text[end..]).Trim();
+    }
+
+    private static string? ExtractPdfMetadataBlock(string text)
+    {
+        var start = text.IndexOf(QuizGenAI.Services.PdfExtractionService.MetadataSectionHeading, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return null;
+        }
+
+        start += QuizGenAI.Services.PdfExtractionService.MetadataSectionHeading.Length;
+
+        var end = text.IndexOf(
+            QuizGenAI.Services.PdfExtractionService.MetadataSectionEndHeading,
+            start,
+            StringComparison.Ordinal);
+
+        if (end < 0)
+        {
+            return text[start..].Trim();
+        }
+
+        return text[start..end].Trim();
+    }
+
+    private static int GetMetadataInt(IReadOnlyDictionary<string, string> values, string key)
+    {
+        return values.TryGetValue(key, out var value) && int.TryParse(value, out var number)
+            ? number
+            : 0;
+    }
+
+    private static bool GetMetadataBool(IReadOnlyDictionary<string, string> values, string key)
+    {
+        return values.TryGetValue(key, out var value) && bool.TryParse(value, out var flag) && flag;
+    }
+
+    private static int CountUsefulWords(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return 0;
+        }
+
+        return System.Text.RegularExpressions.Regex.Matches(text, @"\b[\p{L}\p{N}]{2,}\b").Count;
+    }
+
+    private static bool HasEnoughMathLearningSignals(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var normalized = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+        var compactLength = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s+", string.Empty).Length;
+
+        if (compactLength < 12)
+        {
+            return false;
+        }
+
+        var signalCount = 0;
+
+        signalCount += System.Text.RegularExpressions.Regex.Matches(
+            normalized,
+            @"[\p{L}\p{N}]\s*[=+\-*/÷×]\s*[\p{L}\p{N}]",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant).Count;
+
+        signalCount += System.Text.RegularExpressions.Regex.Matches(
+            normalized,
+            @"\b\d+\s*/\s*\d+\b|\\frac\s*\{|[¼½¾⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant).Count;
+
+        signalCount += System.Text.RegularExpressions.Regex.Matches(
+            normalized,
+            @"\b(?:[\p{L}\p{N}]\s*\^\s*\d+|\d+\s*\^\s*[\p{L}\p{N}])|[⁰¹²³⁴⁵⁶⁷⁸⁹]",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant).Count;
+
+        signalCount += System.Text.RegularExpressions.Regex.Matches(
+            normalized,
+            @"√|\\sqrt|π|∞|≤|≥|≠|≈|∑|∫|∆|Δ|α|β|γ|θ|\b(?:sin|cos|tan|log|ln)\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant).Count;
+
+        return signalCount >= 3;
+    }
+
+    private static string CleanDocumentTextForCounting(
+        string? text,
+        string imageUnreadableMessage,
+        string imageVisionTroubleshootingMessage)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        var cleaned = text
+            .Replace(QuizGenAI.Services.DocxExtractionService.NormalTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.DocxExtractionService.ImageTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.PdfExtractionService.NormalTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.PdfExtractionService.ImageTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.PdfExtractionService.ScannedPdfMessage, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.PdfExtractionService.ImageUnreadableMessage, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(imageUnreadableMessage, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(imageVisionTroubleshootingMessage, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace("KHONG_DOC_DUOC_NOI_DUNG_ANH", " ", StringComparison.OrdinalIgnoreCase);
+
+        cleaned = RemovePdfMetadataBlock(cleaned);
+
+        cleaned = System.Text.RegularExpressions.Regex.Replace(
+            cleaned,
+            @"(?:^|\r?\n)\s*Ghi chú(?: kỹ thuật)?:[^\r\n]*",
+            " ",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        cleaned = System.Text.RegularExpressions.Regex.Replace(
+            cleaned,
+            @"\(Không có nội dung văn bản thường được trích xuất từ Word\.\)",
+            " ",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        cleaned = System.Text.RegularExpressions.Regex.Replace(
+            cleaned,
+            @"\(KhÃ´ng cÃ³ ná»™i dung vÄƒn báº£n .*PDF\.\)",
+            " ",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        return cleaned.Trim();
+    }
+
+    private static string CleanImageTextForDisplay(
+        string? imageText,
+        string imageUnreadableMessage,
+        string imageVisionTroubleshootingMessage)
+    {
+        var cleaned = CleanDocumentTextForCounting(
+            imageText,
+            imageUnreadableMessage,
+            imageVisionTroubleshootingMessage);
+
+        return string.IsNullOrWhiteSpace(cleaned)
+            ? string.Empty
+            : cleaned.Trim();
+    }
+
+    private static int CountReadableImageSections(string? imageText)
+    {
+        if (string.IsNullOrWhiteSpace(imageText))
+        {
+            return 0;
+        }
+
+        return System.Text.RegularExpressions.Regex.Matches(
+            imageText,
+            @"(?:^|\r?\n)\s*Ảnh\s+\d+\s*:",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant).Count;
+    }
+
+    private static int GetDetectedImageCount(string? imageText, int readableImageCount, bool hasImageTextSection)
+    {
+        if (!hasImageTextSection)
+        {
+            return 0;
+        }
+
+        if (!string.IsNullOrWhiteSpace(imageText))
+        {
+            var totalMatch = System.Text.RegularExpressions.Regex.Match(
+                imageText,
+                @"tài liệu có\s+(\d+)\s+ảnh",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+            if (totalMatch.Success && int.TryParse(totalMatch.Groups[1].Value, out var totalImages) && totalImages > 0)
+            {
+                return Math.Max(totalImages, readableImageCount);
+            }
+
+            var technicalMatch = System.Text.RegularExpressions.Regex.Match(
+                imageText,
+                @"đã gửi\s+(\d+)\s+ảnh cho AI;\s*bỏ qua\s+(\d+)\s+ảnh[^;]*;\s*(\d+)\s+ảnh lỗi",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+            if (technicalMatch.Success &&
+                int.TryParse(technicalMatch.Groups[1].Value, out var processed) &&
+                int.TryParse(technicalMatch.Groups[2].Value, out var skipped) &&
+                int.TryParse(technicalMatch.Groups[3].Value, out var failed))
+            {
+                return Math.Max(processed + skipped + failed, readableImageCount);
+            }
+        }
+
+        return Math.Max(readableImageCount, 1);
+    }
 }
 
 <div class="document-detail-page stitch-detail-page">
@@ -160,6 +584,32 @@
                             </a>
                         </div>
                     </div>
+
+                    <div class="stitch-document-page stitch-url-extracted-document">
+                        <h3>Nội dung trích xuất từ liên kết</h3>
+
+                        @if (hasExtractedText)
+                        {
+                            <div class="stitch-document-text-wrapper collapsed">
+                                <div class="stitch-document-text">
+                                    @Model.ExtractedText
+                                </div>
+
+                                <div class="stitch-document-fade"></div>
+                            </div>
+
+                            <button type="button" class="btn-toggle-document-text" id="toggleDocumentTextBtn">
+                                Xem thêm nội dung
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="stitch-url-extraction-warning">
+                                <span class="material-symbols-outlined">info</span>
+                                <p>@urlExtractionWarning</p>
+                            </div>
+                        }
+                    </div>
                 }
                 else
                 {
@@ -168,12 +618,60 @@
 
                         <h3>Nội dung tài liệu</h3>
 
-                        @if (!string.IsNullOrWhiteSpace(Model.ExtractedText))
+                        @if (hasExtractedText)
                         {
                             <div class="stitch-document-text-wrapper collapsed">
-                                <div class="stitch-document-text">
-                                    @Model.ExtractedText
-                                </div>
+                                @if (hasImageTextSection)
+                                {
+                                    @if (normalTextIsShort)
+                                    {
+                                        <div class="stitch-image-ai-note">
+                                            <span class="material-symbols-outlined">image_search</span>
+                                            <span>Tài liệu có rất ít văn bản trực tiếp. Nội dung chính đã được AI nhận diện từ hình ảnh bên dưới.</span>
+                                        </div>
+                                    }
+                                    else if (hasReadableImageText)
+                                    {
+                                        <div class="stitch-image-ai-note">
+                                            <span class="material-symbols-outlined">auto_awesome</span>
+                                            <span>Một số nội dung từ hình ảnh đã được AI nhận diện và gộp vào tài liệu.</span>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(cleanNormalText))
+                                    {
+                                    <div class="stitch-document-text-section stitch-source-text-section @(normalTextIsShort ? "is-secondary" : "")">
+                                        <h4>@sourceTextSectionTitle</h4>
+                                        <div class="stitch-document-text">
+                                            @normalExtractedText
+                                        </div>
+                                    </div>
+
+                                    }
+
+                                    <div class="stitch-document-text-section stitch-image-text-section">
+                                        <h4>@imageTextSectionTitle</h4>
+
+                                        @if (!string.IsNullOrWhiteSpace(cleanImageTextForDisplay))
+                                        {
+                                            <div class="stitch-document-text stitch-image-recognized-text">
+                                                @cleanImageTextForDisplay
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="stitch-image-unreadable-note">
+                                                @imageUnreadableMessage
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="stitch-document-text">
+                                        @extractedText
+                                    </div>
+                                }
 
                                 <div class="stitch-document-fade"></div>
                             </div>
@@ -276,6 +774,65 @@
                         <span>Chủ đề chính</span>
                         <strong>@mainTopic</strong>
                     </div>
+                </div>
+            </div>
+            <div class="stitch-side-card">
+                <div class="stitch-side-title">
+                    <span class="material-symbols-outlined">fact_check</span>
+                    <h3>Đặc điểm tài liệu</h3>
+                </div>
+
+                <div class="stitch-document-traits">
+                    <div>
+                        <span>Loại nội dung</span>
+                        <strong>@contentTypeLabel</strong>
+                    </div>
+
+                    <div>
+                        <span>Số ảnh phát hiện</span>
+                        <strong>@detectedImageCount ảnh</strong>
+                    </div>
+
+                    <div>
+                        <span>AI nhận diện</span>
+                        <strong>@readableImageCount/@detectedImageCount ảnh thành công</strong>
+                    </div>
+
+                    <div>
+                        <span>Nguồn nội dung chính</span>
+                        <strong>@mainContentSource</strong>
+                    </div>
+
+                    <div>
+                        <span>Trạng thái tạo quiz</span>
+                        <strong class="stitch-trait-status @quizStatusClass">@quizContentStatus</strong>
+                    </div>
+                </div>
+
+                <div class="stitch-usage-suggestion @quizStatusClass">
+                    <div class="stitch-usage-suggestion-header">
+                        <span class="material-symbols-outlined">tips_and_updates</span>
+                        <div>
+                            <span>Gợi ý sử dụng</span>
+                            <strong>@usageSuggestionTitle</strong>
+                        </div>
+                    </div>
+
+                    <p>@usageSuggestionText</p>
+
+                    <div class="stitch-usage-suggestion-meta">
+                        <div>
+                            <span>Nên tạo</span>
+                            <strong>@estimatedQuestions</strong>
+                        </div>
+
+                        <div>
+                            <span>Ưu tiên</span>
+                            <strong>@mainContentSource</strong>
+                        </div>
+                    </div>
+
+                    <p class="stitch-usage-suggestion-hint">@usageSuggestionHint</p>
                 </div>
             </div>
         </aside>

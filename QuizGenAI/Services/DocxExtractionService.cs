@@ -1,0 +1,586 @@
+using System.Text;
+using System.Text.RegularExpressions;
+using DocumentFormat.OpenXml.Packaging;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
+
+namespace QuizGenAI.Services
+{
+    public sealed class DocxExtractionService
+    {
+        public const int MaxImagesToProcess = 5;
+        public const string NormalTextSectionHeading = "[Nội dung văn bản trích xuất từ Word]";
+        public const string ImageTextSectionHeading = "[Nội dung nhận diện từ hình ảnh trong tài liệu]";
+        public const string ImageUnreadableMessage = "Tài liệu có chứa hình ảnh, nhưng hệ thống chưa nhận diện được đủ nội dung học tập từ các ảnh này. Bạn có thể thử dùng ảnh rõ hơn hoặc bổ sung nội dung bằng Paste Text.";
+        public const string ImageVisionTroubleshootingMessage = "Nếu ảnh rõ chữ nhưng vẫn không nhận diện được, vui lòng kiểm tra model Gemini hiện tại có hỗ trợ Vision không và xem log backend để xác nhận request ảnh đã được Gemini chấp nhận.";
+
+        private static readonly HashSet<string> SupportedImageMimeTypes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/heic",
+            "image/heif"
+        };
+
+        private readonly GeminiService _geminiService;
+        private readonly IWebHostEnvironment _environment;
+        private readonly ILogger<DocxExtractionService> _logger;
+
+        public DocxExtractionService(
+            GeminiService geminiService,
+            IWebHostEnvironment environment,
+            ILogger<DocxExtractionService> logger)
+        {
+            _geminiService = geminiService;
+            _environment = environment;
+            _logger = logger;
+        }
+
+        public async Task<DocxExtractionResult> ExtractTextFromDocxAsync(
+            string filePath,
+            CancellationToken cancellationToken = default)
+        {
+            var normalText = ExtractTextFromWord(filePath);
+            var imageTexts = new List<string>();
+            var totalImageCount = 0;
+            var processedImageCount = 0;
+            var skippedImageCount = 0;
+            var failedImageCount = 0;
+            var unreadableImageCount = 0;
+
+            try
+            {
+                using var wordDocument = WordprocessingDocument.Open(filePath, false);
+                var mainPart = wordDocument.MainDocumentPart;
+
+                if (mainPart != null)
+                {
+                    var imageParts = mainPart.ImageParts.ToList();
+                    totalImageCount = imageParts.Count;
+
+                    _logger.LogInformation(
+                        "DOCX image scan found {TotalImageCount} ImageParts in {FilePath}. MaxImagesToProcess={MaxImagesToProcess}",
+                        totalImageCount,
+                        filePath,
+                        MaxImagesToProcess);
+
+                    var imageIndex = 0;
+
+                    foreach (var imagePart in imageParts.Take(MaxImagesToProcess))
+                    {
+                        imageIndex++;
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        var originalContentType = imagePart.ContentType;
+                        var mimeType = NormalizeImageMimeType(originalContentType);
+                        var relationshipId = mainPart.GetIdOfPart(imagePart);
+
+                        byte[] imageBytes;
+                        await using (var imageStream = imagePart.GetStream(FileMode.Open, FileAccess.Read))
+                        using (var memoryStream = new MemoryStream())
+                        {
+                            await imageStream.CopyToAsync(memoryStream, cancellationToken);
+                            imageBytes = memoryStream.ToArray();
+                        }
+
+                        if (imageBytes.Length == 0)
+                        {
+                            skippedImageCount++;
+                            _logger.LogWarning(
+                                "Skipped DOCX image {ImageIndex} because extracted bytes are empty. ContentType={ContentType}",
+                                imageIndex,
+                                originalContentType);
+                            continue;
+                        }
+
+                        mimeType = DetectMimeTypeFromBytes(imageBytes) ?? mimeType;
+                        var hasDimensions = TryGetImageDimensions(imageBytes, out var width, out var height);
+
+                        _logger.LogInformation(
+                            "DOCX image {ImageIndex}/{TotalImageCount}. RelationshipId={RelationshipId}, ContentType={ContentType}, DetectedMimeType={MimeType}, Bytes={Bytes}, Width={Width}, Height={Height}",
+                            imageIndex,
+                            totalImageCount,
+                            relationshipId,
+                            originalContentType,
+                            mimeType,
+                            imageBytes.Length,
+                            hasDimensions ? width : (int?)null,
+                            hasDimensions ? height : (int?)null);
+
+                        if (!SupportedImageMimeTypes.Contains(mimeType))
+                        {
+                            skippedImageCount++;
+                            _logger.LogInformation(
+                                "Skipped unsupported DOCX image {ImageIndex}. ContentType={ContentType}, DetectedMimeType={MimeType}, Bytes={Bytes}",
+                                imageIndex,
+                                originalContentType,
+                                mimeType,
+                                imageBytes.Length);
+                            continue;
+                        }
+
+                        await SaveDebugImageIfDevelopmentAsync(
+                            imageBytes,
+                            mimeType,
+                            imageIndex,
+                            cancellationToken);
+
+                        if (IsSmallDecorativeImage(imageBytes))
+                        {
+                            skippedImageCount++;
+                            _logger.LogInformation(
+                                "Skipped small decorative DOCX image {ImageIndex}. MimeType={MimeType}, Bytes={Bytes}, Width={Width}, Height={Height}",
+                                imageIndex,
+                                mimeType,
+                                imageBytes.Length,
+                                width,
+                                height);
+                            continue;
+                        }
+
+                        processedImageCount++;
+
+                        try
+                        {
+                            _logger.LogInformation(
+                                "Sending DOCX image {ImageIndex} to Gemini Vision. MimeType={MimeType}, Bytes={Bytes}, Width={Width}, Height={Height}",
+                                imageIndex,
+                                mimeType,
+                                imageBytes.Length,
+                                hasDimensions ? width : (int?)null,
+                                hasDimensions ? height : (int?)null);
+
+                            var imageText = await _geminiService.ExtractTextFromImageBytesAsync(
+                                imageBytes,
+                                mimeType,
+                                cancellationToken);
+
+                            var isUsefulImageText = IsUsefulImageText(imageText);
+
+                            _logger.LogInformation(
+                                "Gemini Vision result for DOCX image {ImageIndex}. IsUseful={IsUsefulImageText}, Text={ImageText}",
+                                imageIndex,
+                                isUsefulImageText,
+                                TruncateForLog(imageText));
+
+                            if (isUsefulImageText)
+                            {
+                                imageTexts.Add(imageText.Trim());
+                            }
+                            else
+                            {
+                                unreadableImageCount++;
+                            }
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            failedImageCount++;
+                            _logger.LogWarning(
+                                ex,
+                                "Could not extract text from DOCX image {ImageIndex}. MimeType={MimeType}, Bytes={Bytes}, Width={Width}, Height={Height}. If the image is clear, verify that Gemini model {ModelHint} supports vision and that the inline image request is accepted.",
+                                imageIndex,
+                                mimeType,
+                                imageBytes.Length,
+                                hasDimensions ? width : (int?)null,
+                                hasDimensions ? height : (int?)null,
+                                "Gemini:ModelName");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Could not inspect embedded images in DOCX file {FilePath}.", filePath);
+            }
+
+            var combinedText = MergeNormalTextAndImageText(
+                normalText,
+                imageTexts,
+                totalImageCount,
+                processedImageCount,
+                skippedImageCount,
+                failedImageCount,
+                unreadableImageCount);
+
+            return new DocxExtractionResult
+            {
+                NormalText = normalText,
+                ExtractedText = combinedText,
+                ImageExtractedText = imageTexts.Count > 0
+                    ? BuildImageTextSection(imageTexts, totalImageCount, processedImageCount, skippedImageCount, failedImageCount, unreadableImageCount)
+                    : null,
+                HasImages = totalImageCount > 0,
+                TotalImageCount = totalImageCount,
+                ProcessedImageCount = processedImageCount,
+                ReadableImageCount = imageTexts.Count,
+                SkippedImageCount = skippedImageCount,
+                FailedImageCount = failedImageCount,
+                UnreadableImageCount = unreadableImageCount
+            };
+        }
+
+        private static string? ExtractTextFromWord(string filePath)
+        {
+            using var wordDocument = WordprocessingDocument.Open(filePath, false);
+            var mainPart = wordDocument.MainDocumentPart;
+
+            if (mainPart?.Document?.Body == null)
+            {
+                return null;
+            }
+
+            var textBuilder = new StringBuilder();
+
+            foreach (var text in mainPart.Document.Body.Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>())
+            {
+                if (!string.IsNullOrWhiteSpace(text.Text))
+                {
+                    textBuilder.Append(text.Text);
+                    textBuilder.Append(' ');
+                }
+            }
+
+            var extractedText = textBuilder.ToString().Trim();
+
+            return string.IsNullOrWhiteSpace(extractedText)
+                ? null
+                : extractedText;
+        }
+
+        private static string? MergeNormalTextAndImageText(
+            string? normalText,
+            IReadOnlyCollection<string> imageTexts,
+            int totalImageCount,
+            int processedImageCount,
+            int skippedImageCount,
+            int failedImageCount,
+            int unreadableImageCount)
+        {
+            if (totalImageCount == 0)
+            {
+                return normalText;
+            }
+
+            var builder = new StringBuilder();
+
+            builder.AppendLine(NormalTextSectionHeading);
+            builder.AppendLine(!string.IsNullOrWhiteSpace(normalText)
+                ? normalText.Trim()
+                : "(Không có nội dung văn bản thường được trích xuất từ Word.)");
+            builder.AppendLine();
+            builder.AppendLine(ImageTextSectionHeading);
+
+            if (imageTexts.Count > 0)
+            {
+                builder.Append(BuildImageTextSection(imageTexts, totalImageCount, processedImageCount, skippedImageCount, failedImageCount, unreadableImageCount));
+            }
+            else
+            {
+                builder.AppendLine(ImageUnreadableMessage);
+                builder.AppendLine(ImageVisionTroubleshootingMessage);
+                AppendImageProcessingNotes(builder, totalImageCount, processedImageCount, skippedImageCount, failedImageCount, unreadableImageCount);
+            }
+
+            return builder.ToString().Trim();
+        }
+
+        private static string BuildImageTextSection(
+            IReadOnlyCollection<string> imageTexts,
+            int totalImageCount,
+            int processedImageCount,
+            int skippedImageCount,
+            int failedImageCount,
+            int unreadableImageCount)
+        {
+            var builder = new StringBuilder();
+            var imageIndex = 1;
+
+            foreach (var imageText in imageTexts)
+            {
+                builder.AppendLine($"Ảnh {imageIndex}:");
+                builder.AppendLine(imageText.Trim());
+                builder.AppendLine();
+                imageIndex++;
+            }
+
+            AppendImageProcessingNotes(builder, totalImageCount, processedImageCount, skippedImageCount, failedImageCount, unreadableImageCount);
+
+            return builder.ToString().Trim();
+        }
+
+        private static void AppendImageProcessingNotes(
+            StringBuilder builder,
+            int totalImageCount,
+            int processedImageCount,
+            int skippedImageCount,
+            int failedImageCount,
+            int unreadableImageCount)
+        {
+            if (totalImageCount > MaxImagesToProcess)
+            {
+                builder.AppendLine();
+                builder.AppendLine($"Ghi chú: tài liệu có {totalImageCount} ảnh, hệ thống chỉ xử lý tối đa {MaxImagesToProcess} ảnh đầu tiên để tránh timeout/quota.");
+            }
+
+            if (skippedImageCount > 0 || failedImageCount > 0 || unreadableImageCount > 0)
+            {
+                builder.AppendLine();
+                builder.AppendLine($"Ghi chú kỹ thuật: đã gửi {processedImageCount} ảnh cho AI; bỏ qua {skippedImageCount} ảnh nhỏ/không hỗ trợ; {failedImageCount} ảnh lỗi khi nhận diện.");
+            }
+        }
+
+        private static bool IsUsefulImageText(string? imageText)
+        {
+            if (string.IsNullOrWhiteSpace(imageText))
+            {
+                return false;
+            }
+
+            if (imageText.Contains("KHONG_DOC_DUOC_NOI_DUNG_ANH", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return CountUsefulWords(imageText) >= 3
+                || HasMathTextSignal(imageText);
+        }
+
+        private static int CountUsefulWords(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return 0;
+            }
+
+            return Regex.Matches(text, @"\b[\p{L}\p{N}]{2,}\b").Count;
+        }
+
+        private static bool HasMathTextSignal(string text)
+        {
+            return Regex.IsMatch(
+                text,
+                @"[\p{L}\p{N}]\s*[=+\-*/÷×]\s*[\p{L}\p{N}]|\\frac\s*\{|[¼½¾⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]|[\p{L}\p{N}]\s*\^\s*\d+|[⁰¹²³⁴⁵⁶⁷⁸⁹]|√|\\sqrt|π|∞|≤|≥|≠|≈|∑|∫|∆|Δ|\b(?:sin|cos|tan|log|ln)\b",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        }
+
+        private static string TruncateForLog(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            var normalized = Regex.Replace(text.Trim(), @"\s+", " ");
+
+            return normalized.Length <= 500
+                ? normalized
+                : normalized[..500] + "...";
+        }
+
+        private async Task SaveDebugImageIfDevelopmentAsync(
+            byte[] imageBytes,
+            string mimeType,
+            int imageIndex,
+            CancellationToken cancellationToken)
+        {
+            if (!_environment.IsDevelopment())
+            {
+                return;
+            }
+
+            try
+            {
+                var webRootPath = _environment.WebRootPath;
+                if (string.IsNullOrWhiteSpace(webRootPath))
+                {
+                    webRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                }
+
+                var debugFolder = Path.Combine(webRootPath, "uploads", "debug-docx-images");
+                Directory.CreateDirectory(debugFolder);
+
+                var extension = GetFileExtensionForMimeType(mimeType);
+                var fileName = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}-docx-image-{imageIndex}{extension}";
+                var fullPath = Path.Combine(debugFolder, fileName);
+
+                await File.WriteAllBytesAsync(fullPath, imageBytes, cancellationToken);
+
+                _logger.LogInformation(
+                    "Saved DOCX debug image {ImageIndex} to {DebugImagePath}. MimeType={MimeType}, Bytes={Bytes}",
+                    imageIndex,
+                    fullPath,
+                    mimeType,
+                    imageBytes.Length);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Could not save DOCX debug image {ImageIndex}.", imageIndex);
+            }
+        }
+
+        private static string NormalizeImageMimeType(string? contentType)
+        {
+            return contentType?.Trim().ToLowerInvariant() switch
+            {
+                "image/jpg" => "image/jpeg",
+                "image/pjpeg" => "image/jpeg",
+                "image/x-png" => "image/png",
+                var mime when !string.IsNullOrWhiteSpace(mime) => mime,
+                _ => "application/octet-stream"
+            };
+        }
+
+        private static string? DetectMimeTypeFromBytes(byte[] bytes)
+        {
+            if (bytes.Length >= 12 &&
+                bytes[0] == 0x52 &&
+                bytes[1] == 0x49 &&
+                bytes[2] == 0x46 &&
+                bytes[3] == 0x46 &&
+                bytes[8] == 0x57 &&
+                bytes[9] == 0x45 &&
+                bytes[10] == 0x42 &&
+                bytes[11] == 0x50)
+            {
+                return "image/webp";
+            }
+
+            if (bytes.Length >= 24 &&
+                bytes[0] == 0x89 &&
+                bytes[1] == 0x50 &&
+                bytes[2] == 0x4E &&
+                bytes[3] == 0x47)
+            {
+                return "image/png";
+            }
+
+            if (bytes.Length >= 4 && bytes[0] == 0xFF && bytes[1] == 0xD8)
+            {
+                return "image/jpeg";
+            }
+
+            if (bytes.Length >= 12 &&
+                bytes[4] == 0x66 &&
+                bytes[5] == 0x74 &&
+                bytes[6] == 0x79 &&
+                bytes[7] == 0x70)
+            {
+                var brand = Encoding.ASCII.GetString(bytes, 8, 4).ToLowerInvariant();
+                return brand.StartsWith("heic", StringComparison.Ordinal) ||
+                       brand.StartsWith("heix", StringComparison.Ordinal) ||
+                       brand.StartsWith("hevc", StringComparison.Ordinal) ||
+                       brand.StartsWith("hevx", StringComparison.Ordinal)
+                    ? "image/heic"
+                    : brand.StartsWith("mif1", StringComparison.Ordinal) ||
+                      brand.StartsWith("msf1", StringComparison.Ordinal)
+                        ? "image/heif"
+                        : null;
+            }
+
+            return null;
+        }
+
+        private static string GetFileExtensionForMimeType(string mimeType)
+        {
+            return mimeType.ToLowerInvariant() switch
+            {
+                "image/jpeg" => ".jpg",
+                "image/png" => ".png",
+                "image/webp" => ".webp",
+                "image/heic" => ".heic",
+                "image/heif" => ".heif",
+                _ => ".bin"
+            };
+        }
+
+        private static bool IsSmallDecorativeImage(byte[] imageBytes)
+        {
+            return TryGetImageDimensions(imageBytes, out var width, out var height)
+                && width < 100
+                && height < 100;
+        }
+
+        private static bool TryGetImageDimensions(byte[] bytes, out int width, out int height)
+        {
+            width = 0;
+            height = 0;
+
+            if (bytes.Length >= 24 &&
+                bytes[0] == 0x89 &&
+                bytes[1] == 0x50 &&
+                bytes[2] == 0x4E &&
+                bytes[3] == 0x47)
+            {
+                width = ReadBigEndianInt32(bytes, 16);
+                height = ReadBigEndianInt32(bytes, 20);
+                return width > 0 && height > 0;
+            }
+
+            if (bytes.Length >= 10 &&
+                bytes[0] == 0x47 &&
+                bytes[1] == 0x49 &&
+                bytes[2] == 0x46)
+            {
+                width = bytes[6] | (bytes[7] << 8);
+                height = bytes[8] | (bytes[9] << 8);
+                return width > 0 && height > 0;
+            }
+
+            if (bytes.Length >= 4 && bytes[0] == 0xFF && bytes[1] == 0xD8)
+            {
+                var index = 2;
+
+                while (index + 9 < bytes.Length)
+                {
+                    if (bytes[index] != 0xFF)
+                    {
+                        index++;
+                        continue;
+                    }
+
+                    var marker = bytes[index + 1];
+                    var segmentLength = (bytes[index + 2] << 8) + bytes[index + 3];
+
+                    if (segmentLength < 2 || index + 2 + segmentLength > bytes.Length)
+                    {
+                        break;
+                    }
+
+                    if (marker is >= 0xC0 and <= 0xC3 or >= 0xC5 and <= 0xC7 or >= 0xC9 and <= 0xCB or >= 0xCD and <= 0xCF)
+                    {
+                        height = (bytes[index + 5] << 8) + bytes[index + 6];
+                        width = (bytes[index + 7] << 8) + bytes[index + 8];
+                        return width > 0 && height > 0;
+                    }
+
+                    index += 2 + segmentLength;
+                }
+            }
+
+            return false;
+        }
+
+        private static int ReadBigEndianInt32(byte[] bytes, int startIndex)
+        {
+            return (bytes[startIndex] << 24)
+                | (bytes[startIndex + 1] << 16)
+                | (bytes[startIndex + 2] << 8)
+                | bytes[startIndex + 3];
+        }
+    }
+
+    public sealed class DocxExtractionResult
+    {
+        public string? NormalText { get; init; }
+        public string? ExtractedText { get; init; }
+        public string? ImageExtractedText { get; init; }
+        public bool HasImages { get; init; }
+        public int TotalImageCount { get; init; }
+        public int ProcessedImageCount { get; init; }
+        public int ReadableImageCount { get; init; }
+        public int SkippedImageCount { get; init; }
+        public int FailedImageCount { get; init; }
+        public int UnreadableImageCount { get; init; }
+    }
+}
