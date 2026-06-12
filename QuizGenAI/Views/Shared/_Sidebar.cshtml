@@ -146,11 +146,22 @@
     
     <!-- Settings section (Pinned to bottom) -->
     <div class="mt-auto px-6 py-4 border-t border-slate-200 dark:border-outline-variant">
-        <a href="#" 
-           class="flex items-center py-2 text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors gap-3 group">
-            <span class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-300">settings</span>
-            <span class="font-label-sm text-label-sm">Cài đặt</span>
-        </a>
+        @if (User.Identity?.IsAuthenticated == true && User.IsInRole(SD.Role_Admin))
+        {
+            <a asp-area="Admin" asp-controller="AdminSetting" asp-action="Index" 
+               class="flex items-center py-2 transition-colors gap-3 group @(activePage == "AdminSetting" ? "text-primary dark:text-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim")">
+                <span class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-300" style="@(activePage == "AdminSetting" ? "font-variation-settings: 'FILL' 1;" : "")">settings</span>
+                <span class="font-label-sm text-label-sm">Cài đặt hệ thống</span>
+            </a>
+        }
+        else
+        {
+            <a href="#" 
+               class="flex items-center py-2 text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors gap-3 group">
+                <span class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-300">settings</span>
+                <span class="font-label-sm text-label-sm">Cài đặt</span>
+            </a>
+        }
     </div>
     
 </nav>
