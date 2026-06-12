@@ -22,6 +22,11 @@ namespace QuizGenAI.Controllers
 
         public async Task<IActionResult> Index()
         {
+            if (User.IsInRole(SD.Role_Admin))
+            {
+                return RedirectToAction("Index", "AdminDashboard", new { area = "Admin" });
+            }
+
             ViewData["ActivePage"] = "Dashboard";
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);

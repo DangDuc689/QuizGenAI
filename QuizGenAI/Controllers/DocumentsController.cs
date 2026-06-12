@@ -267,6 +267,36 @@ namespace QuizGenAI.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> TogglePublic(int quizSetId)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Json(new { success = false, message = "Bạn chưa đăng nhập." });
+            }
+
+            var quizSet = await _context.QuizSets.FirstOrDefaultAsync(qs => qs.Id == quizSetId);
+            if (quizSet == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy bộ đề." });
+            }
+
+            if (quizSet.UserId != userId)
+            {
+                return Json(new { success = false, message = "Bạn không có quyền chỉnh sửa bộ đề này." });
+            }
+
+            quizSet.IsPublic = !quizSet.IsPublic;
+            quizSet.UpdatedAt = DateTime.Now;
+
+            _context.QuizSets.Update(quizSet);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, isPublic = quizSet.IsPublic, message = "Cập nhật trạng thái thành công." });
+        }
+
         private static string? ExtractTextFromWord(string filePath)
         {
             using var wordDocument = WordprocessingDocument.Open(filePath, false);

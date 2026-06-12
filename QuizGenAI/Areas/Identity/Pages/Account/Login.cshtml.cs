@@ -92,7 +92,10 @@ namespace QuizGenAI.Areas.Identity.Pages.Account
                 ModelState.AddModelError(string.Empty, ErrorMessage);
             }
 
-            returnUrl ??= Url.Content("~/");
+            if (string.IsNullOrEmpty(returnUrl) || returnUrl == "/" || returnUrl == "~/")
+            {
+                returnUrl = Url.Content("~/Dashboard");
+            }
 
             // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
@@ -104,18 +107,35 @@ namespace QuizGenAI.Areas.Identity.Pages.Account
 
         public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
-            returnUrl ??= Url.Content("~/");
+            if (string.IsNullOrEmpty(returnUrl) || returnUrl == "/" || returnUrl == "~/")
+            {
+                returnUrl = Url.Content("~/Dashboard");
+            }
 
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
             if (ModelState.IsValid)
             {
-                // This doesn't count login failures towards account lockout
-                // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-                var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+                // Enable account lockout to prevent brute-force attacks
+                var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in.");
+                    if (returnUrl == "~/" || string.IsNullOrEmpty(returnUrl))
+                    {
+                        var user = await _signInManager.UserManager.FindByEmailAsync(Input.Email);
+                        if (user != null)
+                        {
+                            if (await _signInManager.UserManager.IsInRoleAsync(user, SD.Role_Admin))
+                            {
+                                return RedirectToAction("Index", "AdminDashboard", new { area = "Admin" });
+                            }
+                            else
+                            {
+                                return RedirectToAction("Index", "Dashboard");
+                            }
+                        }
+                    }
                     return LocalRedirect(returnUrl);
                 }
                 if (result.RequiresTwoFactor)

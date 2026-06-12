@@ -32,10 +32,7 @@
             </div>
 
             <div class="auth-field">
-                <div class="auth-label-row">
-                    <label asp-for="Input.Password" class="auth-label"></label>
-                    <a class="auth-small-link" asp-page="./ForgotPassword">Quên mật khẩu?</a>
-                </div>
+                <label asp-for="Input.Password" class="auth-label"></label>
                 <div class="auth-input-wrap">
                     <span class="material-symbols-outlined auth-input-icon">lock</span>
                     <input asp-for="Input.Password" id="login-password" class="auth-input has-leading-icon has-trailing-icon" autocomplete="current-password" placeholder="Nhập mật khẩu" />
@@ -46,10 +43,13 @@
                 <span asp-validation-for="Input.Password" class="auth-error"></span>
             </div>
 
-            <label class="auth-checkline">
-                <input asp-for="Input.RememberMe" class="auth-checkbox" />
-                <span>Ghi nhớ đăng nhập</span>
-            </label>
+            <div class="auth-action-row">
+                <label class="auth-checkline">
+                    <input asp-for="Input.RememberMe" class="auth-checkbox" />
+                    <span>Ghi nhớ đăng nhập</span>
+                </label>
+                <a class="auth-small-link" href="/ForgotPassword">Quên mật khẩu?</a>
+            </div>
 
             <button type="submit" class="auth-primary-button">
                 Đăng nhập
@@ -69,10 +69,6 @@
                 </button>
             </div>
 
-            <a class="auth-guest-link" asp-area="" asp-controller="Home" asp-action="Index">
-                Dùng thử không cần đăng nhập
-                <span class="material-symbols-outlined">arrow_forward</span>
-            </a>
         </form>
     </section>
 </main>

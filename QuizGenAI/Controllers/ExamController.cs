@@ -62,6 +62,12 @@ namespace QuizGenAI.Controllers
             return Json(new { success, statusCode, message });
         }
 
+        [HttpGet("Exam/Start/{id}")]
+        public IActionResult Start(int id)
+        {
+            return RedirectToAction("Index", new { quizSetId = id });
+        }
+
         /// <summary>Trang thi thử chính.</summary>
         public async Task<IActionResult> Index(int quizSetId)
         {
@@ -76,7 +82,7 @@ namespace QuizGenAI.Controllers
             var quizSet = await _context.QuizSets
                 .Include(qs => qs.Questions)
                     .ThenInclude(q => q.AnswerOptions)
-                .FirstOrDefaultAsync(qs => qs.Id == quizSetId && qs.UserId == userId);
+                .FirstOrDefaultAsync(qs => qs.Id == quizSetId && (qs.UserId == userId || qs.IsPublic));
 
             if (quizSet == null)
             {
@@ -541,7 +547,7 @@ namespace QuizGenAI.Controllers
             var quizSet = await _context.QuizSets
                 .Include(qs => qs.Questions)
                     .ThenInclude(q => q.AnswerOptions)
-                .FirstOrDefaultAsync(qs => qs.Id == quizSetId && qs.UserId == userId);
+                .FirstOrDefaultAsync(qs => qs.Id == quizSetId && (qs.UserId == userId || qs.IsPublic));
 
             if (quizSet == null)
             {
