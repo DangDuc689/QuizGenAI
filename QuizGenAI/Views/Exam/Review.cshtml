@@ -160,7 +160,7 @@
                         <div class="p-3.5 rounded-lg border border-slate-100 dark:border-outline-variant/10 bg-[#0037b0]/5 dark:bg-primary/5 text-[#0037b0] dark:text-primary-fixed-dim flex gap-2">
                             <span class="material-symbols-outlined text-[20px] flex-shrink-0 mt-0.5">lightbulb</span>
                             <p class="text-caption font-caption leading-relaxed">
-                                Bạn có thể chọn nhiều tài liệu cùng lúc để hệ thống tự động tổng hợp nội dung và biên soạn câu hỏi ôn tập chéo!
+                                Hãy chọn một tài liệu từ thư viện của bạn để hệ thống AI phân tích và biên soạn bộ đề ôn tập tương ứng.
                             </p>
                         </div>
                     </div>
@@ -179,6 +179,12 @@
                     Thông số bài thi
                 </h3>
                 
+                <div class="flex flex-col gap-2">
+                    <label class="font-button text-button text-on-surface dark:text-primary-fixed-dim" for="quiz-title">Tên bộ đề ôn tập <span class="text-danger">*</span></label>
+                    <input type="text" id="quiz-title" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface" placeholder="Ví dụ: Đề kiểm tra cuối kỳ, Ôn tập chương 1..." maxlength="200" required />
+                    <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Nhập tên để dễ dàng quản lý và phân biệt các bộ đề.</span>
+                </div>
+
                 <div class="flex flex-col gap-2">
                     <label class="font-button text-button text-on-surface dark:text-primary-fixed-dim" for="total-questions">Số lượng câu hỏi</label>
                     <input type="number" id="total-questions" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface" min="5" max="50" value="20" />
@@ -201,6 +207,15 @@
                     <select id="output-lang" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface">
                         <option value="0" selected>Tiếng Việt</option>
                         <option value="1">Tiếng Anh (English)</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="font-button text-button text-on-surface dark:text-primary-fixed-dim" for="difficulty">Mức độ đề thi</label>
+                    <select id="difficulty" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface">
+                        <option value="0">Dễ</option>
+                        <option value="1" selected>Trung bình</option>
+                        <option value="2">Khó</option>
                     </select>
                 </div>
             </div>
@@ -289,19 +304,22 @@
             let currentStep = 1;
             let selectedDocIds = [];
 
-            // 1. SELECT DOCUMENTS LOGIC
+            // 1. SELECT DOCUMENTS LOGIC (Single select)
             $(".document-card").on("click", function () {
                 const docId = parseInt($(this).attr("data-id"));
                 const index = selectedDocIds.indexOf(docId);
+                const isAlreadySelected = index > -1;
+
+                // Reset all other document cards visually
+                $(".document-card").removeClass("border-primary dark:border-primary-fixed-dim bg-primary-fixed dark:bg-primary/10 shadow-sm");
+                $(".document-card").find(".checkbox-indicator").removeClass("bg-primary border-primary").addClass("bg-white border-slate-300 dark:border-outline-variant");
+                $(".document-card").find(".checkbox-indicator span").addClass("hidden");
                 
-                if (index > -1) {
-                    // Unselect
-                    selectedDocIds.splice(index, 1);
-                    $(this).removeClass("border-primary dark:border-primary-fixed-dim bg-primary-fixed dark:bg-primary/10 shadow-sm");
-                    $(this).find(".checkbox-indicator").removeClass("bg-primary border-primary").addClass("bg-white border-slate-300 dark:border-outline-variant");
-                    $(this).find(".checkbox-indicator span").addClass("hidden");
-                } else {
-                    // Select
+                // Clear the selection array
+                selectedDocIds = [];
+
+                if (!isAlreadySelected) {
+                    // Select this document only
                     selectedDocIds.push(docId);
                     $(this).addClass("border-primary dark:border-primary-fixed-dim bg-primary-fixed dark:bg-primary/10 shadow-sm");
                     $(this).find(".checkbox-indicator").addClass("bg-primary border-primary").removeClass("bg-white border-slate-300 dark:border-outline-variant");
@@ -464,6 +482,11 @@
 
             // 5. CALL AI TO CREATE QUIZSET VIA AJAX
             function createQuizSet() {
+                const quizTitle = $("#quiz-title").val().trim();
+                if (!quizTitle) {
+                    alert("Vui lòng nhập tên bộ đề ôn tập.");
+                    return;
+                }
                 const totalQ = parseInt($("#total-questions").val());
                 const timeL = parseInt($("#time-limit").val());
                 const lang = parseInt($("#output-lang").val());
@@ -503,14 +526,18 @@
                     });
                 }, 3500);
 
+                const diff = parseInt($("#difficulty").val());
+
                 const requestData = {
                     documentIds: selectedDocIds,
+                    title: quizTitle,
                     totalQuestions: totalQ,
                     bloomRememberPercent: rVal,
                     bloomUnderstandPercent: uVal,
                     bloomApplyPercent: aVal,
                     timeLimitMinutes: timeL,
-                    language: lang
+                    language: lang,
+                    difficulty: diff
                 };
 
                 $.ajax({

@@ -60,7 +60,7 @@
             </div>
             <div>
                 <span class="block text-caption text-secondary dark:text-secondary-fixed-dim">Thời gian ôn tập</span>
-                <span class="text-h2 font-h2 text-on-surface dark:text-on-primary-container">@Model.StudyHours giờ</span>
+                <span class="text-h2 font-h2 text-on-surface dark:text-on-primary-container">@Model.StudyTimeText</span>
             </div>
         </div>
     </div>
@@ -82,7 +82,10 @@
 
             <!-- Bloom Progress Bars Card -->
             <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200/60 dark:border-outline-variant rounded-2xl p-6 shadow-sm">
-                <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container mb-4">Phân tích năng lực (Bloom's Taxonomy)</h3>
+                <div class="mb-4">
+                    <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container">Phân tích năng lực</h3>
+                    <p class="text-caption text-secondary dark:text-secondary-fixed-dim mt-0.5">Tập trung đánh giá theo 3 cấp độ cốt lõi: Nhận biết, Thông hiểu và Vận dụng.</p>
+                </div>
                 <div class="flex flex-col gap-4">
                     <!-- Remember -->
                     <div>

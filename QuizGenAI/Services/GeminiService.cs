@@ -27,7 +27,8 @@ namespace QuizGenAI.Services
             int rememberPercent, 
             int understandPercent, 
             int applyPercent,
-            OutputLanguage language)
+            OutputLanguage language,
+            DifficultyLevel difficulty)
         {
             if (string.IsNullOrWhiteSpace(_apiKey))
             {
@@ -50,12 +51,19 @@ namespace QuizGenAI.Services
             numApply = Math.Max(0, numApply);
 
             var languageStr = language == OutputLanguage.English ? "English" : "Tiếng Việt";
+            var difficultyStr = difficulty switch
+            {
+                DifficultyLevel.Easy => "DỄ (Các câu hỏi tập trung vào định nghĩa, dữ kiện trực diện, phương án nhiễu dễ phân biệt, không lắt léo).",
+                DifficultyLevel.Hard => "KHÓ (Các câu hỏi có cấu trúc phức tạp, lắt léo, yêu cầu lập luận suy luận hoặc tổng hợp sâu từ tài liệu, các phương án nhiễu cực kỳ thuyết phục và dễ nhầm lẫn).",
+                _ => "TRUNG BÌNH (Có sự kết hợp hợp lý giữa lý thuyết cơ bản và tư duy phân tích, đòi hỏi người làm phải nắm rõ nội dung tài liệu)."
+            };
 
             // Xây dựng Prompt chi tiết
             var promptBuilder = new StringBuilder();
             promptBuilder.AppendLine("Bạn là một chuyên gia khảo thí và xây dựng đề thi học thuật chất lượng cao.");
             promptBuilder.AppendLine("Dựa trên tài liệu được cung cấp dưới đây, hãy tạo bộ câu hỏi trắc nghiệm (mỗi câu gồm 4 đáp án A, B, C, D và chỉ có duy nhất 1 đáp án đúng) theo chuẩn phân loại Bloom.");
             promptBuilder.AppendLine($"Ngôn ngữ của câu hỏi, các đáp án và lời giải thích phải hoàn toàn bằng: {languageStr}.");
+            promptBuilder.AppendLine($"Độ khó của toàn bộ đề ôn tập này phải ở mức: {difficultyStr}");
             promptBuilder.AppendLine($"Tổng số câu hỏi cần tạo là {totalQuestions} câu, trong đó:");
             promptBuilder.AppendLine($"- {numRemember} câu ở mức độ NHẬN BIẾT (Remembering - Bloom Level: 0): Hỏi về các dữ kiện trực tiếp, định nghĩa, thông tin rõ ràng trong bài.");
             promptBuilder.AppendLine($"- {numUnderstand} câu ở mức độ THÔNG HIỂU (Understanding - Bloom Level: 1): Hỏi về việc hiểu bản chất, giải thích lý do, so sánh các khái niệm.");
@@ -117,11 +125,14 @@ namespace QuizGenAI.Services
                 }
             };
 
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_modelName}:generateContent?key={_apiKey}";
-            var jsonContent = JsonSerializer.Serialize(requestBody);
-            var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_modelName}:generateContent";
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.Add("x-goog-api-key", _apiKey);
 
-            var response = await _httpClient.PostAsync(url, httpContent);
+            var jsonContent = JsonSerializer.Serialize(requestBody);
+            request.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
                 var errorMsg = await response.Content.ReadAsStringAsync();

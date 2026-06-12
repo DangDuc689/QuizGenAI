@@ -12,7 +12,7 @@ namespace QuizGenAI.Areas.Admin.Controllers
         private static readonly AdminSettingViewModel _settings = new()
         {
             AppName = "QuizGen AI",
-            Slogan = "Academic Excellence & AI-powered Quiz Generation",
+            Slogan = "Học tập xuất sắc - Tạo đề bằng AI",
             LogoPath = "/images/logo.png",
             DefaultLanguage = "vi",
             Enable2FA = false,

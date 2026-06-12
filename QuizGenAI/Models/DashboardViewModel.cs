@@ -8,7 +8,7 @@ namespace QuizGenAI.Models
         public int TotalExams { get; set; }
         public double AverageScorePercent { get; set; }
         public int SavedQuizSetsCount { get; set; }
-        public double StudyHours { get; set; }
+        public string StudyTimeText { get; set; } = "0 phút";
         
         // Progress trend (Chart.js data)
         public List<string> TrendLabels { get; set; } = new List<string>();

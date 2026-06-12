@@ -293,9 +293,14 @@ namespace QuizGenAI.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateQuizSet([FromBody] CreateQuizSetModel model)
         {
-            if (model == null || model.DocumentIds == null || model.DocumentIds.Count == 0)
+            if (model == null || model.DocumentIds == null || model.DocumentIds.Count != 1)
             {
-                return Json(new { success = false, message = "Vui lòng chọn ít nhất một tài liệu." });
+                return Json(new { success = false, message = "Vui lòng chọn duy nhất một tài liệu." });
+            }
+
+            if (string.IsNullOrWhiteSpace(model.Title))
+            {
+                return Json(new { success = false, message = "Vui lòng nhập tên bộ đề ôn tập." });
             }
 
             var userId = _userManager.GetUserId(User);
@@ -346,7 +351,8 @@ namespace QuizGenAI.Controllers
                     model.BloomRememberPercent,
                     model.BloomUnderstandPercent,
                     model.BloomApplyPercent,
-                    model.Language);
+                    model.Language,
+                    model.Difficulty);
 
                 if (generatedQuestions == null || generatedQuestions.Count == 0)
                 {
@@ -354,9 +360,7 @@ namespace QuizGenAI.Controllers
                 }
 
                 // Tạo QuizSet mới
-                var title = documents.Count == 1 
-                    ? $"Đề ôn tập: {documents[0].Title}" 
-                    : $"Đề ôn tập tổng hợp ({documents.Count} tài liệu)";
+                var title = model.Title.Trim();
 
                 var quizSet = new QuizSet
                 {
@@ -367,6 +371,7 @@ namespace QuizGenAI.Controllers
                     BloomApplyPercent = model.BloomApplyPercent,
                     TimeLimitMinutes = model.TimeLimitMinutes,
                     Language = model.Language,
+                    Difficulty = model.Difficulty,
                     Status = QuizSetStatus.Ready,
                     CreatedAt = DateTime.UtcNow,
                     UserId = userId,
@@ -459,6 +464,35 @@ namespace QuizGenAI.Controllers
             await _context.SaveChangesAsync();
 
             return Json(new { success = true, sessionId = session.Id });
+        }
+
+        /// <summary>AJAX: Cập nhật thời gian làm bài thực tế định kỳ.</summary>
+        [HttpPost]
+        public async Task<IActionResult> UpdateSessionDuration(int sessionId, int durationSeconds)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Json(new { success = false, message = "Chưa đăng nhập." });
+            }
+
+            var session = await _context.ExamSessions
+                .FirstOrDefaultAsync(es => es.Id == sessionId && es.UserId == userId);
+
+            if (session == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy phiên làm bài." });
+            }
+
+            if (session.Status != ExamSessionStatus.InProgress)
+            {
+                return Json(new { success = false, message = "Phiên làm bài đã kết thúc hoặc không ở trạng thái làm bài." });
+            }
+
+            session.ActualDurationSeconds = durationSeconds;
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true });
         }
 
         /// <summary>AJAX: Nộp bài thi thử.</summary>
@@ -684,12 +718,14 @@ namespace QuizGenAI.Controllers
     public class CreateQuizSetModel
     {
         public List<int> DocumentIds { get; set; } = new List<int>();
+        public string? Title { get; set; }
         public int TotalQuestions { get; set; } = 20;
         public int BloomRememberPercent { get; set; } = 40;
         public int BloomUnderstandPercent { get; set; } = 40;
         public int BloomApplyPercent { get; set; } = 20;
         public int TimeLimitMinutes { get; set; } = 30;
         public OutputLanguage Language { get; set; } = OutputLanguage.Vietnamese;
+        public DifficultyLevel Difficulty { get; set; } = DifficultyLevel.Medium;
     }
 
     public class ExamSubmissionModel

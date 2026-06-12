@@ -49,9 +49,24 @@ namespace QuizGenAI.Controllers
                 .CountAsync(qs => qs.UserId == userId && qs.Status == QuizSetStatus.Ready);
 
             // 3. Calculate study hours
-            viewModel.StudyHours = completedSessions.Any()
-                ? Math.Round(completedSessions.Sum(es => es.ActualDurationSeconds ?? 0) / 3600.0, 1)
-                : 0;
+            var totalStudySeconds = await _context.ExamSessions
+                .Where(es => es.UserId == userId && (es.Status == ExamSessionStatus.Completed || es.Status == ExamSessionStatus.Abandoned))
+                .SumAsync(es => es.ActualDurationSeconds ?? 0);
+
+            if (totalStudySeconds < 60)
+            {
+                viewModel.StudyTimeText = "Dưới 1 phút";
+            }
+            else if (totalStudySeconds < 3600)
+            {
+                viewModel.StudyTimeText = $"{totalStudySeconds / 60} phút";
+            }
+            else
+            {
+                int hours = totalStudySeconds / 3600;
+                int minutes = (totalStudySeconds % 3600) / 60;
+                viewModel.StudyTimeText = minutes > 0 ? $"{hours} giờ {minutes} phút" : $"{hours} giờ";
+            }
 
             // If user has zero data, populate clean defaults but let them know
             if (completedSessions.Count == 0)

@@ -10,7 +10,7 @@ namespace QuizGenAI.Models
         public string AppName { get; set; } = "QuizGen AI";
 
         [Display(Name = "Slogan / Mô tả")]
-        public string Slogan { get; set; } = "Academic Excellence & AI-powered Quiz Generation";
+        public string Slogan { get; set; } = "Học tập xuất sắc - Tạo đề bằng AI";
 
         [Display(Name = "Đường dẫn Logo")]
         public string LogoPath { get; set; } = "/images/logo.png";

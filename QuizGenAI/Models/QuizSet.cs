@@ -16,6 +16,13 @@ namespace QuizGenAI.Models
         Archived = 2     // Đã lưu trữ
     }
 
+    public enum DifficultyLevel
+    {
+        Easy = 0,
+        Medium = 1,
+        Hard = 2
+    }
+
     public class QuizSet
     {
         public int Id { get; set; }
@@ -42,6 +49,8 @@ namespace QuizGenAI.Models
         public int TimeLimitMinutes { get; set; } = 30;
 
         public OutputLanguage Language { get; set; } = OutputLanguage.Vietnamese;
+
+        public DifficultyLevel Difficulty { get; set; } = DifficultyLevel.Medium;
 
         public QuizSetStatus Status { get; set; } = QuizSetStatus.Draft;
 

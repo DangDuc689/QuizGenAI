@@ -212,7 +212,16 @@
 
                             <p>
                                 <span class="material-symbols-outlined">format_list_numbered</span>
-                                Bộ câu hỏi đã tạo
+                                @quizSet.TotalQuestions câu hỏi
+                            </p>
+
+                            <p>
+                                <span class="material-symbols-outlined">signal_cellular_alt</span>
+                                Mức độ: @(quizSet.Difficulty switch {
+                                    QuizGenAI.Models.DifficultyLevel.Easy => "Dễ",
+                                    QuizGenAI.Models.DifficultyLevel.Hard => "Khó",
+                                    _ => "Trung bình"
+                                })
                             </p>
 
                             <p>

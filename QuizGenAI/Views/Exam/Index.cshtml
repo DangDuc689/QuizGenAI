@@ -604,6 +604,20 @@
         }
         
         function startTimer() {
+            // Khởi chạy đồng bộ thời gian làm bài thực tế lên server mỗi 10 giây
+            const durationInterval = setInterval(function () {
+                if (isExamSubmitted || sessionId === 0) {
+                    clearInterval(durationInterval);
+                    return;
+                }
+                const currentDuration = @(Model.TimeLimitMinutes * 60) - timeRemainingSeconds;
+                $.ajax({
+                    url: '/Exam/UpdateSessionDuration',
+                    type: 'POST',
+                    data: { sessionId: sessionId, durationSeconds: currentDuration }
+                });
+            }, 10000);
+
             const timerInterval = setInterval(function () {
                 if (isExamSubmitted) {
                     clearInterval(timerInterval);
