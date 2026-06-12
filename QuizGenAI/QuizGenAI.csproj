@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <NuGetAudit>false</NuGetAudit>
     <NoWarn>$(NoWarn);NU1901;NU1902;NU1903;NU1904</NoWarn>
+    <UserSecretsId>f9fec27f-09e7-4281-a8c7-d0148e22be12</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
