@@ -2,6 +2,19 @@
 
 @{
     ViewData["Title"] = Model.Title;
+    
+    // Tính toán các chỉ số cho biểu đồ SVG tiến trình và stats phụ
+    var avgScore = Model.AverageScorePercent;
+    var radius = 50;
+    var circumference = 2 * Math.PI * radius; // ~314.16
+    var strokeDashoffset = circumference * (1 - (avgScore / 100.0));
+    var maxScore = Model.RecentAssessments.Any() ? Model.RecentAssessments.Max(a => a.ScorePercent) : 0;
+    var totalExams = Model.RecentAssessments.Count;
+
+    // Dữ liệu cho biểu đồ Chart.js (sắp xếp từ cũ nhất đến mới nhất)
+    var chartLabels = Model.RecentAssessments.Select(a => a.TakenAt.ToString("dd/MM")).Reverse().ToList();
+    var chartData = Model.RecentAssessments.Select(a => a.ScorePercent).Reverse().ToList();
+    var chartTitles = Model.RecentAssessments.Select(a => a.Title).Reverse().ToList();
 }
 
 <div class="space-y-8">
@@ -24,46 +37,72 @@
                 </span>
             </div>
 
-            <div class="relative flex-1 rounded-[2rem] bg-slate-50 border border-slate-200 p-5">
-                <div class="absolute inset-x-0 top-5 h-px bg-slate-200 opacity-50"></div>
-                <div class="absolute inset-x-0 top-1/3 h-px bg-slate-200 opacity-50"></div>
-                <div class="absolute inset-x-0 top-2/3 h-px bg-slate-200 opacity-50"></div>
-                <div class="absolute inset-x-0 top-4/5 h-px bg-slate-200 opacity-50"></div>
-
-                <div class="relative z-10 h-full flex items-end gap-3">
-                    @if (Model.PerformanceTrend.Any())
-                    {
-                        foreach (var score in Model.PerformanceTrend)
-                        {
-                            var height = Math.Max(12, score);
-                            <div class="flex-1 flex flex-col items-center justify-end gap-2">
-                                <div class="w-full max-w-[24px] rounded-t-3xl bg-primary/20 overflow-hidden">
-                                    <div class="h-full rounded-t-3xl bg-gradient-to-t from-primary to-primary-fixed-dim" style="height:@height%"></div>
-                                </div>
-                                <span class="text-caption font-caption text-secondary">@score%</span>
-                            </div>
-                        }
-                    }
-                    else
-                    {
-                        <div class="col-span-5 rounded-3xl border border-dashed border-slate-300 bg-slate-100 p-6 text-center text-secondary">Không có dữ liệu hiệu suất trong lịch sử.</div>
-                    }
-                </div>
+            <div class="relative flex-1 w-full h-[18rem] mt-4">
+                <canvas id="performanceChart"></canvas>
             </div>
         </section>
 
-        <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-tertiary-container p-6 shadow-sm text-on-primary h-[28rem]">
-            <div class="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-3xl"></div>
-            <div class="absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-white/10 blur-2xl"></div>
+        <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e40af] to-[#6d28d9] p-6 shadow-sm text-on-primary h-[28rem] flex flex-col justify-between">
+            <div class="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+            
             <div class="relative z-10 flex h-full flex-col justify-between">
                 <div>
-                    <p class="text-caption font-caption uppercase tracking-[0.18em] text-white/80">Điểm trung bình</p>
-                    <div class="mt-3 text-[4rem] font-bold tracking-tight">@Model.AverageScoreLabel</div>
+                    <p class="text-caption font-caption text-center uppercase tracking-[0.18em] text-white/80">Điểm trung bình</p>
                 </div>
-                <div class="rounded-3xl bg-white/15 p-4 backdrop-blur-sm">
-                    <p class="font-caption text-caption text-white/90 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[16px]">military_tech</span>
-                        Top 15% trong lớp
+                
+                <!-- SVG Progress Circle -->
+                <div class="relative flex items-center justify-center my-2">
+                    <svg class="w-36 h-36 transform -rotate-90">
+                        <circle
+                            cx="72"
+                            cy="72"
+                            r="@radius"
+                            stroke="rgba(255, 255, 255, 0.15)"
+                            stroke-width="10"
+                            fill="transparent"
+                        />
+                        <circle
+                            cx="72"
+                            cy="72"
+                            r="@radius"
+                            stroke="url(#progressGradient)"
+                            stroke-width="10"
+                            fill="transparent"
+                            stroke-dasharray="@circumference"
+                            stroke-dashoffset="@strokeDashoffset"
+                            stroke-linecap="round"
+                        />
+                        <defs>
+                            <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#ffffff" />
+                                <stop offset="100%" stop-color="#e2e8f0" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="absolute flex flex-col items-center justify-center">
+                        <span class="text-4xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]">@Model.AverageScoreLabel</span>
+                        <span class="text-[10px] text-white/70 uppercase tracking-wider font-semibold mt-0.5">Tỉ lệ đúng</span>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-4 my-2 border-t border-b border-white/10 py-3">
+                    <div class="text-center border-r border-white/10">
+                        <span class="block text-2xl font-bold text-white">@maxScore%</span>
+                        <span class="block text-[10px] text-white/75 uppercase tracking-wider font-medium mt-1">Cao nhất</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="block text-2xl font-bold text-white">@totalExams</span>
+                        <span class="block text-[10px] text-white/75 uppercase tracking-wider font-medium mt-1">Số bài thi</span>
+                    </div>
+                </div>
+
+                <!-- Footer Badge -->
+                <div class="rounded-2xl bg-white/10 p-3.5 backdrop-blur-sm">
+                    <p class="font-caption text-caption text-white/95 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">military_tech</span>
+                        @Model.HighlightBadge
                     </p>
                 </div>
             </div>
@@ -100,12 +139,12 @@
                         <th class="px-6 py-4 font-label-sm uppercase tracking-[0.18em] text-right">Hành động</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-200">
+                <tbody id="assessment-table-body" class="divide-y divide-slate-200">
                     @if (Model.RecentAssessments.Any())
                     {
                         foreach (var assessment in Model.RecentAssessments)
                         {
-                            <tr class="hover:bg-slate-50 transition-colors">
+                            <tr class="assessment-row hover:bg-slate-50 transition-colors">
                                 <td class="px-6 py-4 align-top">
                                     <div class="font-semibold text-on-surface">@assessment.Title</div>
                                     <div class="mt-2 inline-flex items-center gap-2 text-caption text-secondary">
@@ -127,7 +166,7 @@
                                 </td>
                                 <td class="px-6 py-4 align-top text-on-surface">@assessment.QuestionSummary</td>
                                 <td class="px-6 py-4 align-top text-right">
-                                    <a asp-controller="Exam" asp-action="Result" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-caption font-caption text-primary hover:bg-primary hover:text-on-primary transition-colors">
+                                    <a asp-controller="Exam" asp-action="Result" asp-route-sessionId="@assessment.Id" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-caption font-caption text-primary hover:bg-primary hover:text-on-primary transition-colors">
                                         <span class="material-symbols-outlined">visibility</span>
                                         Xem lại
                                     </a>
@@ -146,15 +185,198 @@
         </div>
 
         <div class="p-4 border-t border-slate-200 bg-surface flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p class="font-caption text-secondary">Hiển thị 1 đến @Model.RecentAssessments.Count mục</p>
-            <div class="flex items-center gap-1">
-                <button class="h-10 w-10 rounded-full bg-primary text-on-primary">1</button>
-                <button class="h-10 w-10 rounded-full text-on-surface hover:bg-slate-100 transition-colors">2</button>
-                <button class="h-10 w-10 rounded-full text-on-surface hover:bg-slate-100 transition-colors">3</button>
-                <button class="h-10 w-10 rounded-full text-on-surface hover:bg-slate-100 transition-colors">
-                    <span class="material-symbols-outlined">chevron_right</span>
-                </button>
+            <p id="pagination-info" class="font-caption text-secondary">Hiển thị 1 đến @Model.RecentAssessments.Count mục</p>
+            <div id="pagination-container" class="flex items-center gap-1">
+                <!-- Nút phân trang sẽ được sinh tự động bằng JS -->
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // --- Khởi tạo biểu đồ Chart.js ---
+            const chartCanvas = document.getElementById('performanceChart');
+            if (chartCanvas) {
+                const ctx = chartCanvas.getContext('2d');
+                
+                // Tạo gradient cho Area Fill
+                const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+                gradient.addColorStop(0, 'rgba(79, 70, 229, 0.25)'); // Indigo với 25% opacity
+                gradient.addColorStop(1, 'rgba(79, 70, 229, 0.0)');
+
+                const chartLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartLabels));
+                const chartData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartData));
+                const chartTitles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartTitles));
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{
+                            label: 'Điểm số',
+                            data: chartData,
+                            borderColor: '#4f46e5',
+                            borderWidth: 3,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: '#4f46e5',
+                            pointBorderWidth: 2,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointHoverBackgroundColor: '#4f46e5',
+                            pointHoverBorderColor: '#ffffff',
+                            pointHoverBorderWidth: 2,
+                            fill: true,
+                            backgroundColor: gradient,
+                            tension: 0.4 // Độ cong mượt của đường
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false // Ẩn chú giải
+                            },
+                            tooltip: {
+                                backgroundColor: '#0f172a',
+                                titleFont: {
+                                    size: 12,
+                                    weight: 'bold',
+                                    family: 'Inter, system-ui, sans-serif'
+                                },
+                                bodyFont: {
+                                    size: 12,
+                                    family: 'Inter, system-ui, sans-serif'
+                                },
+                                padding: 12,
+                                cornerRadius: 8,
+                                callbacks: {
+                                    title: function(context) {
+                                        const index = context[0].dataIndex;
+                                        return chartTitles[index] || 'Bài thi';
+                                    },
+                                    label: function(context) {
+                                        return ` Điểm: ${context.parsed.y}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: false // Ẩn lưới dọc
+                                },
+                                ticks: {
+                                    font: {
+                                        size: 11,
+                                        family: 'Inter, system-ui, sans-serif'
+                                    },
+                                    color: '#64748b'
+                                }
+                            },
+                            y: {
+                                min: 0,
+                                max: 100,
+                                ticks: {
+                                    stepSize: 20,
+                                    font: {
+                                        size: 11,
+                                        family: 'Inter, system-ui, sans-serif'
+                                    },
+                                    color: '#64748b',
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(226, 232, 240, 0.6)' // Đường lưới ngang mờ hơn
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // --- Khởi tạo phân trang Client-side ---
+            const pageSize = 5;
+            let currentPage = 1;
+            const rows = Array.from(document.querySelectorAll(".assessment-row"));
+            const totalItems = rows.length;
+            const totalPages = Math.ceil(totalItems / pageSize);
+
+            const infoEl = document.getElementById("pagination-info");
+            const containerEl = document.getElementById("pagination-container");
+
+            function showPage(page) {
+                if (page < 1) page = 1;
+                if (page > totalPages) page = totalPages;
+                currentPage = page;
+
+                // Ẩn/hiện dòng
+                rows.forEach((row, idx) => {
+                    const start = (currentPage - 1) * pageSize;
+                    const end = currentPage * pageSize;
+                    if (idx >= start && idx < end) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+
+                // Cập nhật text thông tin
+                if (totalItems === 0) {
+                    if (infoEl) infoEl.textContent = "Hiển thị 0 mục";
+                } else {
+                    const startIdx = (currentPage - 1) * pageSize + 1;
+                    const endIdx = Math.min(currentPage * pageSize, totalItems);
+                    if (infoEl) infoEl.textContent = `Hiển thị ${startIdx} đến ${endIdx} trong số ${totalItems} mục`;
+                }
+
+                // Vẽ lại các nút phân trang
+                renderPagination();
+            }
+
+            function renderPagination() {
+                if (!containerEl) return;
+                containerEl.innerHTML = "";
+
+                if (totalPages <= 1) {
+                    return; // Không cần hiện phân trang nếu chỉ có 1 trang hoặc không có dữ liệu
+                }
+
+                // Nút Previous
+                const prevBtn = document.createElement("button");
+                prevBtn.className = `h-10 w-10 rounded-full flex items-center justify-center transition-colors ${currentPage === 1 ? "text-slate-300 pointer-events-none" : "text-on-surface hover:bg-slate-100"}`;
+                prevBtn.innerHTML = '<span class="material-symbols-outlined">chevron_left</span>';
+                prevBtn.addEventListener("click", () => showPage(currentPage - 1));
+                containerEl.appendChild(prevBtn);
+
+                // Các nút số trang
+                for (let i = 1; i <= totalPages; i++) {
+                    const pageBtn = document.createElement("button");
+                    if (i === currentPage) {
+                        pageBtn.className = "h-10 w-10 rounded-full bg-primary text-on-primary font-semibold shadow-sm";
+                    } else {
+                        pageBtn.className = "h-10 w-10 rounded-full text-on-surface hover:bg-slate-100 transition-colors";
+                    }
+                    pageBtn.textContent = i;
+                    pageBtn.addEventListener("click", () => showPage(i));
+                    containerEl.appendChild(pageBtn);
+                }
+
+                // Nút Next
+                const nextBtn = document.createElement("button");
+                nextBtn.className = `h-10 w-10 rounded-full flex items-center justify-center transition-colors ${currentPage === totalPages ? "text-slate-300 pointer-events-none" : "text-on-surface hover:bg-slate-100"}`;
+                nextBtn.innerHTML = '<span class="material-symbols-outlined">chevron_right</span>';
+                nextBtn.addEventListener("click", () => showPage(currentPage + 1));
+                containerEl.appendChild(nextBtn);
+            }
+
+            // Khởi tạo trang đầu tiên
+            showPage(1);
+        });
+    </script>
+}

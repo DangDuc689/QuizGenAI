@@ -151,7 +151,7 @@
                     <div class="flex items-center justify-between">
                         <span id="taxonomy-badge" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-label-sm text-label-sm uppercase tracking-wide">
                             <span class="material-symbols-outlined text-[14px]">psychology</span>
-                            <span id="taxonomy-text">Applying</span>
+                            <span id="taxonomy-text">Đang tải...</span>
                         </span>
                         <button id="flag-btn" class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors flex items-center gap-1 font-button text-button cursor-pointer">
                             <span class="material-symbols-outlined text-[18px]" id="flag-icon">flag</span>
@@ -161,7 +161,7 @@
                     
                     <!-- Question Stem -->
                     <h2 id="question-stem" class="font-h2 text-h2 text-on-surface dark:text-on-primary-container leading-tight">
-                        Loading question...
+                        Đang tải câu hỏi...
                     </h2>
                     
                     <!-- Answer Options -->
@@ -189,7 +189,7 @@
         
         <!-- Right Actions -->
         <div class="flex items-center gap-3">
-            <button id="submit-btn" class="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-danger text-white font-button text-button shadow-sm hover:bg-danger/90 transition-colors focus:ring-4 focus:ring-danger/20 cursor-pointer">
+            <button id="submit-btn" class="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-success-light text-success hover:bg-success-light/80 border border-success/20 font-button text-button shadow-sm transition-colors focus:ring-4 focus:ring-success/20 cursor-pointer">
                 <span class="material-symbols-outlined text-[18px]">gavel</span>
                 Nộp bài
             </button>
@@ -307,7 +307,7 @@
                 {
                     id: @q.OrderIndex,
                     dbId: @q.Id,
-                    taxonomy: "@(q.BloomLevel == QuizGenAI.Models.BloomLevel.Remember ? "Remembering" : q.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "Understanding" : "Applying")",
+                    taxonomy: "@Html.Raw(q.BloomLevel == QuizGenAI.Models.BloomLevel.Remember ? "Nhận biết" : q.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "Thông hiểu" : "Vận dụng")",
                     taxonomyClass: "@(q.BloomLevel == QuizGenAI.Models.BloomLevel.Remember ? "bg-bloom-remember/10 text-bloom-remember dark:text-primary-fixed-dim border border-bloom-remember/20" : q.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "bg-bloom-understand/10 text-bloom-understand dark:text-tertiary-fixed-dim border border-bloom-understand/20" : "bg-warning-light text-bloom-apply dark:text-secondary-fixed-dim border border-warning/20")",
                     stem: `@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(q.Content))`,
                     explanation: `@Html.Raw(q.Explanation != null ? System.Web.HttpUtility.JavaScriptStringEncode(q.Explanation) : "")`,
@@ -477,7 +477,52 @@
             
             // Update Footer Buttons Disable states
             $("#prev-btn").prop("disabled", index === 0).toggleClass("opacity-40 pointer-events-none", index === 0);
-            $("#next-btn").prop("disabled", index === totalQuestions - 1).toggleClass("opacity-40 pointer-events-none", index === totalQuestions - 1);
+
+            // Cập nhật trạng thái hiển thị của các nút Câu sau / Nộp bài
+            const isLastQuestion = index === totalQuestions - 1;
+            const $nextBtn = $("#next-btn");
+            const $submitBtn = $("#submit-btn");
+            
+            if (isExamSubmitted) {
+                // Đã nộp bài (chế độ xem lại bài)
+                $submitBtn.addClass("hidden");
+                
+                if (isLastQuestion) {
+                    $nextBtn.html(`
+                        Xem kết quả
+                        <span class="material-symbols-outlined text-[18px]">analytics</span>
+                    `);
+                    $nextBtn.removeClass("bg-primary hover:bg-primary/90 focus:ring-primary/20 opacity-40 pointer-events-none")
+                            .addClass("bg-success text-white hover:bg-success/90 focus:ring-4 focus:ring-success/20")
+                            .prop("disabled", false);
+                } else {
+                    $nextBtn.html(`
+                        Câu sau
+                        <span class="material-symbols-outlined">arrow_forward</span>
+                    `);
+                    $nextBtn.removeClass("bg-success hover:bg-success/90 focus:ring-success/20 opacity-40 pointer-events-none")
+                            .addClass("bg-primary text-white hover:bg-primary/90 focus:ring-4 focus:ring-primary/20")
+                            .prop("disabled", false);
+                }
+            } else {
+                // Chưa nộp bài (chế độ đang làm bài)
+                $submitBtn.removeClass("hidden");
+                
+                $nextBtn.html(`
+                    Câu sau
+                    <span class="material-symbols-outlined">arrow_forward</span>
+                `);
+                
+                if (isLastQuestion) {
+                    $nextBtn.removeClass("bg-success hover:bg-success/90 focus:ring-success/20")
+                            .addClass("bg-primary text-white opacity-40 pointer-events-none")
+                            .prop("disabled", true);
+                } else {
+                    $nextBtn.removeClass("bg-success hover:bg-success/90 focus:ring-success/20 opacity-40 pointer-events-none")
+                            .addClass("bg-primary text-white hover:bg-primary/90 focus:ring-4 focus:ring-primary/20")
+                            .prop("disabled", false);
+                }
+            }
             
             // Update Question Map
             renderQuestionMapGrid();
@@ -758,20 +803,25 @@
         });
         
         $("#next-btn").on("click", function () {
-            navigateToQuestion(currentQuestionIndex + 1);
+            const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
+            
+            if (isLastQuestion) {
+                if (isExamSubmitted) {
+                    window.location.href = $("#result-modal-detail-link").attr("href");
+                }
+            } else {
+                navigateToQuestion(currentQuestionIndex + 1);
+            }
+        });
+        
+        $("#submit-btn").on("click", function () {
+            if (!isExamSubmitted) {
+                showSubmitModal();
+            }
         });
         
         $("#flag-btn").on("click", function () {
             toggleFlag();
-        });
-        
-        $("#submit-btn").on("click", function () {
-            if (isExamSubmitted) {
-                // Đã nộp bài trước đó, chuyển thẳng đến trang kết quả chi tiết
-                window.location.href = $("#result-modal-detail-link").attr("href");
-            } else {
-                showSubmitModal();
-            }
         });
         
         $("#cancel-submit-btn").on("click", function () {

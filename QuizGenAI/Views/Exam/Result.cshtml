@@ -237,7 +237,7 @@
                 <text>
                 {
                     index: @q.OrderIndex,
-                    level: "@(q.BloomLevel == QuizGenAI.Models.BloomLevel.Remember ? "Remembering" : q.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "Understanding" : "Applying")",
+                    level: "@Html.Raw(q.BloomLevel == QuizGenAI.Models.BloomLevel.Remember ? "Nhận biết" : q.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "Thông hiểu" : "Vận dụng")",
                     stem: `@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(q.Content))`,
                     options: [
                         @foreach (var opt in q.AnswerOptions)
@@ -264,21 +264,18 @@
     }
 
     function bloomBadgeClass(level) {
-        if (level === "Remembering" || level === "Nhận biết")  return "bg-blue-100 text-bloom-remember border-blue-200";
-        if (level === "Understanding" || level === "Thông hiểu") return "bg-purple-100 text-bloom-understand border-purple-200";
+        if (level === "Nhận biết")  return "bg-blue-100 text-bloom-remember border-blue-200";
+        if (level === "Thông hiểu") return "bg-purple-100 text-bloom-understand border-purple-200";
         return "bg-orange-100 text-bloom-apply border-orange-200";
     }
 
     function barColor(level) {
-        if (level === "Remembering" || level === "Nhận biết")  return "bg-bloom-remember";
-        if (level === "Understanding" || level === "Thông hiểu") return "bg-bloom-understand";
+        if (level === "Nhận biết")  return "bg-bloom-remember";
+        if (level === "Thông hiểu") return "bg-bloom-understand";
         return "bg-bloom-apply";
     }
 
     function displayLevelName(level) {
-        if (level === "Remembering") return "Nhận biết";
-        if (level === "Understanding") return "Thông hiểu";
-        if (level === "Applying") return "Vận dụng";
         return level;
     }
 
