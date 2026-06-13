@@ -79,8 +79,7 @@ namespace QuizGenAI.Areas.Identity.Pages.Account
             [Compare("Password", ErrorMessage = "Mật khẩu xác nhận không khớp.")]
             public string ConfirmPassword { get; set; }
 
-            [Display(Name = "Tôi đồng ý với Điều khoản và Chính sách bảo mật")]
-            public bool AcceptTerms { get; set; }
+
         }
 
         public async Task OnGetAsync(string returnUrl = null)
@@ -101,10 +100,7 @@ namespace QuizGenAI.Areas.Identity.Pages.Account
             }
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
-            if (!Input.AcceptTerms)
-            {
-                ModelState.AddModelError("Input.AcceptTerms", "Bạn cần đồng ý với điều khoản trước khi đăng ký.");
-            }
+
 
             if (ModelState.IsValid)
             {

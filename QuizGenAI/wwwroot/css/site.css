@@ -2063,11 +2063,15 @@ main:has(.documents-page) {
 }
 
 .auth-shell-login {
-    padding-top: 0;
+    justify-content: center;
+    padding-top: 32px;
+    padding-bottom: 32px;
 }
 
 .auth-shell-register {
-    padding-top: 14px;
+    justify-content: center;
+    padding-top: 32px;
+    padding-bottom: 32px;
     background: #f7f9fc;
 }
 

@@ -2,6 +2,17 @@
 @{
     Layout = null;
     ViewData["Title"] = "Thi thử - QuizGen AI";
+
+    var returnUrl = ViewBag.ReturnUrl as string;
+    var backUrl = "/Dashboard";
+    if (returnUrl == "Explore")
+    {
+        backUrl = "/Explore";
+    }
+    else if (returnUrl == "Review")
+    {
+        backUrl = "/Exam/Review";
+    }
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -147,16 +158,12 @@
                 
                 <!-- Question Card -->
                 <div id="question-card" class="bg-surface-container-lowest dark:bg-on-secondary-fixed rounded-[20px] shadow-sm border border-slate-200/60 dark:border-outline-variant p-6 md:p-10 flex flex-col gap-8 mt-2 transition-all duration-300">
-                    <!-- Meta Row: Bloom's Taxonomy Badge & Flag Button -->
+                    <!-- Meta Row: Bloom's Taxonomy Badge -->
                     <div class="flex items-center justify-between">
                         <span id="taxonomy-badge" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-label-sm text-label-sm uppercase tracking-wide">
                             <span class="material-symbols-outlined text-[14px]">psychology</span>
                             <span id="taxonomy-text">Đang tải...</span>
                         </span>
-                        <button id="flag-btn" class="text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors flex items-center gap-1 font-button text-button cursor-pointer">
-                            <span class="material-symbols-outlined text-[18px]" id="flag-icon">flag</span>
-                            <span class="hidden sm:inline" id="flag-text">Đánh dấu ôn tập</span>
-                        </button>
                     </div>
                     
                     <!-- Question Stem -->
@@ -214,14 +221,10 @@
             </div>
             
             <!-- Summary Stats -->
-            <div class="bg-slate-50 dark:bg-surface-dim/20 rounded-xl p-4 grid grid-cols-3 gap-2 text-center border border-slate-200/50 dark:border-outline-variant">
+            <div class="bg-slate-50 dark:bg-surface-dim/20 rounded-xl p-4 grid grid-cols-2 gap-2 text-center border border-slate-200/50 dark:border-outline-variant">
                 <div>
                     <span class="block text-h2 font-h2 text-primary dark:text-primary-fixed-dim" id="modal-answered-count">0</span>
                     <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Đã làm</span>
-                </div>
-                <div>
-                    <span class="block text-h2 font-h2 text-warning" id="modal-flagged-count">0</span>
-                    <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Đánh dấu</span>
                 </div>
                 <div>
                     <span class="block text-h2 font-h2 text-danger" id="modal-unanswered-count">25</span>
@@ -282,9 +285,9 @@
             </div>
 
             <div class="flex gap-3 w-full">
-                <button id="result-review-btn" class="flex-1 px-5 py-2.5 rounded-lg border border-slate-200 dark:border-outline-variant text-secondary dark:text-secondary-fixed-dim hover:bg-slate-100 dark:hover:bg-secondary-container font-button text-button transition-colors cursor-pointer">
-                    Xem chi tiết
-                </button>
+                <a href="@backUrl" id="result-review-btn" class="flex-1 px-5 py-2.5 rounded-lg border border-slate-200 dark:border-outline-variant text-secondary dark:text-secondary-fixed-dim hover:bg-slate-100 dark:hover:bg-secondary-container font-button text-button transition-colors flex items-center justify-center cursor-pointer">
+                    Quay lại
+                </a>
                 <a href="" id="result-modal-detail-link" class="flex-1 px-6 py-2.5 rounded-lg bg-primary text-white font-button text-button shadow-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1;">auto_awesome</span>
                     Kết quả chi tiết
@@ -303,6 +306,9 @@
         const questions = [
             @foreach (var q in Model.Questions)
             {
+                var savedAnswers = ViewBag.SavedAnswers as Dictionary<int, int?>;
+                var savedOptionId = savedAnswers != null && savedAnswers.TryGetValue(q.Id, out var optId) ? optId : null;
+                var savedOptionLabel = savedOptionId.HasValue ? q.AnswerOptions.FirstOrDefault(ao => ao.Id == savedOptionId.Value)?.Label : null;
                 <text>
                 {
                     id: @q.OrderIndex,
@@ -324,9 +330,8 @@
                         }
                     ],
                     correct: "@(q.AnswerOptions.FirstOrDefault(ao => ao.IsCorrect)?.Label ?? "A")",
-                    userAnswer: null,
-                    userAnswerId: null,
-                    flagged: false
+                    userAnswer: @(savedOptionLabel != null ? $"'{savedOptionLabel}'" : "null"),
+                    userAnswerId: @(savedOptionId.HasValue ? savedOptionId.Value.ToString() : "null")
                 },
                 </text>
             }
@@ -335,12 +340,20 @@
         // 2. STATE VARIABLES
         let currentQuestionIndex = 0; // Bắt đầu từ câu 1 (index 0)
         let totalQuestions = questions.length;
-        let timeRemainingSeconds = @(Model.TimeLimitMinutes * 60);
         let isExamSubmitted = false;
-        let sessionId = 0;
+        let sessionId = @(ViewBag.SessionId ?? 0);
+        const isNoLimit = @(Model.TimeLimitMinutes <= 0 ? "true" : "false");
+        let actualDurationSeconds = @(ViewBag.ActualDurationSeconds ?? 0);
+        let timeRemainingSeconds = isNoLimit ? 999999 : (@(Model.TimeLimitMinutes * 60) - actualDurationSeconds);
 
         // 3. START SESSION IN DB
         function startSessionInDb() {
+            if (sessionId > 0) {
+                // Đang tiếp tục phiên thi cũ
+                startTimer();
+                return;
+            }
+
             $.ajax({
                 url: '/Exam/StartSession',
                 type: 'POST',
@@ -376,21 +389,7 @@
             const $badge = $("#taxonomy-badge");
             $badge.attr("class", `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-label-sm text-label-sm uppercase tracking-wide ${q.taxonomyClass}`);
             $("#taxonomy-text").text(q.taxonomy);
-            
-            // Update Flag button state
-            const $flagText = $("#flag-text");
-            const $flagIcon = $("#flag-icon");
-            const $flagBtn = $("#flag-btn");
-            if (q.flagged) {
-                $flagText.text("Đã đánh dấu");
-                $flagIcon.css("font-variation-settings", "'FILL' 1");
-                $flagBtn.removeClass("text-secondary dark:text-secondary-fixed-dim").addClass("text-warning");
-            } else {
-                $flagText.text("Đánh dấu ôn tập");
-                $flagIcon.css("font-variation-settings", "'FILL' 0");
-                $flagBtn.removeClass("text-warning").addClass("text-secondary dark:text-secondary-fixed-dim");
-            }
-            
+
             // Render Stem
             $("#question-stem").text(q.stem);
             
@@ -535,26 +534,19 @@
             questions.forEach((q, idx) => {
                 const isCurrent = idx === currentQuestionIndex;
                 const isAnswered = q.userAnswer !== null;
-                const isFlagged = q.flagged;
-                
+
                 let btnClass = "";
                 let badgeHtml = "";
-                
+
                 if (isCurrent) {
                     btnClass = "border-2 border-primary dark:border-primary-fixed-dim text-primary dark:text-primary-fixed-dim shadow-sm relative";
                     badgeHtml = `<div class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-primary dark:bg-primary-fixed-dim rounded-full animate-pulse"></div>`;
                 } else if (isAnswered) {
                     btnClass = "bg-primary text-white shadow-sm border border-primary hover:opacity-90";
-                    if (isFlagged) {
-                        badgeHtml = `<div class="absolute -top-1 -right-1 w-3 h-3 bg-warning rounded-full border-2 border-white dark:border-on-secondary-fixed"></div>`;
-                    }
-                } else if (isFlagged) {
-                    btnClass = "border border-warning text-warning bg-warning-light/35 dark:bg-warning-light/10 relative hover:bg-warning-light/50";
-                    badgeHtml = `<div class="absolute -top-1 -right-1 w-3 h-3 bg-warning rounded-full border-2 border-white dark:border-on-secondary-fixed"></div>`;
                 } else {
                     btnClass = "border border-slate-200 dark:border-outline-variant text-secondary dark:text-secondary-fixed-dim hover:border-slate-400 dark:hover:border-slate-500 bg-white dark:bg-transparent";
                 }
-                
+
                 if (isExamSubmitted) {
                     const isCorrect = q.userAnswer === q.correct;
                     if (isCorrect) {
@@ -595,6 +587,19 @@
             
             saveAnswersToLocalStorage();
             renderQuestion(currentQuestionIndex);
+
+            // Lưu tạm thời câu trả lời lên server để đồng bộ tiến độ thời gian thực
+            if (sessionId > 0) {
+                $.ajax({
+                    url: '/Exam/SaveAnswer',
+                    type: 'POST',
+                    data: {
+                        sessionId: sessionId,
+                        questionId: q.dbId,
+                        selectedOptionId: q.userAnswerId
+                    }
+                });
+            }
         }
         
         function navigateToQuestion(idx) {
@@ -603,21 +608,13 @@
                 renderQuestion(currentQuestionIndex);
             }
         }
-        
-        function toggleFlag() {
-            const q = questions[currentQuestionIndex];
-            q.flagged = !q.flagged;
-            saveAnswersToLocalStorage();
-            renderQuestion(currentQuestionIndex);
-        }
 
         // 5.5 LOCALSTORAGE HELPER FUNCTIONS
         function saveAnswersToLocalStorage() {
             const answers = questions.map(q => ({
                 id: q.id,
                 userAnswer: q.userAnswer,
-                userAnswerId: q.userAnswerId,
-                flagged: q.flagged
+                userAnswerId: q.userAnswerId
             }));
             localStorage.setItem(`quiz_set_answers_${@Model.Id}`, JSON.stringify(answers));
         }
@@ -632,7 +629,6 @@
                         if (q) {
                             q.userAnswer = savedQ.userAnswer;
                             q.userAnswerId = savedQ.userAnswerId;
-                            q.flagged = savedQ.flagged;
                         }
                     });
                 } catch (e) {
@@ -649,13 +645,20 @@
         }
         
         function startTimer() {
+            // Thiết lập giao diện ban đầu cho chế độ không giới hạn thời gian
+            if (isNoLimit) {
+                $("#exam-timer-container").removeClass("bg-success-light dark:bg-success-light/10 text-success border-success/20")
+                                          .addClass("bg-slate-100 dark:bg-secondary-container/30 text-secondary dark:text-secondary-fixed-dim border-slate-200 dark:border-outline-variant");
+                $("#exam-timer").text(formatTime(actualDurationSeconds));
+            }
+
             // Khởi chạy đồng bộ thời gian làm bài thực tế lên server mỗi 10 giây
             const durationInterval = setInterval(function () {
                 if (isExamSubmitted || sessionId === 0) {
                     clearInterval(durationInterval);
                     return;
                 }
-                const currentDuration = @(Model.TimeLimitMinutes * 60) - timeRemainingSeconds;
+                const currentDuration = isNoLimit ? actualDurationSeconds : (@(Model.TimeLimitMinutes * 60) - timeRemainingSeconds);
                 $.ajax({
                     url: '/Exam/UpdateSessionDuration',
                     type: 'POST',
@@ -669,19 +672,24 @@
                     return;
                 }
                 
-                timeRemainingSeconds--;
-                $("#exam-timer").text(formatTime(timeRemainingSeconds));
-                
-                const $timerContainer = $("#exam-timer-container");
-                if (timeRemainingSeconds <= 300) {
-                    $timerContainer.removeClass("bg-success-light dark:bg-success-light/10 text-success")
-                                   .addClass("bg-danger-light dark:bg-error-container/20 border-danger/20 dark:border-error/30 text-danger dark:text-error animate-pulse");
-                }
-                
-                if (timeRemainingSeconds <= 0) {
-                    clearInterval(timerInterval);
-                    $("#exam-timer").text("00:00");
-                    autoSubmitExam();
+                if (isNoLimit) {
+                    actualDurationSeconds++;
+                    $("#exam-timer").text(formatTime(actualDurationSeconds));
+                } else {
+                    timeRemainingSeconds--;
+                    $("#exam-timer").text(formatTime(timeRemainingSeconds));
+                    
+                    const $timerContainer = $("#exam-timer-container");
+                    if (timeRemainingSeconds <= 300) {
+                        $timerContainer.removeClass("bg-success-light dark:bg-success-light/10 text-success")
+                                       .addClass("bg-danger-light dark:bg-error-container/20 border-danger/20 dark:border-error/30 text-danger dark:text-error animate-pulse");
+                    }
+                    
+                    if (timeRemainingSeconds <= 0) {
+                        clearInterval(timerInterval);
+                        $("#exam-timer").text("00:00");
+                        autoSubmitExam();
+                    }
                 }
             }, 1000);
         }
@@ -693,17 +701,14 @@
         // 7. SUBMISSION CONTROLLERS
         function showSubmitModal() {
             let answered = 0;
-            let flagged = 0;
             let unanswered = 0;
-            
+
             questions.forEach(q => {
                 if (q.userAnswer !== null) answered++;
                 else unanswered++;
-                if (q.flagged) flagged++;
             });
-            
+
             $("#modal-answered-count").text(answered);
-            $("#modal-flagged-count").text(flagged);
             $("#modal-unanswered-count").text(unanswered);
             
             if (unanswered > 0) {
@@ -734,7 +739,7 @@
                 };
             });
 
-            const durationSeconds = @(Model.TimeLimitMinutes * 60) - timeRemainingSeconds;
+            const durationSeconds = isNoLimit ? actualDurationSeconds : (@(Model.TimeLimitMinutes * 60) - timeRemainingSeconds);
 
             const submissionData = {
                 sessionId: sessionId,
@@ -767,17 +772,11 @@
                         const offset = circumference - (response.scorePercent / 100) * circumference;
                         circle.style.strokeDashoffset = offset;
 
-                        // Xem kết quả ngay tại chỗ
-                        $("#result-review-btn").off("click").on("click", function() {
-                            const $resModal = $("#result-modal");
-                            $resModal.addClass("opacity-0 pointer-events-none").find(".transform").addClass("scale-95");
-                            setTimeout(() => {
-                                $resModal.addClass("hidden").removeClass("flex");
-                                renderQuestion(currentQuestionIndex);
-                            }, 300);
-                        });
 
-                        $("#result-modal-detail-link").attr("href", `/Exam/Result?sessionId=${sessionId}`);
+
+                         const returnUrl = '@(ViewBag.ReturnUrl ?? "")';
+                         const resultUrl = `/Exam/Result?sessionId=${sessionId}` + (returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : '');
+                         $("#result-modal-detail-link").attr("href", resultUrl);
 
                         // Hiện Result Modal
                         const $resModal = $("#result-modal");
@@ -819,11 +818,7 @@
                 showSubmitModal();
             }
         });
-        
-        $("#flag-btn").on("click", function () {
-            toggleFlag();
-        });
-        
+
         $("#cancel-submit-btn").on("click", function () {
             closeSubmitModal();
         });
@@ -833,9 +828,7 @@
             submitExamToDb();
         });
         
-        $("#result-review-btn").on("click", function () {
-            closeResultModal();
-        });
+
 
         function closeResultModal() {
             const $resModal = $("#result-modal");

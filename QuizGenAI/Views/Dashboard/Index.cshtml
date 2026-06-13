@@ -143,7 +143,7 @@
                         <div class="w-full h-1.5 bg-white/20 rounded-full overflow-hidden mb-4">
                             <div class="h-full bg-white rounded-full" style="width: @((Model.InProgressExam.TotalQuestions - Model.InProgressExam.QuestionsRemaining) * 100 / Model.InProgressExam.TotalQuestions)%"></div>
                         </div>
-                        <a asp-controller="Exam" asp-action="Index" asp-route-id="@Model.InProgressExam.SessionId" class="inline-flex w-full items-center justify-center py-2.5 rounded-xl bg-white hover:bg-slate-50 text-primary font-button text-button shadow-sm transition-all text-center">
+                        <a asp-controller="Exam" asp-action="Index" asp-route-id="@Model.InProgressExam.SessionId" asp-route-returnUrl="Dashboard" class="inline-flex w-full items-center justify-center py-2.5 rounded-xl bg-white hover:bg-slate-50 text-primary font-button text-button shadow-sm transition-all text-center">
                             Tiếp tục làm bài
                         </a>
                     </div>

@@ -29,7 +29,7 @@
         <!-- Timer (Dynamic red state for low time) -->
         <div id="exam-timer-container" class="flex items-center gap-2 px-4 py-2 bg-success-light dark:bg-success-light/10 rounded-full border border-success/20 text-success dark:text-success shadow-sm transition-all duration-300">
             <span class="material-symbols-outlined text-xl">timer</span>
-            <span id="exam-timer" class="font-button text-button tabular-nums tracking-wide">@Model.TimeLimitMinutes:00</span>
+            <span id="exam-timer" class="font-button text-button tabular-nums tracking-wide">@(Model.TimeLimitMinutes <= 0 ? "00:00" : $"{Model.TimeLimitMinutes}:00")</span>
         </div>
     </div>
 </header>

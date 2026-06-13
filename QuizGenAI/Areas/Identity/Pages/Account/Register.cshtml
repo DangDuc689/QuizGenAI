@@ -56,26 +56,7 @@
                 <span asp-validation-for="Input.ConfirmPassword" class="auth-error"></span>
             </div>
 
-            <label class="auth-checkline">
-                <input asp-for="Input.AcceptTerms" class="auth-checkbox" />
-                <span>Tôi đồng ý với <a href="#">Điều khoản</a> và <a href="#">Chính sách bảo mật</a></span>
-            </label>
-            <span asp-validation-for="Input.AcceptTerms" class="auth-error"></span>
-
             <button type="submit" class="auth-primary-button">Đăng ký ngay</button>
-
-            <div class="auth-divider"><span>hoặc</span></div>
-
-            <div class="auth-social-row">
-                <button type="button" class="auth-social-button" disabled>
-                    <span class="auth-social-mark">G</span>
-                    Google
-                </button>
-                <button type="button" class="auth-social-button" disabled>
-                    <span class="auth-social-mark">M</span>
-                    Microsoft
-                </button>
-            </div>
         </form>
 
         <footer class="auth-card-footer">

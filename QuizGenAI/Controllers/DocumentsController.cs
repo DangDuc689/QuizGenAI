@@ -121,6 +121,12 @@ namespace QuizGenAI.Controllers
                     ModelState.AddModelError("UploadedFile", "Chỉ hỗ trợ file PDF, DOCX hoặc XLSX.");
                     return View();
                 }
+
+                if (fileExtension == ".pdf" && UploadedFile.Length > 15 * 1024 * 1024)
+                {
+                    ModelState.AddModelError("UploadedFile", "Kích thước file PDF vượt quá giới hạn cho phép (tối đa 15MB).");
+                    return View();
+                }
             }
 
             var userId = _userManager.GetUserId(User);

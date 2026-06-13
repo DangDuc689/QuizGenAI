@@ -12,6 +12,9 @@ namespace QuizGenAI.Models
         [StringLength(200)]
         public string? Address { get; set; }
 
+        [StringLength(500)]
+        public string? AvatarPath { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public bool IsActive { get; set; } = true;

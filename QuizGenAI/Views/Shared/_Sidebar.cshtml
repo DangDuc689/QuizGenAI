@@ -156,9 +156,9 @@
         }
         else
         {
-            <a href="#" 
-               class="flex items-center py-2 text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors gap-3 group">
-                <span class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-300">settings</span>
+            <a asp-area="Identity" asp-page="/Account/Manage/Index"
+               class="flex items-center py-2 transition-colors gap-3 group @(activePage == "UserSettings" ? "text-primary dark:text-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim")">
+                <span class="material-symbols-outlined group-hover:rotate-45 transition-transform duration-300" style="@(activePage == "UserSettings" ? "font-variation-settings: 'FILL' 1;" : "")">settings</span>
                 <span class="font-label-sm text-label-sm">Cài đặt</span>
             </a>
         }

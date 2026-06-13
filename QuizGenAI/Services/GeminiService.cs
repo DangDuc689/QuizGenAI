@@ -13,7 +13,9 @@ namespace QuizGenAI.Services
 
         private readonly HttpClient _httpClient;
         private readonly ILogger<GeminiService> _logger;
-        private readonly string _apiKey;
+        private readonly List<string> _apiKeys = new();
+        private static int _currentKeyIndex = 0;
+        private readonly string _apiKey; // Lưu key mặc định đầu tiên để tương thích ngược
         private readonly string _modelName;
 
         public GeminiService(
@@ -23,17 +25,53 @@ namespace QuizGenAI.Services
         {
             _httpClient = httpClient;
             _logger = logger;
-            _apiKey = configuration["Gemini:ApiKey"] ?? string.Empty;
             _modelName = configuration["Gemini:ModelName"] ?? "gemini-2.5-flash";
 
-            // Log fingerprint an toàn (4 ký tự cuối) khi khởi tạo để xác nhận đúng key
-            var keyFingerprint = _apiKey.Length >= 4
-                ? "..." + _apiKey[^4..]
-                : "(empty)";
+            // 1. Đọc danh sách ApiKeys
+            var apiKeysSection = configuration.GetSection("Gemini:ApiKeys");
+            if (apiKeysSection.Exists())
+            {
+                var keys = apiKeysSection.Get<List<string>>();
+                if (keys != null)
+                {
+                    _apiKeys.AddRange(keys.Where(k => !string.IsNullOrWhiteSpace(k)));
+                }
+            }
+
+            // 2. Fallback sang ApiKey đơn lẻ nếu chưa có key nào trong danh sách
+            var singleKey = configuration["Gemini:ApiKey"];
+            if (!string.IsNullOrWhiteSpace(singleKey) && !_apiKeys.Contains(singleKey))
+            {
+                _apiKeys.Add(singleKey);
+            }
+
+            _apiKey = _apiKeys.Count > 0 ? _apiKeys[0] : string.Empty;
+
+            // Log danh sách fingerprints an toàn khi khởi tạo
+            var keyFingerprints = _apiKeys.Select(k => k.Length >= 4 ? "..." + k[^4..] : "(empty)");
             _logger.LogInformation(
-                "GeminiService initialized. Model={ModelName}, KeyFingerprint={KeyFingerprint}",
+                "GeminiService initialized. Model={ModelName}, KeyPoolSize={KeyPoolSize}, KeyFingerprints=[{KeyFingerprints}]",
                 _modelName,
-                keyFingerprint);
+                _apiKeys.Count,
+                string.Join(", ", keyFingerprints));
+        }
+
+        private string GetCurrentApiKey()
+        {
+            if (_apiKeys.Count == 0)
+            {
+                return string.Empty;
+            }
+            var index = Math.Abs(_currentKeyIndex) % _apiKeys.Count;
+            return _apiKeys[index];
+        }
+
+        private void RotateToNextKey()
+        {
+            if (_apiKeys.Count > 1)
+            {
+                System.Threading.Interlocked.Increment(ref _currentKeyIndex);
+            }
         }
 
         /// <summary>
@@ -43,7 +81,8 @@ namespace QuizGenAI.Services
         {
             EnsureApiKeyConfigured();
 
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_modelName}:generateContent?key={_apiKey}";
+            var activeKey = GetCurrentApiKey();
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_modelName}:generateContent?key={activeKey}";
             var requestBody = new
             {
                 contents = new[]
@@ -71,23 +110,28 @@ namespace QuizGenAI.Services
                 var responseText = await response.Content.ReadAsStringAsync();
                 var statusCode = (int)response.StatusCode;
 
+                var keyFingerprint = activeKey.Length >= 4 ? "..." + activeKey[^4..] : "(empty)";
                 _logger.LogInformation(
-                    "[GEMINI_PING] StatusCode={StatusCode}, Model={ModelName}, ResponseLength={ResponseLength}",
+                    "[GEMINI_PING] StatusCode={StatusCode}, Key={Key}, Model={ModelName}, ResponseLength={ResponseLength}",
                     statusCode,
+                    keyFingerprint,
                     _modelName,
                     responseText.Length);
 
                 if (response.IsSuccessStatusCode)
                 {
                     var text = ExtractTextFromGeminiResponse(responseText);
+                    RotateToNextKey(); // Xoay sang key khác cho request sau
                     return (true, statusCode, $"OK - Gemini trả lời: {text?.Trim() ?? "(empty)"}");
                 }
 
-                return (false, statusCode, $"Gemini lỗi {statusCode}: {SanitizeForLog(responseText[..Math.Min(300, responseText.Length)])}");
+                RotateToNextKey(); // Xoay key khi gặp lỗi
+                return (false, statusCode, $"Gemini lỗi {statusCode} (Key: {keyFingerprint}): {SanitizeForLog(responseText[..Math.Min(300, responseText.Length)])}");
             }
             catch (Exception ex)
             {
                 _logger.LogError("[GEMINI_PING] Exception: {Error}", ex.Message);
+                RotateToNextKey();
                 return (false, 0, $"Exception: {ex.Message}");
             }
         }
@@ -175,6 +219,70 @@ namespace QuizGenAI.Services
             return text.Trim();
         }
 
+        public async Task<string> ExtractStructuredTextFromPdfAsync(
+            byte[] pdfBytes,
+            CancellationToken cancellationToken = default)
+        {
+            EnsureApiKeyConfigured();
+
+            if (pdfBytes == null || pdfBytes.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            var prompt = """
+                Bạn là hệ thống đọc và trích xuất nội dung học tập từ tài liệu PDF cho QuizGen AI.
+
+                Nhiệm vụ:
+                1. Đọc kỹ và trích xuất toàn bộ văn bản xuất hiện trong file PDF.
+                2. Nếu tài liệu chứa các bảng biểu, hãy chuyển đổi chúng thành định dạng bảng Markdown rõ ràng.
+                3. Nếu tài liệu chứa hình ảnh, sơ đồ hoặc công thức toán, hãy mô tả chi tiết nội dung học tập và mối quan hệ được hiển thị trong đó.
+                4. Giữ nguyên cấu trúc logic của tài liệu (tiêu đề, các mục lớn, mục con).
+                5. Không thêm kiến thức ngoài tài liệu, không tự bịa thông tin không có trong PDF.
+
+                Định dạng trả về:
+                - Trả về bằng tiếng Việt dạng văn bản sạch, có cấu trúc tốt.
+                - Sử dụng Markdown cơ bản để định dạng tiêu đề, danh sách và bảng biểu.
+                - Không thêm bất kỳ lời dẫn đề hay lời kết nào của AI (ví dụ: không viết "Đây là nội dung...", chỉ trả về nội dung trích xuất).
+                """;
+
+            var requestBody = new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        parts = new object[]
+                        {
+                            new
+                            {
+                                inline_data = new
+                                {
+                                    mime_type = "application/pdf",
+                                    data = Convert.ToBase64String(pdfBytes)
+                                }
+                            },
+                            new { text = prompt }
+                        }
+                    }
+                },
+                generationConfig = new
+                {
+                    temperature = 0.2,
+                    maxOutputTokens = 32768  // Tăng từ 8192 lên 32768 để hỗ trợ PDF dài hơn
+                }
+            };
+
+            var responseJson = await SendGenerateContentRequestWithRetryAsync(
+                requestBody,
+                cancellationToken,
+                "Gemini PDF Extraction");
+
+            var text = ExtractTextFromGeminiResponse(responseJson);
+
+            return text?.Trim() ?? string.Empty;
+        }
+
         public async Task<List<GeneratedQuestionDto>> GenerateQuestionsAsync(
             string textContent,
             int totalQuestions,
@@ -182,11 +290,12 @@ namespace QuizGenAI.Services
             int understandPercent,
             int applyPercent,
             OutputLanguage language,
-            DifficultyLevel difficulty)
+            DifficultyLevel difficulty,
+            byte[]? pdfBytes = null)
         {
             EnsureApiKeyConfigured();
 
-            if (string.IsNullOrWhiteSpace(textContent))
+            if (pdfBytes == null && string.IsNullOrWhiteSpace(textContent))
             {
                 throw new ArgumentException("Nội dung tài liệu học tập không được để trống.", nameof(textContent));
             }
@@ -211,7 +320,7 @@ namespace QuizGenAI.Services
 
             // Prompt tối ưu: yêu cầu JSON object, giới hạn độ dài field, explanation ngắn
             var promptBuilder = new StringBuilder();
-            promptBuilder.AppendLine("Bạn là chuyên gia khảo thí. Tạo câu hỏi trắc nghiệm từ tài liệu bên dưới.");
+            promptBuilder.AppendLine("Bạn là chuyên gia khảo thí. Tạo câu hỏi trắc nghiệm từ tài liệu ôn tập được cung cấp.");
             promptBuilder.AppendLine($"Ngôn ngữ: {languageText}. Tổng: {totalQuestions} câu.");
             promptBuilder.AppendLine($"Độ khó: {difficultyText}");
             promptBuilder.AppendLine($"- {numRemember} câu Nhận biết: hỏi dữ kiện, định nghĩa trực tiếp.");
@@ -227,9 +336,17 @@ namespace QuizGenAI.Services
             promptBuilder.AppendLine("VÍ DỤ OUTPUT:");
             promptBuilder.AppendLine("{\"questions\":[{\"questionText\":\"Câu hỏi?\",\"bloomLevel\":\"Nhận biết\",\"options\":[\"A\",\"B\",\"C\",\"D\"],\"correctAnswerIndex\":0,\"explanation\":\"Giải thích ngắn.\"}]}");
             promptBuilder.AppendLine();
-            promptBuilder.AppendLine("--- TÀI LIỆU ---");
-            promptBuilder.AppendLine(textContent);
-            promptBuilder.AppendLine("--- HẾT TÀI LIỆU ---");
+
+            if (pdfBytes == null)
+            {
+                promptBuilder.AppendLine("--- TÀI LIỆU ---");
+                promptBuilder.AppendLine(textContent);
+                promptBuilder.AppendLine("--- HẾT TÀI LIỆU ---");
+            }
+            else
+            {
+                promptBuilder.AppendLine("Tài liệu ôn tập chính là file PDF đã được đính kèm.");
+            }
 
             var promptText = promptBuilder.ToString();
 
@@ -242,24 +359,57 @@ namespace QuizGenAI.Services
                 _ => 16384
             };
 
-            var requestBody = new
+            object requestBody;
+            if (pdfBytes != null)
             {
-                contents = new[]
+                requestBody = new
                 {
-                    new
+                    contents = new[]
                     {
-                        parts = new[]
+                        new
                         {
-                            new { text = promptText }
+                            parts = new object[]
+                            {
+                                new
+                                {
+                                    inline_data = new
+                                    {
+                                        mime_type = "application/pdf",
+                                        data = Convert.ToBase64String(pdfBytes)
+                                    }
+                                },
+                                new { text = promptText }
+                            }
                         }
+                    },
+                    generationConfig = new
+                    {
+                        maxOutputTokens,
+                        temperature = 0.3
                     }
-                },
-                generationConfig = new
+                };
+            }
+            else
+            {
+                requestBody = new
                 {
-                    maxOutputTokens,
-                    temperature = 0.3
-                }
-            };
+                    contents = new[]
+                    {
+                        new
+                        {
+                            parts = new[]
+                            {
+                                new { text = promptText }
+                            }
+                        }
+                    },
+                    generationConfig = new
+                    {
+                        maxOutputTokens,
+                        temperature = 0.3
+                    }
+                };
+            }
 
             var responseJson = await SendGenerateContentRequestWithRetryAsync(
                 requestBody,
@@ -268,7 +418,7 @@ namespace QuizGenAI.Services
                 new GeminiRequestDiagnostics(
                     _modelName,
                     promptText.Length,
-                    textContent.Length,
+                    pdfBytes != null ? pdfBytes.Length : textContent.Length,
                     totalQuestions,
                     maxOutputTokens));
             var rawJsonText = ExtractTextFromGeminiResponse(responseJson);
@@ -428,7 +578,7 @@ namespace QuizGenAI.Services
 
         private void EnsureApiKeyConfigured()
         {
-            if (string.IsNullOrWhiteSpace(_apiKey))
+            if (_apiKeys.Count == 0)
             {
                 throw new InvalidOperationException("Gemini API Key chưa được cấu hình. Vui lòng kiểm tra appsettings.json.");
             }
@@ -441,24 +591,28 @@ namespace QuizGenAI.Services
             GeminiRequestDiagnostics? diagnostics = null)
         {
             const int maxAttempts = 3;
-
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_modelName}:generateContent?key={_apiKey}";
             var jsonContent = JsonSerializer.Serialize(requestBody);
 
             for (var attempt = 1; attempt <= maxAttempts; attempt++)
             {
+                var activeKey = GetCurrentApiKey();
+                var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_modelName}:generateContent?key={activeKey}";
+                var keyFingerprint = activeKey.Length >= 4 ? "..." + activeKey[^4..] : "(empty)";
+
                 using var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
                 using var response = await _httpClient.PostAsync(url, httpContent, cancellationToken);
                 var responseText = await response.Content.ReadAsStringAsync(cancellationToken);
 
                 if (response.IsSuccessStatusCode)
                 {
+                    RotateToNextKey(); // Xoay key cho request tiếp theo
                     return responseText;
                 }
 
                 _logger.LogWarning(
-                    "{OperationName} request failed. Attempt={Attempt}/{MaxAttempts}, StatusCode={StatusCode}, Model={ModelName}, PromptLength={PromptLength}, ContentLength={ContentLength}, RequestedQuestions={RequestedQuestions}, MaxOutputTokens={MaxOutputTokens}, RequestJsonLength={RequestJsonLength}, Response={ResponseText}",
+                    "{OperationName} request failed with Key={KeyFingerprint}. Attempt={Attempt}/{MaxAttempts}, StatusCode={StatusCode}, Model={ModelName}, PromptLength={PromptLength}, ContentLength={ContentLength}, RequestedQuestions={RequestedQuestions}, MaxOutputTokens={MaxOutputTokens}, RequestJsonLength={RequestJsonLength}, Response={ResponseText}",
                     operationName,
+                    keyFingerprint,
                     attempt,
                     maxAttempts,
                     response.StatusCode,
@@ -469,6 +623,8 @@ namespace QuizGenAI.Services
                     diagnostics?.MaxOutputTokens,
                     jsonContent.Length,
                     TruncateForLog(SanitizeForLog(responseText)));
+
+                RotateToNextKey(); // Xoay sang key tiếp theo ngay lập tức khi gặp lỗi
 
                 if ((int)response.StatusCode == 400)
                 {
@@ -488,6 +644,11 @@ namespace QuizGenAI.Services
 
                 if (IsGeminiRateLimited(response.StatusCode, responseText))
                 {
+                    if (attempt < maxAttempts)
+                    {
+                        await Task.Delay(TimeSpan.FromMilliseconds(500 * attempt), cancellationToken);
+                        continue;
+                    }
                     throw new GeminiRateLimitException(AiRateLimitMessage);
                 }
 
@@ -495,11 +656,17 @@ namespace QuizGenAI.Services
                 {
                     if (attempt < maxAttempts)
                     {
-                        await Task.Delay(TimeSpan.FromMilliseconds(700 * attempt), cancellationToken);
+                        await Task.Delay(TimeSpan.FromMilliseconds(500 * attempt), cancellationToken);
                         continue;
                     }
 
                     throw new GeminiServiceUnavailableException(AiOverloadedMessage);
+                }
+
+                if (attempt < maxAttempts)
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(500 * attempt), cancellationToken);
+                    continue;
                 }
 
                 throw new HttpRequestException($"Lỗi khi gọi Gemini API ({response.StatusCode}).");
@@ -527,9 +694,21 @@ namespace QuizGenAI.Services
                 return string.Empty;
             }
 
-            return string.IsNullOrWhiteSpace(_apiKey)
-                ? text
-                : text.Replace(_apiKey, "[REDACTED_API_KEY]", StringComparison.Ordinal);
+            if (_apiKeys.Count == 0)
+            {
+                return text;
+            }
+
+            var result = text;
+            foreach (var key in _apiKeys)
+            {
+                if (!string.IsNullOrWhiteSpace(key))
+                {
+                    result = result.Replace(key, "[REDACTED_API_KEY]", StringComparison.Ordinal);
+                }
+            }
+
+            return result;
         }
 
         private static bool IsGeminiOverloaded(System.Net.HttpStatusCode statusCode, string? responseText)

@@ -63,15 +63,49 @@ namespace QuizGenAI.Controllers
         }
 
         [HttpGet("Exam/Start/{id}")]
-        public IActionResult Start(int id)
+        public IActionResult Start(int id, string? returnUrl)
         {
-            return RedirectToAction("Index", new { quizSetId = id });
+            return RedirectToAction("Index", new { quizSetId = id, returnUrl = returnUrl });
         }
 
         /// <summary>Trang thi thử chính.</summary>
-        public async Task<IActionResult> Index(int quizSetId)
+        public async Task<IActionResult> Index(int? quizSetId, int? id, string? returnUrl)
         {
             ViewData["ActivePage"] = "Exam";
+
+            if (string.IsNullOrEmpty(returnUrl))
+            {
+                var referer = Request.Headers["Referer"].ToString();
+                if (!string.IsNullOrEmpty(referer))
+                {
+                    if (referer.Contains("/Dashboard", StringComparison.OrdinalIgnoreCase))
+                    {
+                        returnUrl = "Dashboard";
+                    }
+                    else if (referer.Contains("/Explore", StringComparison.OrdinalIgnoreCase))
+                    {
+                        returnUrl = "Explore";
+                    }
+                    else if (referer.Contains("/Exam/Review", StringComparison.OrdinalIgnoreCase))
+                    {
+                        returnUrl = "Review";
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(returnUrl))
+            {
+                try
+                {
+                    HttpContext.Session.SetString("ReturnUrl", returnUrl);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to save returnUrl to Session");
+                }
+            }
+
+            ViewBag.ReturnUrl = returnUrl;
 
             var userId = _userManager.GetUserId(User);
             if (string.IsNullOrEmpty(userId))
@@ -79,10 +113,36 @@ namespace QuizGenAI.Controllers
                 return RedirectToAction("Login", "Account");
             }
 
+            ExamSession? existingSession = null;
+            int finalQuizSetId = 0;
+
+            if (id.HasValue && id.Value > 0)
+            {
+                // Truy cập trang làm bài từ Dashboard (làm tiếp phiên cũ)
+                existingSession = await _context.ExamSessions
+                    .Include(es => es.QuizSet)
+                    .FirstOrDefaultAsync(es => es.Id == id.Value && es.UserId == userId && es.Status == ExamSessionStatus.InProgress);
+
+                if (existingSession == null)
+                {
+                    return NotFound("Không tìm thấy phiên làm bài đang dang dở yêu cầu.");
+                }
+
+                finalQuizSetId = existingSession.QuizSetId;
+            }
+            else if (quizSetId.HasValue && quizSetId.Value > 0)
+            {
+                finalQuizSetId = quizSetId.Value;
+            }
+            else
+            {
+                return BadRequest("Không xác định được bộ đề hoặc phiên làm bài.");
+            }
+
             var quizSet = await _context.QuizSets
                 .Include(qs => qs.Questions)
                     .ThenInclude(q => q.AnswerOptions)
-                .FirstOrDefaultAsync(qs => qs.Id == quizSetId && (qs.UserId == userId || qs.IsPublic));
+                .FirstOrDefaultAsync(qs => qs.Id == finalQuizSetId && (qs.UserId == userId || qs.IsPublic));
 
             if (quizSet == null)
             {
@@ -101,13 +161,46 @@ namespace QuizGenAI.Controllers
             }
             quizSet.Questions = quizSet.Questions.OrderBy(q => q.OrderIndex).ToList();
 
+            // Truyền thông tin Session hiện tại sang View
+            if (existingSession != null)
+            {
+                ViewBag.SessionId = existingSession.Id;
+                ViewBag.ActualDurationSeconds = existingSession.ActualDurationSeconds ?? 0;
+                
+                // Tải các đáp án đã chọn lưu tạm thời trong Db
+                var savedAnswers = await _context.ExamAnswers
+                    .Where(ea => ea.ExamSessionId == existingSession.Id)
+                    .ToDictionaryAsync(ea => ea.QuestionId, ea => ea.SelectedAnswerOptionId);
+                
+                ViewBag.SavedAnswers = savedAnswers;
+            }
+            else
+            {
+                ViewBag.SessionId = 0;
+                ViewBag.ActualDurationSeconds = 0;
+                ViewBag.SavedAnswers = new Dictionary<int, int?>();
+            }
+
             return View(quizSet);
         }
 
         /// <summary>Trang kết quả hiển thị sau khi nộp bài.</summary>
-        public async Task<IActionResult> Result(int sessionId)
+        public async Task<IActionResult> Result(int sessionId, string? returnUrl)
         {
             ViewData["ActivePage"] = "History";
+
+            if (string.IsNullOrEmpty(returnUrl))
+            {
+                try
+                {
+                    returnUrl = HttpContext.Session.GetString("ReturnUrl");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get returnUrl from Session");
+                }
+            }
+            ViewBag.ReturnUrl = returnUrl;
 
             var userId = _userManager.GetUserId(User);
             if (string.IsNullOrEmpty(userId))
@@ -241,6 +334,11 @@ namespace QuizGenAI.Controllers
             if (!allowedExtensions.Contains(fileExtension))
             {
                 return Json(new { success = false, message = "Chỉ hỗ trợ file PDF, DOCX hoặc TXT." });
+            }
+
+            if (fileExtension == ".pdf" && file.Length > 15 * 1024 * 1024)
+            {
+                return Json(new { success = false, message = "Kích thước file PDF vượt quá giới hạn cho phép (tối đa 15MB)." });
             }
 
             var userId = _userManager.GetUserId(User);
@@ -412,15 +510,33 @@ namespace QuizGenAI.Controllers
 
             try
             {
+                byte[]? pdfBytes = null;
+                if (documents.Count == 1 && documents[0].SourceType == DocumentSourceType.PDF && !string.IsNullOrWhiteSpace(documents[0].FilePath))
+                {
+                    try
+                    {
+                        var physicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", documents[0].FilePath!.TrimStart('/'));
+                        if (System.IO.File.Exists(physicalPath))
+                        {
+                            pdfBytes = await System.IO.File.ReadAllBytesAsync(physicalPath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to read physical PDF file: {FilePath}", documents[0].FilePath);
+                    }
+                }
+
                 // Gọi AI sinh câu hỏi - dùng usefulTextForQuiz (đã cleaned) thay vì mergedText
                 var generatedQuestions = await _geminiService.GenerateQuestionsAsync(
-                    usefulTextForQuiz,
+                    pdfBytes != null ? string.Empty : usefulTextForQuiz,
                     model.TotalQuestions,
                     model.BloomRememberPercent,
                     model.BloomUnderstandPercent,
                     model.BloomApplyPercent,
                     model.Language,
-                    model.Difficulty);
+                    model.Difficulty,
+                    pdfBytes);
 
                 var validQuestions = ValidateGeneratedQuestions(
                     generatedQuestions,
@@ -618,6 +734,47 @@ namespace QuizGenAI.Controllers
             return Json(new { success = true });
         }
 
+        /// <summary>AJAX: Lưu tạm thời một câu trả lời.</summary>
+        [HttpPost]
+        public async Task<IActionResult> SaveAnswer(int sessionId, int questionId, int? selectedOptionId)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Json(new { success = false, message = "Chưa đăng nhập." });
+            }
+
+            var session = await _context.ExamSessions
+                .FirstOrDefaultAsync(es => es.Id == sessionId && es.UserId == userId && es.Status == ExamSessionStatus.InProgress);
+
+            if (session == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy phiên làm bài." });
+            }
+
+            var existingAnswer = await _context.ExamAnswers
+                .FirstOrDefaultAsync(ea => ea.ExamSessionId == sessionId && ea.QuestionId == questionId);
+
+            if (existingAnswer == null)
+            {
+                var examAnswer = new ExamAnswer
+                {
+                    ExamSessionId = sessionId,
+                    QuestionId = questionId,
+                    SelectedAnswerOptionId = selectedOptionId
+                };
+                _context.ExamAnswers.Add(examAnswer);
+            }
+            else
+            {
+                existingAnswer.SelectedAnswerOptionId = selectedOptionId;
+                _context.ExamAnswers.Update(existingAnswer);
+            }
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
+        }
+
         /// <summary>AJAX: Nộp bài thi thử.</summary>
         [HttpPost]
         public async Task<IActionResult> SubmitExam([FromBody] ExamSubmissionModel model)
@@ -655,6 +812,11 @@ namespace QuizGenAI.Controllers
             var questions = await _context.Questions
                 .Include(q => q.AnswerOptions)
                 .Where(q => q.QuizSetId == session.QuizSetId)
+                .ToListAsync();
+
+            // Tải các đáp án đã được lưu tạm trước đó
+            var savedAnswers = await _context.ExamAnswers
+                .Where(ea => ea.ExamSessionId == session.Id)
                 .ToListAsync();
 
             int correctCount = 0;
@@ -695,15 +857,25 @@ namespace QuizGenAI.Controllers
                     correctCount++;
                 }
 
-                // Lưu ExamAnswer
-                var examAnswer = new ExamAnswer
+                // Kiểm tra xem đã có bản ghi tạm thời chưa
+                var examAnswer = savedAnswers.FirstOrDefault(sa => sa.QuestionId == question.Id);
+                if (examAnswer == null)
                 {
-                    ExamSessionId = session.Id,
-                    QuestionId = question.Id,
-                    SelectedAnswerOptionId = userAns?.SelectedOptionId,
-                    IsCorrect = userAns?.SelectedOptionId.HasValue == true ? isCorrect : (bool?)null
-                };
-                _context.ExamAnswers.Add(examAnswer);
+                    examAnswer = new ExamAnswer
+                    {
+                        ExamSessionId = session.Id,
+                        QuestionId = question.Id,
+                        SelectedAnswerOptionId = userAns?.SelectedOptionId,
+                        IsCorrect = userAns?.SelectedOptionId.HasValue == true ? isCorrect : (bool?)null
+                    };
+                    _context.ExamAnswers.Add(examAnswer);
+                }
+                else
+                {
+                    examAnswer.SelectedAnswerOptionId = userAns?.SelectedOptionId;
+                    examAnswer.IsCorrect = userAns?.SelectedOptionId.HasValue == true ? isCorrect : (bool?)null;
+                    _context.ExamAnswers.Update(examAnswer);
+                }
             }
 
             session.CorrectAnswers = correctCount;

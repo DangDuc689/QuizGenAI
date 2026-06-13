@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuizGenAI.Models;
 
@@ -11,9 +12,11 @@ using QuizGenAI.Models;
 namespace QuizGenAI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260613082020_AddPracticeModeFields")]
+    partial class AddPracticeModeFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -374,6 +377,9 @@ namespace QuizGenAI.Migrations
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsPracticeMode")
+                        .HasColumnType("bit");
+
                     b.Property<int>("QuizSetId")
                         .HasColumnType("int");
 
@@ -481,6 +487,9 @@ namespace QuizGenAI.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TargetBloomLevel")
                         .HasColumnType("int");
 
                     b.Property<int>("TimeLimitMinutes")

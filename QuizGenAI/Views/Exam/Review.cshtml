@@ -557,7 +557,7 @@
                         if (response.success) {
                             hasRedirected = true;
                             // Chuyển hướng sang trang thi thử thực tế
-                            window.location.href = `/Exam/Index?quizSetId=${response.quizSetId}`;
+                            window.location.href = `/Exam/Index?quizSetId=${response.quizSetId}&returnUrl=Review`;
                         } else {
                             alert(getFriendlyAiErrorMessage(response.message));
                         }

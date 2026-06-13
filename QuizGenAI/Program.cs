@@ -12,6 +12,8 @@ builder.Services.AddHttpClient<UrlExtractionService>();
 builder.Services.AddTransient<QuizGenAI.Services.GeminiService>();
 builder.Services.AddTransient<DocxExtractionService>();
 builder.Services.AddTransient<PdfExtractionService>();
+builder.Services.AddTransient<PracticeQuizService>();
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings"));
@@ -52,6 +54,14 @@ builder.Services.ConfigureApplicationCookie(options =>
 // Enable Razor Pages (needed for Default Identity UI if used)
 builder.Services.AddRazorPages();
 
+// Add Session Services
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(60);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 var app = builder.Build();
 
 await SeedIdentityAsync(app);
@@ -65,7 +75,12 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+// Serve files uploaded at runtime, such as user avatars and documents.
+app.UseStaticFiles();
 app.UseRouting();
+
+// Enable Session Middleware
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

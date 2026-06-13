@@ -2,6 +2,21 @@
 @{
     Layout = null;
     ViewData["Title"] = "Kết quả bài thi - QuizGen AI";
+
+    var returnUrl = ViewBag.ReturnUrl as string;
+    var backUrl = "/Dashboard";
+    if (returnUrl == "Dashboard")
+    {
+        backUrl = "/Dashboard";
+    }
+    else if (returnUrl == "Explore")
+    {
+        backUrl = "/Explore";
+    }
+    else if (returnUrl == "Review")
+    {
+        backUrl = "/Exam/Review";
+    }
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -197,9 +212,9 @@
 
     <!-- STICKY BOTTOM ACTION BAR -->
     <div class="fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-on-secondary-fixed/95 backdrop-blur-md border-t border-slate-200/70 dark:border-outline-variant px-6 py-4 flex items-center justify-between shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
-        <a href="/Dashboard" class="flex items-center gap-2 text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim font-semibold text-[14px] transition-colors group">
+        <a href="@backUrl" class="flex items-center gap-2 text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim font-semibold text-[14px] transition-colors group">
             <span class="material-symbols-outlined text-[18px] transition-transform group-hover:-translate-x-0.5">arrow_back</span>
-            Trở về Dashboard
+            Quay lại
         </a>
         <button id="practice-btn"
                 class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-[14px] shadow-md hover:bg-primary/90 active:scale-95 transition-all duration-200 focus:ring-4 focus:ring-primary/20">
@@ -414,6 +429,22 @@
         });
     }
 
+    // HELPERS
+    function showLoading(show) {
+        const $modal = $('#loading-modal');
+        if (show) {
+            $modal.removeClass('hidden').addClass('flex opacity-0');
+            setTimeout(() => {
+                $modal.addClass('opacity-100');
+            }, 20);
+        } else {
+            $modal.removeClass('opacity-100').addClass('opacity-0');
+            setTimeout(() => {
+                $modal.addClass('hidden').removeClass('flex opacity-0');
+            }, 300);
+        }
+    }
+
     // INIT
     document.addEventListener("DOMContentLoaded", () => {
         renderScore();
@@ -421,9 +452,104 @@
         renderReview();
 
         document.getElementById("practice-btn").addEventListener("click", () => {
-            alert("Hệ thống khuyên bạn nên tập trung ôn tập các tài liệu tương ứng với phần nhận thức còn yếu hiển thị ở trên!");
+            const remTotal = RESULT.remember.total;
+            const undTotal = RESULT.understand.total;
+            const appTotal = RESULT.apply.total;
+
+            const remAcc = remTotal > 0 ? (RESULT.remember.correct / remTotal) : 1.0;
+            const undAcc = undTotal > 0 ? (RESULT.understand.correct / undTotal) : 1.0;
+            const appAcc = appTotal > 0 ? (RESULT.apply.correct / appTotal) : 1.0;
+
+            // Xác định Bloom level yếu nhất dựa trên độ chính xác thấp nhất và số lượng câu hỏi nhiều nhất làm tiêu chí phụ
+            let targetLevel = 0; // 0: Remember, 1: Understand, 2: Apply
+            let levelName = "Nhận biết";
+            let levelSlug = "remember";
+
+            let candidates = [];
+            if (remTotal > 0) candidates.push({ level: 0, acc: remAcc, name: "Nhận biết", slug: "remember", total: remTotal });
+            if (undTotal > 0) candidates.push({ level: 1, acc: undAcc, name: "Thông hiểu", slug: "understand", total: undTotal });
+            if (appTotal > 0) candidates.push({ level: 2, acc: appAcc, name: "Vận dụng", slug: "apply", total: appTotal });
+
+            if (candidates.length > 0) {
+                // Sắp xếp tăng dần theo độ chính xác, nếu bằng nhau thì ưu tiên phần có nhiều câu hỏi hơn
+                candidates.sort((a, b) => {
+                    if (a.acc !== b.acc) {
+                        return a.acc - b.acc;
+                    }
+                    return b.total - a.total;
+                });
+                targetLevel = candidates[0].level;
+                levelName = candidates[0].name;
+                levelSlug = candidates[0].slug;
+            } else {
+                targetLevel = 0;
+                levelName = "Nhận biết";
+                levelSlug = "remember";
+            }
+
+            // Gọi AJAX để bắt đầu quy trình tạo đề luyện tập cho cấp độ nhận thức yếu nhất
+            showLoading(true);
+            $.ajax({
+                url: '/Practice/CreatePracticeQuiz',
+                type: 'POST',
+                data: {
+                    targetLevel: targetLevel,
+                    questionCount: 10
+                },
+                success: function (res) {
+                    if (res.success) {
+                        // Tạo phiên làm bài luyện tập
+                        $.ajax({
+                            url: '/Practice/StartPracticeSession',
+                            type: 'POST',
+                            data: {
+                                quizSetId: res.quizSetId
+                            },
+                            success: function (sessionRes) {
+                                if (sessionRes.success) {
+                                    // Chuyển hướng sang trang thi thử với chế độ luyện tập
+                                    window.location.href = `/Exam/Index?quizSetId=${res.quizSetId}&id=${sessionRes.sessionId}&returnUrl=Practice`;
+                                } else {
+                                    showLoading(false);
+                                    alert(sessionRes.message || "Không thể khởi tạo phiên làm bài luyện tập.");
+                                }
+                            },
+                            error: function () {
+                                showLoading(false);
+                                alert("Có lỗi xảy ra khi bắt đầu làm bài luyện tập.");
+                            }
+                        });
+                    } else {
+                        showLoading(false);
+                        // Khi thiếu câu hỏi trong lịch sử, gợi ý chuyển hướng sang trang quản lý luyện tập chung
+                        if (confirm(`${res.message}\n\nBạn có muốn chuyển sang trang Luyện tập để chọn cấp độ nhận thức khác hoặc xem danh sách chủ đề yếu không?`)) {
+                            window.location.href = `/Practice?level=${levelSlug}`;
+                        }
+                    }
+                },
+                error: function () {
+                    showLoading(false);
+                    alert("Có lỗi kết nối xảy ra khi yêu cầu tạo đề luyện tập.");
+                }
+            });
         });
     });
     </script>
+
+    <!-- Modal Loading Spinner (Giao diện hiện đại đồng bộ) -->
+    <div id="loading-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
+        <div class="bg-surface dark:bg-on-secondary-fixed border border-slate-200/80 dark:border-outline-variant rounded-3xl p-8 max-w-sm w-full shadow-2xl relative z-10 flex flex-col items-center gap-5 text-center transform scale-100 transition-transform">
+            <!-- Modern Spinner with gradient -->
+            <div class="relative w-16 h-16">
+                <div class="absolute inset-0 rounded-full border-4 border-primary/20"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-t-primary border-l-primary/30 animate-spin"></div>
+            </div>
+            <div>
+                <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container">Đang tạo đề luyện tập</h3>
+                <p class="text-caption text-secondary dark:text-secondary-fixed-dim mt-2 font-body leading-relaxed">AI đang tuyển chọn các câu hỏi phù hợp nhất từ kho lưu trữ của bạn. Vui lòng chờ giây lát...</p>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
