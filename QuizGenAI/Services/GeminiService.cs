@@ -269,7 +269,7 @@ namespace QuizGenAI.Services
                 generationConfig = new
                 {
                     temperature = 0.2,
-                    maxOutputTokens = 32768  // Tăng từ 8192 lên 32768 để hỗ trợ PDF dài hơn
+                    maxOutputTokens = 65000
                 }
             };
 
@@ -281,6 +281,95 @@ namespace QuizGenAI.Services
             var text = ExtractTextFromGeminiResponse(responseJson);
 
             return text?.Trim() ?? string.Empty;
+        }
+
+        public async Task<AiSummaryDto> SummarizeDocumentAsync(
+            string textContent,
+            CancellationToken cancellationToken = default)
+        {
+            EnsureApiKeyConfigured();
+
+            if (string.IsNullOrWhiteSpace(textContent))
+            {
+                throw new ArgumentException("Nội dung tài liệu học tập không được để trống.", nameof(textContent));
+            }
+
+            var promptBuilder = new StringBuilder();
+            promptBuilder.AppendLine("Bạn là chuyên gia giáo dục và tóm tắt tài liệu học tập.");
+            promptBuilder.AppendLine("Nhiệm vụ: Hãy đọc và tóm tắt tài liệu ôn tập được cung cấp bên dưới.");
+            promptBuilder.AppendLine();
+            promptBuilder.AppendLine("QUY TẮC BẮT BUỘC:");
+            promptBuilder.AppendLine("1. Trả về DUY NHẤT một JSON object hợp lệ bằng tiếng Việt, KHÔNG bọc trong markdown, KHÔNG thêm text ngoài JSON.");
+            promptBuilder.AppendLine("2. Format JSON:");
+            promptBuilder.AppendLine("   {");
+            promptBuilder.AppendLine("      \"summary\": \"Tóm tắt chính khoảng 250-350 từ, chia thành 3-5 đoạn ngắn gọn, tổng hợp các ý cốt lõi.\",");
+            promptBuilder.AppendLine("      \"keyPoints\": [\"Điểm nổi bật/Khái niệm quan trọng 1\", \"Điểm nổi bật/Khái niệm quan trọng 2\", ...],");
+            promptBuilder.AppendLine("      \"audience\": \"Gợi ý đối tượng học tập phù hợp (ví dụ: Sinh viên CNTT, học sinh THPT ôn thi Đại học, nghiên cứu viên...)\"");
+            promptBuilder.AppendLine("   }");
+            promptBuilder.AppendLine("3. Chỉ dùng thông tin trong tài liệu, không bịa đặt.");
+            promptBuilder.AppendLine();
+            promptBuilder.AppendLine("--- TÀI LIỆU ---");
+            promptBuilder.AppendLine(textContent);
+            promptBuilder.AppendLine("--- HẾT TÀI LIỆU ---");
+
+            var promptText = promptBuilder.ToString();
+            var maxOutputTokens = 4096;
+
+            var requestBody = new
+            {
+                contents = new[]
+                {
+                    new
+                    {
+                        parts = new[]
+                        {
+                            new { text = promptText }
+                        }
+                    }
+                },
+                generationConfig = new
+                {
+                    maxOutputTokens,
+                    temperature = 0.3
+                }
+            };
+
+            var responseJson = await SendGenerateContentRequestWithRetryAsync(
+                requestBody,
+                cancellationToken,
+                "Gemini Document Summarization");
+            var rawJsonText = ExtractTextFromGeminiResponse(responseJson);
+
+            if (string.IsNullOrWhiteSpace(rawJsonText))
+            {
+                _logger.LogError(
+                    "Gemini Document Summarization: Response rỗng. Model={ModelName}",
+                    _modelName);
+                throw new InvalidOperationException("Gemini API trả về nội dung trống.");
+            }
+
+            var jsonToParse = StripMarkdownCodeFence(rawJsonText.Trim());
+
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            try
+            {
+                return JsonSerializer.Deserialize<AiSummaryDto>(jsonToParse, jsonOptions)
+                    ?? new AiSummaryDto { Summary = "Không thể tóm tắt tài liệu." };
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(
+                    "Gemini Document Summarization: JSON parse fail. Model={ModelName}, ParseLength={ParseLength}, Error={Error}, RawResponse={RawResponse}",
+                    _modelName,
+                    jsonToParse.Length,
+                    ex.Message,
+                    jsonToParse);
+                throw new InvalidOperationException($"Gemini trả về JSON không hợp lệ: {ex.Message}", ex);
+            }
         }
 
         public async Task<List<GeneratedQuestionDto>> GenerateQuestionsAsync(
@@ -350,13 +439,12 @@ namespace QuizGenAI.Services
 
             var promptText = promptBuilder.ToString();
 
-            // maxOutputTokens cao hơn: gemini-2.5-flash dùng thinking tokens trong output budget
+            // maxOutputTokens cao hơn: gemini-2.5-flash/3.1 dùng thinking tokens trong output budget
             var maxOutputTokens = totalQuestions switch
             {
                 <= 5 => 4096,
                 <= 10 => 8192,
-                <= 20 => 16384,
-                _ => 16384
+                _ => GetMaxAllowedOutputTokens(16384)
             };
 
             object requestBody;
@@ -574,6 +662,18 @@ namespace QuizGenAI.Services
                 "Vận dụng" or "Apply" or "Applying" => 2,
                 _ => 1
             };
+        }
+
+        /// <summary>
+        /// Lấy số lượng output token tối đa được hỗ trợ bởi model hiện tại để tránh lỗi API.
+        /// </summary>
+        private int GetMaxAllowedOutputTokens(int requestedTokens)
+        {
+            if (!string.IsNullOrEmpty(_modelName) && (_modelName.Contains("1.5") || _modelName.Contains("flash-8b")))
+            {
+                return Math.Min(requestedTokens, 8192);
+            }
+            return Math.Min(requestedTokens, 65536);
         }
 
         private void EnsureApiKeyConfigured()
@@ -884,5 +984,17 @@ namespace QuizGenAI.Services
 
         [JsonPropertyName("explanation")]
         public string? Explanation { get; set; }
+    }
+
+    public class AiSummaryDto
+    {
+        [JsonPropertyName("summary")]
+        public string Summary { get; set; } = string.Empty;
+
+        [JsonPropertyName("keyPoints")]
+        public List<string> KeyPoints { get; set; } = new();
+
+        [JsonPropertyName("audience")]
+        public string Audience { get; set; } = string.Empty;
     }
 }

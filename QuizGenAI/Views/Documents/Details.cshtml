@@ -480,6 +480,16 @@
                     </button>
                 </form>
 
+                <button type="button" id="btn-ai-summarize"
+                        data-has-summary="@(Model.AiSummary != null ? "true" : "false")"
+                        data-summary="@Model.AiSummary"
+                        data-keypoints="@Model.AiKeyPoints"
+                        data-audience="@Model.AiAudience"
+                        class="px-4 py-2.5 rounded-xl font-semibold text-[14px] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer border border-transparent dark:border-indigo-500/30">
+                    <span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+                    Tóm tắt AI
+                </button>
+
                 <a asp-controller="Exam"
                    asp-action="Review"
                    asp-route-documentId="@Model.Id"
@@ -839,6 +849,103 @@
     </div>
 </div>
 
+<!-- AI Summary Modal -->
+<div id="ai-summary-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <!-- Overlay backdrop -->
+    <div id="ai-summary-overlay" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
+    
+    <!-- Modal box -->
+    <div id="ai-summary-box" class="bg-[#faf8ff] dark:bg-[#0d1c2f] border border-slate-200/80 dark:border-outline-variant rounded-2xl max-w-2xl w-full shadow-2xl relative z-10 transform scale-95 opacity-0 transition-all duration-300 flex flex-col max-h-[85vh]">
+        
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-5 border-b border-slate-100 dark:border-outline-variant/30 shrink-0">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[22px]">auto_awesome</span>
+                </div>
+                <div>
+                    <h3 class="text-[16px] font-bold text-[#131b2e] dark:text-[#b7c4ff] leading-none">Tóm tắt tài liệu bằng AI</h3>
+                    <p class="text-[12px] text-slate-400 dark:text-slate-500 mt-1 font-medium">Được tạo bởi Gemini AI</p>
+                </div>
+            </div>
+            <button type="button" id="ai-summary-close-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <!-- Modal Body (with scroll) -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+            
+            <!-- Loading State -->
+            <div id="ai-summary-loading" class="flex flex-col items-center justify-center py-12 gap-4">
+                <div class="relative w-16 h-16">
+                    <div class="absolute inset-0 rounded-full border-4 border-indigo-100 dark:border-indigo-950/30"></div>
+                    <div class="absolute inset-0 rounded-full border-4 border-t-indigo-600 dark:border-t-indigo-400 animate-spin"></div>
+                </div>
+                <p class="text-[14px] font-semibold text-slate-600 dark:text-slate-300 animate-pulse">AI đang phân tích và tóm tắt, vui lòng đợi...</p>
+            </div>
+            
+            <!-- Content State -->
+            <div id="ai-summary-content" class="hidden space-y-6">
+                <!-- Section 1: Summary -->
+                <div class="space-y-2">
+                    <h4 class="flex items-center gap-2 text-[14px] font-bold text-indigo-600 dark:text-indigo-400">
+                        <span class="material-symbols-outlined text-[20px]">subject</span>
+                        Tóm tắt cốt lõi
+                    </h4>
+                    <div id="ai-summary-text" class="text-[14px] leading-relaxed text-slate-600 dark:text-slate-300 space-y-3 font-medium">
+                        <!-- Tóm tắt chính sẽ được điền vào đây -->
+                    </div>
+                </div>
+                
+                <hr class="border-slate-100 dark:border-outline-variant/20" />
+                
+                <!-- Section 2: Key Points -->
+                <div class="space-y-3">
+                    <h4 class="flex items-center gap-2 text-[14px] font-bold text-indigo-600 dark:text-indigo-400">
+                        <span class="material-symbols-outlined text-[20px]">star_rate</span>
+                        Khái niệm cốt lõi & Điểm nổi bật
+                    </h4>
+                    <ul id="ai-summary-keypoints" class="space-y-2.5">
+                        <!-- Các điểm nổi bật sẽ được điền vào đây -->
+                    </ul>
+                </div>
+                
+                <hr class="border-slate-100 dark:border-outline-variant/20" />
+                
+                <!-- Section 3: Audience -->
+                <div class="p-4 bg-indigo-50/50 dark:bg-indigo-950/15 rounded-xl border border-indigo-100/50 dark:border-indigo-900/30 flex gap-3.5 items-start">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[20px]">school</span>
+                    </div>
+                    <div>
+                        <h5 class="text-[13px] font-bold text-indigo-900 dark:text-indigo-300">Đối tượng đề khuyên dùng</h5>
+                        <p id="ai-summary-audience" class="text-[13px] text-slate-600 dark:text-slate-400 mt-1 leading-normal font-medium">
+                            <!-- Gợi ý đối tượng học sẽ được điền vào đây -->
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="p-4 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-100 dark:border-outline-variant/20 flex justify-between items-center shrink-0 rounded-b-2xl">
+            <span class="text-[11px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">QuizGen AI</span>
+            <div class="flex gap-2">
+                <button type="button" id="ai-summary-btn-close" class="px-4 py-2 rounded-xl text-[13px] font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">
+                    Đóng
+                </button>
+                <a asp-controller="Exam" asp-action="Review" asp-route-documentId="@Model.Id" id="ai-summary-btn-create-quiz" class="hidden px-4 py-2 rounded-xl text-[13px] font-bold bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                    <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                    Tạo đề ngay
+                </a>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
 @section Scripts {
     <script>
         const toggleDocumentTextBtn = document.getElementById("toggleDocumentTextBtn");
@@ -920,6 +1027,149 @@
                         document.getElementById("deleteDocumentFormDetails").submit();
                     }
                 });
+            });
+        }
+
+        // -------------------------------------------------------------
+        // XỬ LÝ MODAL TÓM TẮT AI
+        // -------------------------------------------------------------
+        const btnAiSummarize = document.getElementById("btn-ai-summarize");
+        const modalAiSummary = document.getElementById("ai-summary-modal");
+        const overlayAiSummary = document.getElementById("ai-summary-overlay");
+        const boxAiSummary = document.getElementById("ai-summary-box");
+        const btnCloseHeader = document.getElementById("ai-summary-close-btn");
+        const btnCloseFooter = document.getElementById("ai-summary-btn-close");
+        const btnCreateQuiz = document.getElementById("ai-summary-btn-create-quiz");
+
+        const loadingDiv = document.getElementById("ai-summary-loading");
+        const contentDiv = document.getElementById("ai-summary-content");
+        const textSummaryDiv = document.getElementById("ai-summary-text");
+        const listKeypointsUl = document.getElementById("ai-summary-keypoints");
+        const textAudienceP = document.getElementById("ai-summary-audience");
+
+        function showAiSummaryModal() {
+            modalAiSummary.classList.remove("hidden");
+            modalAiSummary.classList.add("flex");
+            setTimeout(() => {
+                overlayAiSummary.classList.remove("opacity-0");
+                overlayAiSummary.classList.add("opacity-100");
+                boxAiSummary.classList.remove("scale-95", "opacity-0");
+                boxAiSummary.classList.add("scale-100", "opacity-100");
+            }, 10);
+        }
+
+        function hideAiSummaryModal() {
+            overlayAiSummary.classList.remove("opacity-100");
+            overlayAiSummary.classList.add("opacity-0");
+            boxAiSummary.classList.remove("scale-100", "opacity-100");
+            boxAiSummary.classList.add("scale-95", "opacity-0");
+            setTimeout(() => {
+                modalAiSummary.classList.remove("flex");
+                modalAiSummary.classList.add("hidden");
+            }, 300);
+        }
+
+        [btnCloseHeader, btnCloseFooter, overlayAiSummary].forEach(el => {
+            if (el) el.addEventListener("click", hideAiSummaryModal);
+        });
+
+        function renderSummaryData(summary, keyPoints, audience) {
+            // Hiển thị tóm tắt chính (chia theo các đoạn)
+            textSummaryDiv.innerHTML = "";
+            const paragraphs = summary.split("\n");
+            paragraphs.forEach(pText => {
+                if (pText.trim()) {
+                    const p = document.createElement("p");
+                    p.className = "mb-3 text-justify leading-relaxed text-[#131b2e] dark:text-slate-300";
+                    p.textContent = pText.trim();
+                    textSummaryDiv.appendChild(p);
+                }
+            });
+
+            // Hiển thị điểm nổi bật
+            listKeypointsUl.innerHTML = "";
+            let points = [];
+            if (Array.isArray(keyPoints)) {
+                points = keyPoints;
+            } else if (typeof keyPoints === 'string') {
+                try {
+                    points = JSON.parse(keyPoints);
+                } catch (e) {
+                    points = keyPoints.split("\n").map(x => x.trim()).filter(x => x);
+                }
+            }
+
+            points.forEach(point => {
+                const li = document.createElement("li");
+                li.className = "flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 font-medium";
+                li.innerHTML = `
+                    <span class="material-symbols-outlined text-indigo-500 dark:text-indigo-400 text-[18px] shrink-0 mt-0.5">check_circle</span>
+                    <span class="leading-relaxed">${point}</span>
+                `;
+                listKeypointsUl.appendChild(li);
+            });
+
+            // Hiển thị đối tượng
+            textAudienceP.textContent = audience || "Chưa có thông tin.";
+
+            // Switch views
+            loadingDiv.classList.add("hidden");
+            contentDiv.classList.remove("hidden");
+            btnCreateQuiz.classList.remove("hidden");
+        }
+
+        if (btnAiSummarize) {
+            btnAiSummarize.addEventListener("click", function () {
+                const hasSummary = btnAiSummarize.getAttribute("data-has-summary") === "true";
+                
+                showAiSummaryModal();
+
+                if (hasSummary) {
+                    // Load từ cache đã có sẵn trên giao diện
+                    const summary = btnAiSummarize.getAttribute("data-summary");
+                    const keyPoints = btnAiSummarize.getAttribute("data-keypoints");
+                    const audience = btnAiSummarize.getAttribute("data-audience");
+                    renderSummaryData(summary, keyPoints, audience);
+                } else {
+                    // Mở chế độ loading
+                    loadingDiv.classList.remove("hidden");
+                    contentDiv.classList.add("hidden");
+                    btnCreateQuiz.classList.add("hidden");
+
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                    const docId = "@Model.Id";
+
+                    fetch("/Documents/Summarize", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded",
+                        },
+                        body: new URLSearchParams({
+                            "id": docId,
+                            "__RequestVerificationToken": token
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Cập nhật thuộc tính của nút bấm để dùng làm cache cho lần click tiếp theo
+                            btnAiSummarize.setAttribute("data-has-summary", "true");
+                            btnAiSummarize.setAttribute("data-summary", data.summary);
+                            btnAiSummarize.setAttribute("data-keypoints", JSON.stringify(data.keyPoints));
+                            btnAiSummarize.setAttribute("data-audience", data.audience);
+
+                            renderSummaryData(data.summary, data.keyPoints, data.audience);
+                        } else {
+                            hideAiSummaryModal();
+                            alert(data.message || "Không thể tải tóm tắt AI.");
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error summarize:", error);
+                        hideAiSummaryModal();
+                        alert("Không thể kết nối tới máy chủ.");
+                    });
+                }
             });
         }
     </script>

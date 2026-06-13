@@ -22,6 +22,10 @@
         {
             activePage = "History";
         }
+        else if (controller == "Practice")
+        {
+            activePage = "Practice";
+        }
         else if (controller == "Explore")
         {
             activePage = "Explore";
@@ -90,6 +94,15 @@
                    class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Review" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
                     <span class="material-symbols-outlined" style="@(activePage == "Review" ? "font-variation-settings: 'FILL' 1;" : "")">auto_stories</span>
                     <span class="font-label-sm text-label-sm">Ôn tập</span>
+                </a>
+            </li>
+            
+            <!-- Luyện tập -->
+            <li>
+                <a asp-area="" asp-controller="Practice" asp-action="Index" 
+                   class="flex items-center px-6 py-3 border-l-4 transition-all duration-200 gap-3 group @(activePage == "Practice" ? "bg-surface-container-low dark:bg-secondary-container text-primary dark:text-on-primary-container border-primary dark:border-primary-fixed-dim" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant border-transparent")">
+                    <span class="material-symbols-outlined" style="@(activePage == "Practice" ? "font-variation-settings: 'FILL' 1;" : "")">model_training</span>
+                    <span class="font-label-sm text-label-sm">Luyện tập</span>
                 </a>
             </li>
             

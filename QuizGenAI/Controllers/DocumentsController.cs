@@ -17,19 +17,22 @@ namespace QuizGenAI.Controllers
         private readonly DocxExtractionService _docxExtractionService;
         private readonly PdfExtractionService _pdfExtractionService;
         private readonly UrlExtractionService _urlExtractionService;
+        private readonly GeminiService _geminiService;
 
         public DocumentsController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,
             DocxExtractionService docxExtractionService,
             PdfExtractionService pdfExtractionService,
-            UrlExtractionService urlExtractionService)
+            UrlExtractionService urlExtractionService,
+            GeminiService geminiService)
         {
             _context = context;
             _userManager = userManager;
             _docxExtractionService = docxExtractionService;
             _pdfExtractionService = pdfExtractionService;
             _urlExtractionService = urlExtractionService;
+            _geminiService = geminiService;
         }
 
         public async Task<IActionResult> Index(string? type)
@@ -37,7 +40,13 @@ namespace QuizGenAI.Controllers
             ViewData["ActivePage"] = "Documents";
             ViewData["SelectedType"] = type;
 
-            var query = _context.Documents.AsQueryable();
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
+            var query = _context.Documents.Where(d => d.UserId == userId).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(type))
             {
@@ -242,11 +251,17 @@ namespace QuizGenAI.Controllers
         {
             ViewData["ActivePage"] = "Documents";
 
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
             var document = await _context.Documents
                 .Include(d => d.QuizSets)
                 .FirstOrDefaultAsync(d => d.Id == id);
 
-            if (document == null)
+            if (document == null || document.UserId != userId)
             {
                 return NotFound();
             }
@@ -256,13 +271,95 @@ namespace QuizGenAI.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Summarize(int id)
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Json(new { success = false, message = "Bạn chưa đăng nhập." });
+            }
+
+            var document = await _context.Documents.FirstOrDefaultAsync(d => d.Id == id);
+            if (document == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy tài liệu." });
+            }
+
+            if (document.UserId != userId)
+            {
+                return Json(new { success = false, message = "Bạn không có quyền truy cập tài liệu này." });
+            }
+
+            // Nếu đã lưu sẵn tóm tắt trong database, trả về ngay lập tức (Caching)
+            if (!string.IsNullOrEmpty(document.AiSummary))
+            {
+                List<string> keyPointsList = new();
+                if (!string.IsNullOrEmpty(document.AiKeyPoints))
+                {
+                    try
+                    {
+                        keyPointsList = System.Text.Json.JsonSerializer.Deserialize<List<string>>(document.AiKeyPoints) ?? new();
+                    }
+                    catch
+                    {
+                        keyPointsList = document.AiKeyPoints.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList();
+                    }
+                }
+
+                return Json(new
+                {
+                    success = true,
+                    summary = document.AiSummary,
+                    keyPoints = keyPointsList,
+                    audience = document.AiAudience ?? string.Empty
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(document.ExtractedText))
+            {
+                return Json(new { success = false, message = "Tài liệu trống hoặc không có nội dung văn bản để tóm tắt." });
+            }
+
+            try
+            {
+                var result = await _geminiService.SummarizeDocumentAsync(document.ExtractedText, HttpContext.RequestAborted);
+
+                document.AiSummary = result.Summary;
+                document.AiKeyPoints = System.Text.Json.JsonSerializer.Serialize(result.KeyPoints);
+                document.AiAudience = result.Audience;
+
+                _context.Documents.Update(document);
+                await _context.SaveChangesAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    summary = result.Summary,
+                    keyPoints = result.KeyPoints,
+                    audience = result.Audience
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Lỗi khi gọi AI tóm tắt: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return RedirectToAction("Login", "Account");
+            }
+
             var document = await _context.Documents
                 .Include(d => d.QuizSets)
                 .FirstOrDefaultAsync(d => d.Id == id);
 
-            if (document == null)
+            if (document == null || document.UserId != userId)
             {
                 return NotFound();
             }
