@@ -1007,6 +1007,99 @@ main:has(.documents-page) {
     word-break: break-word;
 }
 
+.stitch-readable-text {
+    white-space: normal;
+}
+
+.stitch-readable-text p {
+    margin: 0 0 14px;
+    color: #1f2937;
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.stitch-readable-text p:last-child {
+    margin-bottom: 0;
+}
+
+.stitch-readable-list {
+    margin: 0 0 14px 20px;
+    padding: 0;
+    color: #1f2937;
+    font-size: 14px;
+    line-height: 1.75;
+}
+
+.stitch-readable-list li {
+    margin-bottom: 6px;
+}
+
+.stitch-word-table-wrap {
+    width: 100%;
+    margin: 16px 0 20px;
+    border: 1px solid #dbe5f5;
+    border-radius: 8px;
+    overflow-x: auto;
+    background: #ffffff;
+}
+
+.stitch-word-table {
+    width: 100%;
+    min-width: 640px;
+    border-collapse: collapse;
+    color: #1f2937;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.stitch-word-table th,
+.stitch-word-table td {
+    border: 1px solid #e2e8f0;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.stitch-word-table th {
+    color: #0f172a;
+    background: #eef4ff;
+    font-weight: 800;
+}
+
+.stitch-word-table tbody tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+.stitch-url-source-inline {
+    margin-bottom: 18px;
+    border: 1px solid #dbe5f5;
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: grid;
+    gap: 4px;
+    background: #f8fbff;
+}
+
+.stitch-url-source-inline span {
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.stitch-url-source-inline a {
+    color: #0037b0;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+.stitch-url-source-inline a:hover {
+    text-decoration: underline;
+}
+
 .stitch-document-text-section {
     margin-bottom: 22px;
 }
