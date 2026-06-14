@@ -85,7 +85,7 @@ namespace QuizGenAI.Areas.Identity.Pages.Account
             public bool RememberMe { get; set; }
         }
 
-        public async Task OnGetAsync(string returnUrl = null, bool locked = false)
+        public async Task OnGetAsync(string returnUrl = null, bool locked = false, string email = null)
         {
             if (locked)
             {
@@ -100,6 +100,12 @@ namespace QuizGenAI.Areas.Identity.Pages.Account
             if (string.IsNullOrEmpty(returnUrl) || returnUrl == "/" || returnUrl == "~/")
             {
                 returnUrl = Url.Content("~/Dashboard");
+            }
+
+            // Tự động điền email nếu được truyền vào sau khi đăng ký
+            if (!string.IsNullOrEmpty(email))
+            {
+                Input = new InputModel { Email = email };
             }
 
             // Clear the existing external cookie to ensure a clean login process

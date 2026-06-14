@@ -13,6 +13,10 @@
     {
         backUrl = "/Exam/Review";
     }
+    else if (returnUrl == "Practice")
+    {
+        backUrl = "/Practice";
+    }
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -355,6 +359,7 @@
         let isExamSubmitted = false;
         let sessionId = @(ViewBag.SessionId ?? 0);
         const isNoLimit = @(Model.TimeLimitMinutes <= 0 ? "true" : "false");
+        const isPracticeMode = @(ViewBag.IsPracticeMode == true ? "true" : "false");
         let actualDurationSeconds = @(ViewBag.ActualDurationSeconds ?? 0);
         let timeRemainingSeconds = isNoLimit ? 999999 : (@(Model.TimeLimitMinutes * 60) - actualDurationSeconds);
 
@@ -761,8 +766,10 @@
 
             $("#confirm-submit-btn").text("Đang nộp...").attr("disabled", "disabled");
 
+            const submitUrl = isPracticeMode ? '/Practice/SubmitPractice' : '/Exam/SubmitExam';
+
             $.ajax({
-                url: '/Exam/SubmitExam',
+                url: submitUrl,
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(submissionData),
@@ -784,10 +791,10 @@
                         const offset = circumference - (response.scorePercent / 100) * circumference;
                         circle.style.strokeDashoffset = offset;
 
-
-
                          const returnUrl = '@(ViewBag.ReturnUrl ?? "")';
-                         const resultUrl = `/Exam/Result?sessionId=${sessionId}` + (returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : '');
+                         const resultUrl = isPracticeMode 
+                             ? `/Practice/Result?sessionId=${sessionId}`
+                             : `/Exam/Result?sessionId=${sessionId}` + (returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : '');
                          $("#result-modal-detail-link").attr("href", resultUrl);
 
                         // Hiện Result Modal

@@ -22,6 +22,14 @@
             <h1 id="login-title" class="sr-only">Đăng nhập QuizGen AI</h1>
             <div asp-validation-summary="ModelOnly" class="auth-validation-summary"></div>
 
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="mb-4 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/30 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px] text-emerald-600 dark:text-emerald-400">check_circle</span>
+                    <span>@TempData["SuccessMessage"]</span>
+                </div>
+            }
+
             <div class="auth-field">
                 <label asp-for="Input.Email" class="auth-label"></label>
                 <div class="auth-input-wrap">

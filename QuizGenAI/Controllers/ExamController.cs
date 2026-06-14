@@ -166,6 +166,7 @@ namespace QuizGenAI.Controllers
             {
                 ViewBag.SessionId = existingSession.Id;
                 ViewBag.ActualDurationSeconds = existingSession.ActualDurationSeconds ?? 0;
+                ViewBag.IsPracticeMode = existingSession.IsPracticeMode;
                 
                 // Tải các đáp án đã chọn lưu tạm thời trong Db
                 var savedAnswers = await _context.ExamAnswers
@@ -178,6 +179,7 @@ namespace QuizGenAI.Controllers
             {
                 ViewBag.SessionId = 0;
                 ViewBag.ActualDurationSeconds = 0;
+                ViewBag.IsPracticeMode = false;
                 ViewBag.SavedAnswers = new Dictionary<int, int?>();
             }
 
@@ -901,57 +903,57 @@ namespace QuizGenAI.Controllers
 
         private async Task UpdateWeakTopicsAsync(string userId, ExamSession session)
         {
-            // Phân tích xem user sai nhiều nhất ở mức Bloom nào
-            double remAcc = session.RememberTotal > 0 ? (double)session.RememberCorrect / session.RememberTotal : 1.0;
-            double undAcc = session.UnderstandTotal > 0 ? (double)session.UnderstandCorrect / session.UnderstandTotal : 1.0;
-            double appAcc = session.ApplyTotal > 0 ? (double)session.ApplyCorrect / session.ApplyTotal : 1.0;
-
-            // Xác định mức Bloom yếu nhất có độ chính xác dưới 80%
-            var levels = new List<(BloomLevel Level, double Accuracy, int Correct, int Total)>
+            var levels = new List<(BloomLevel Level, int Correct, int Total, string LevelName)>
             {
-                (BloomLevel.Remember, remAcc, session.RememberCorrect, session.RememberTotal),
-                (BloomLevel.Understand, undAcc, session.UnderstandCorrect, session.UnderstandTotal),
-                (BloomLevel.Apply, appAcc, session.ApplyCorrect, session.ApplyTotal)
+                (BloomLevel.Remember, session.RememberCorrect, session.RememberTotal, "Nhận biết (Remembering)"),
+                (BloomLevel.Understand, session.UnderstandCorrect, session.UnderstandTotal, "Thông hiểu (Understanding)"),
+                (BloomLevel.Apply, session.ApplyCorrect, session.ApplyTotal, "Vận dụng (Applying)")
             };
 
-            // Tìm mức Bloom có làm bài và yếu nhất
-            var activeLevels = levels.Where(l => l.Total > 0).ToList();
-            if (!activeLevels.Any()) return;
-
-            var weakest = activeLevels.OrderBy(l => l.Accuracy).FirstOrDefault();
-
-            if (weakest.Accuracy < 0.80)
+            foreach (var level in levels)
             {
-                var levelName = weakest.Level == BloomLevel.Remember ? "Nhận biết (Remembering)" :
-                                 weakest.Level == BloomLevel.Understand ? "Thông hiểu (Understanding)" :
-                                 "Vận dụng (Applying)";
+                if (level.Total <= 0) continue;
 
                 var existingWeakTopic = await _context.WeakTopics
-                    .FirstOrDefaultAsync(wt => wt.UserId == userId && wt.BloomLevel == weakest.Level);
+                    .FirstOrDefaultAsync(wt => wt.UserId == userId && wt.BloomLevel == level.Level);
 
-                if (existingWeakTopic == null)
+                if (existingWeakTopic != null)
                 {
-                    var weakTopic = new WeakTopic
-                    {
-                        UserId = userId,
-                        TopicName = $"Kỹ năng: {levelName}",
-                        BloomLevel = weakest.Level,
-                        TotalAttempts = weakest.Total,
-                        CorrectAttempts = weakest.Correct,
-                        AccuracyRate = (decimal)(weakest.Accuracy * 100),
-                        LastUpdated = DateTime.UtcNow
-                    };
-                    _context.WeakTopics.Add(weakTopic);
-                }
-                else
-                {
-                    existingWeakTopic.TotalAttempts += weakest.Total;
-                    existingWeakTopic.CorrectAttempts += weakest.Correct;
+                    existingWeakTopic.TotalAttempts += level.Total;
+                    existingWeakTopic.CorrectAttempts += level.Correct;
                     existingWeakTopic.AccuracyRate = existingWeakTopic.TotalAttempts > 0 
                         ? (decimal)(existingWeakTopic.CorrectAttempts * 100.0 / existingWeakTopic.TotalAttempts)
                         : 0;
                     existingWeakTopic.LastUpdated = DateTime.UtcNow;
-                    _context.WeakTopics.Update(existingWeakTopic);
+
+                    if (existingWeakTopic.AccuracyRate >= 80)
+                    {
+                        // Đạt độ chính xác tích lũy từ 80% trở lên -> xóa khỏi danh sách yếu
+                        _context.WeakTopics.Remove(existingWeakTopic);
+                    }
+                    else
+                    {
+                        _context.WeakTopics.Update(existingWeakTopic);
+                    }
+                }
+                else
+                {
+                    // Nếu chưa có WeakTopic nhưng tỉ lệ đúng của phiên này dưới 80%, tạo mới để theo dõi
+                    double accuracy = (double)level.Correct / level.Total;
+                    if (accuracy < 0.80)
+                    {
+                        var weakTopic = new WeakTopic
+                        {
+                            UserId = userId,
+                            TopicName = $"Kỹ năng: {level.LevelName}",
+                            BloomLevel = level.Level,
+                            TotalAttempts = level.Total,
+                            CorrectAttempts = level.Correct,
+                            AccuracyRate = (decimal)(accuracy * 100),
+                            LastUpdated = DateTime.UtcNow
+                        };
+                        _context.WeakTopics.Add(weakTopic);
+                    }
                 }
             }
         }

@@ -127,8 +127,8 @@ namespace QuizGenAI.Areas.Identity.Pages.Account
                     }
                     await _userManager.AddToRoleAsync(user, SD.Role_User);
 
-                    await _signInManager.SignInAsync(user, isPersistent: false);
-                    return LocalRedirect(returnUrl);
+                    TempData["SuccessMessage"] = "Đăng ký tài khoản thành công! Vui lòng đăng nhập.";
+                    return RedirectToPage("./Login", new { returnUrl = returnUrl, email = user.Email });
                 }
                 foreach (var error in result.Errors)
                 {
