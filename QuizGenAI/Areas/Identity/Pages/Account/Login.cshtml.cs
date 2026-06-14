@@ -85,8 +85,13 @@ namespace QuizGenAI.Areas.Identity.Pages.Account
             public bool RememberMe { get; set; }
         }
 
-        public async Task OnGetAsync(string returnUrl = null)
+        public async Task OnGetAsync(string returnUrl = null, bool locked = false)
         {
+            if (locked)
+            {
+                ErrorMessage = "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.";
+            }
+
             if (!string.IsNullOrEmpty(ErrorMessage))
             {
                 ModelState.AddModelError(string.Empty, ErrorMessage);
@@ -116,6 +121,13 @@ namespace QuizGenAI.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
+                var user = await _signInManager.UserManager.FindByEmailAsync(Input.Email);
+                if (user != null && !user.IsActive)
+                {
+                    ModelState.AddModelError(string.Empty, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.");
+                    return Page();
+                }
+
                 // Enable account lockout to prevent brute-force attacks
                 var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
                 if (result.Succeeded)
@@ -123,7 +135,6 @@ namespace QuizGenAI.Areas.Identity.Pages.Account
                     _logger.LogInformation("User logged in.");
                     if (returnUrl == "~/" || string.IsNullOrEmpty(returnUrl))
                     {
-                        var user = await _signInManager.UserManager.FindByEmailAsync(Input.Email);
                         if (user != null)
                         {
                             if (await _signInManager.UserManager.IsInRoleAsync(user, SD.Role_Admin))

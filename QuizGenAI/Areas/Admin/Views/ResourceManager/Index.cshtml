@@ -110,7 +110,7 @@
                             </td>
                             <!-- Cột ngày đăng -->
                             <td class="px-6 py-4 text-sm text-secondary dark:text-secondary-fixed-dim font-medium">
-                                @doc.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                @doc.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
                             </td>
                             <!-- Cột kích thước -->
                             <td class="px-6 py-4 text-sm text-secondary dark:text-secondary-fixed-dim font-medium">

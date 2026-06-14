@@ -20,13 +20,7 @@ namespace QuizGenAI.Models
         public string DefaultLanguage { get; set; } = "vi"; // "vi" hoặc "en"
 
         // Bảo mật & Tài khoản
-        [Display(Name = "Xác thực 2 yếu tố (2FA)")]
-        public bool Enable2FA { get; set; } = false;
 
-        [Required(ErrorMessage = "Thời gian hết hạn phiên không được để trống")]
-        [Range(5, 1440, ErrorMessage = "Thời gian hết hạn phiên phải từ 5 đến 1440 phút")]
-        [Display(Name = "Thời gian hết hạn phiên (phút)")]
-        public int SessionTimeout { get; set; } = 60;
 
         // Cấu hình thông báo
         [Display(Name = "Cảnh báo hệ thống")]

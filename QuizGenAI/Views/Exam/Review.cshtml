@@ -98,7 +98,7 @@
 
                                 <div class="mt-4 flex items-center justify-between text-caption font-caption text-secondary dark:text-secondary-fixed-dim border-t border-slate-100 dark:border-outline-variant/30 pt-2">
                                     <span>@(doc.PageCount.HasValue ? $"{doc.PageCount} trang" : "1 trang")</span>
-                                    <span>@doc.CreatedAt.ToString("dd/MM/yyyy")</span>
+                                    <span>@doc.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</span>
                                 </div>
                             </div>
                         }

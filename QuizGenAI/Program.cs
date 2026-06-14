@@ -68,6 +68,7 @@ app.UseHttpsRedirection();
 app.UseRouting();
 
 app.UseAuthentication();
+app.UseMiddleware<QuizGenAI.Services.UserActiveCheckMiddleware>();
 app.UseAuthorization();
 
 app.MapStaticAssets();

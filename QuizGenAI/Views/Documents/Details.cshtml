@@ -509,7 +509,7 @@
 
                     <span>
                         <span class="material-symbols-outlined">calendar_today</span>
-                        Thêm lúc: @Model.CreatedAt.ToString("dd/MM/yyyy")
+                        Thêm lúc: @Model.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")
                     </span>
                 </div>
             </div>
@@ -724,7 +724,7 @@
 
                             <p>
                                 <span class="material-symbols-outlined">calendar_today</span>
-                                Tạo lúc: @quizSet.CreatedAt.ToString("dd/MM/yyyy")
+                                Tạo lúc: @quizSet.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")
                             </p>
 
                             <div class="stitch-quiz-footer">

@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using QuizGenAI.Models;
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace QuizGenAI.Areas.Admin.Controllers
 {
@@ -9,76 +13,124 @@ namespace QuizGenAI.Areas.Admin.Controllers
     [Authorize(Roles = SD.Role_Admin)]
     public class AdminDashboardController : Controller
     {
+        private readonly ApplicationDbContext _context;
+
+        public AdminDashboardController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
         // Action hiển thị trang tổng quan chính
-        public IActionResult Index(string timeframe = "today")
+        public async Task<IActionResult> Index(string timeframe = "today")
         {
             ViewData["Title"] = "Tổng quan Hệ thống";
             ViewData["ActivePage"] = "AdminDashboard";
 
-            // Thay đổi số liệu giả lập dựa trên timeframe được chọn để tạo tính năng tương tác thực tế
-            int totalUsers = 12450;
-            string totalUsersChange = "+12%";
-            int newDocuments = 842;
-            string newDocumentsChange = "+5%";
-            int questionsCreated = 3120;
-            string questionsCreatedChange = "Tăng trưởng";
-            double successRate = 98.5;
-            string successRateChange = "Ổn định";
+            var stats = await GetDashboardStatsAsync(timeframe);
 
-            if (timeframe == "7days")
+            // Dữ liệu tài liệu mới nhất từ Db
+            var recentDbDocs = await _context.Documents
+                .Include(d => d.User)
+                .Include(d => d.QuizSets)
+                .ThenInclude(qs => qs.Questions)
+                .OrderByDescending(d => d.CreatedAt)
+                .Take(5)
+                .ToListAsync();
+
+            var recentDocuments = recentDbDocs.Select(d => new AdminRecentDocumentItemViewModel
             {
-                totalUsers = 12780;
-                totalUsersChange = "+15%";
-                newDocuments = 1240;
-                newDocumentsChange = "+8%";
-                questionsCreated = 4890;
-                questionsCreatedChange = "Tăng nhanh";
-                successRate = 98.8;
-                successRateChange = "Cải thiện";
+                Filename = d.Title,
+                UploadedTime = GetRelativeTime(d.CreatedAt),
+                QuestionsCount = d.QuizSets.Sum(qs => qs.Questions.Count),
+                FileSize = FormatSize(d.FileSizeBytes),
+                FileType = d.SourceType == DocumentSourceType.PDF ? "pdf" : "docx"
+            }).ToList();
+
+            // Phân bổ Cấp độ Bloom từ Db
+            var totalQCount = await _context.Questions.CountAsync();
+            int rememberPercent = 40;
+            int understandPercent = 40;
+            int applyPercent = 20;
+
+            if (totalQCount > 0)
+            {
+                var rememberCount = await _context.Questions.CountAsync(q => q.BloomLevel == BloomLevel.Remember);
+                var understandCount = await _context.Questions.CountAsync(q => q.BloomLevel == BloomLevel.Understand);
+                var applyCount = await _context.Questions.CountAsync(q => q.BloomLevel == BloomLevel.Apply);
+
+                rememberPercent = (int)Math.Round((double)rememberCount * 100 / totalQCount);
+                understandPercent = (int)Math.Round((double)understandCount * 100 / totalQCount);
+                applyPercent = 100 - rememberPercent - understandPercent;
             }
-            else if (timeframe == "30days")
+
+            // Dữ liệu Log hệ thống động dựa trên dữ liệu thực tế
+            var systemLogs = new List<AdminSystemLogItemViewModel>();
+
+            var latestUser = await _context.Users.OrderByDescending(u => u.CreatedAt).FirstOrDefaultAsync();
+            if (latestUser != null)
             {
-                totalUsers = 13900;
-                totalUsersChange = "+22%";
-                newDocuments = 3840;
-                newDocumentsChange = "+18%";
-                questionsCreated = 12450;
-                questionsCreatedChange = "Bùng nổ";
-                successRate = 99.1;
-                successRateChange = "Tối ưu";
+                systemLogs.Add(new AdminSystemLogItemViewModel
+                {
+                    LogType = "Success",
+                    Message = $"Người dùng mới \"{latestUser.FullName}\" đã đăng ký tài khoản thành công.",
+                    TimeString = GetRelativeTime(latestUser.CreatedAt)
+                });
             }
 
-            // Dữ liệu tài liệu mới nhất
-            var recentDocuments = new List<AdminRecentDocumentItemViewModel>
+            var latestDoc = await _context.Documents.Include(d => d.User).OrderByDescending(d => d.CreatedAt).FirstOrDefaultAsync();
+            if (latestDoc != null)
             {
-                new AdminRecentDocumentItemViewModel { Filename = "Biology_Final.pdf", UploadedTime = "2 phút trước", QuestionsCount = 45, FileSize = "2.4 MB", FileType = "pdf" },
-                new AdminRecentDocumentItemViewModel { Filename = "Intro_Computer_Sci.docx", UploadedTime = "15 phút trước", QuestionsCount = 30, FileSize = "1.1 MB", FileType = "docx" },
-                new AdminRecentDocumentItemViewModel { Filename = "English_Vocabulary_Test.docx", UploadedTime = "1 giờ trước", QuestionsCount = 120, FileSize = "0.5 MB", FileType = "docx" },
-                new AdminRecentDocumentItemViewModel { Filename = "World_History_Notes.pdf", UploadedTime = "3 giờ trước", QuestionsCount = 15, FileSize = "4.8 MB", FileType = "pdf" }
-            };
+                systemLogs.Add(new AdminSystemLogItemViewModel
+                {
+                    LogType = "Info",
+                    Message = $"Tài liệu mới \"{latestDoc.Title}\" đã được tải lên bởi {latestDoc.User?.FullName ?? "Người dùng ẩn danh"}.",
+                    TimeString = GetRelativeTime(latestDoc.CreatedAt)
+                });
+            }
 
-            // Dữ liệu Log hệ thống
-            var systemLogs = new List<AdminSystemLogItemViewModel>
+            var lockedUser = await _context.Users
+                .Where(u => !u.IsActive && u.LockedAt != null)
+                .OrderByDescending(u => u.LockedAt)
+                .FirstOrDefaultAsync();
+
+            if (lockedUser == null)
             {
-                new AdminSystemLogItemViewModel { LogType = "Info", Message = "Quản trị viên mới \"Hoàng Nam\" đã được chỉ định vào hệ thống.", TimeString = "Hôm nay, 09:45 AM" },
-                new AdminSystemLogItemViewModel { LogType = "Success", Message = "Cập nhật hệ thống phiên bản v2.4.1 hoàn tất thành công.", TimeString = "Hôm qua, 06:20 PM" },
-                new AdminSystemLogItemViewModel { LogType = "Warning", Message = "Phát hiện lưu lượng truy cập cao bất thường từ IP: 192.168.1.1", TimeString = "28 Th05, 02:15 PM" }
-            };
+                // Fallback to CreatedAt if no users have LockedAt set yet (e.g. existing database)
+                lockedUser = await _context.Users
+                    .Where(u => !u.IsActive)
+                    .OrderByDescending(u => u.CreatedAt)
+                    .FirstOrDefaultAsync();
+            }
+
+            if (lockedUser != null)
+            {
+                systemLogs.Add(new AdminSystemLogItemViewModel
+                {
+                    LogType = "Warning",
+                    Message = $"Tài khoản của người dùng \"{lockedUser.FullName}\" hiện đang bị khóa.",
+                    TimeString = GetRelativeTime(lockedUser.LockedAt ?? lockedUser.CreatedAt)
+                });
+            }
+            else
+            {
+                systemLogs.Add(new AdminSystemLogItemViewModel
+                {
+                    LogType = "Warning",
+                    Message = "Hệ thống hoạt động bình thường, không phát hiện sự cố bảo mật.",
+                    TimeString = "Vừa xong"
+                });
+            }
 
             var viewModel = new AdminDashboardViewModel
             {
-                TotalUsers = totalUsers,
-                TotalUsersChange = totalUsersChange,
-                NewDocuments = newDocuments,
-                NewDocumentsChange = newDocumentsChange,
-                QuestionsCreated = questionsCreated,
-                QuestionsCreatedChange = questionsCreatedChange,
-                SuccessRate = successRate,
-                SuccessRateChange = successRateChange,
+                TotalUsers = stats.totalUsers,
+                NewDocuments = stats.newDocuments,
+                QuestionsCreated = stats.questionsCreated,
+                SuccessRate = stats.successRate,
                 RecentDocuments = recentDocuments,
-                BloomRememberPercent = 45,
-                BloomUnderstandPercent = 32,
-                BloomApplyPercent = 23,
+                BloomRememberPercent = rememberPercent,
+                BloomUnderstandPercent = understandPercent,
+                BloomApplyPercent = applyPercent,
                 SystemLogs = systemLogs,
                 SelectedTimeframe = timeframe
             };
@@ -88,59 +140,114 @@ namespace QuizGenAI.Areas.Admin.Controllers
 
         // AJAX API lọc thời gian (trả về Json)
         [HttpGet]
-        public IActionResult FilterTimeframe(string timeframe)
+        public async Task<IActionResult> FilterTimeframe(string timeframe)
         {
-            int totalUsers = 12450;
-            string totalUsersChange = "+12%";
-            int newDocuments = 842;
-            string newDocumentsChange = "+5%";
-            int questionsCreated = 3120;
-            string questionsCreatedChange = "Tăng trưởng";
-            double successRate = 98.5;
-            string successRateChange = "Ổn định";
-
-            if (timeframe == "7days")
-            {
-                totalUsers = 12780;
-                totalUsersChange = "+15%";
-                newDocuments = 1240;
-                newDocumentsChange = "+8%";
-                questionsCreated = 4890;
-                questionsCreatedChange = "Tăng nhanh";
-                successRate = 98.8;
-                successRateChange = "Cải thiện";
-            }
-            else if (timeframe == "30days")
-            {
-                totalUsers = 13900;
-                totalUsersChange = "+22%";
-                newDocuments = 3840;
-                newDocumentsChange = "+18%";
-                questionsCreated = 12450;
-                questionsCreatedChange = "Bùng nổ";
-                successRate = 99.1;
-                successRateChange = "Tối ưu";
-            }
+            var stats = await GetDashboardStatsAsync(timeframe);
 
             return Json(new
             {
                 success = true,
-                totalUsers,
-                totalUsersChange,
-                newDocuments,
-                newDocumentsChange,
-                questionsCreated,
-                questionsCreatedChange,
-                successRate,
-                successRateChange
+                totalUsers = stats.totalUsers,
+                newDocuments = stats.newDocuments,
+                questionsCreated = stats.questionsCreated,
+                successRate = stats.successRate
             });
         }
 
-        // Action API Xem tất cả tài liệu (giả lập)
+        // Action API Xem tất cả tài liệu
         [HttpGet]
         public IActionResult ViewAllDocuments()
         {
             return Json(new { success = true, redirectUrl = "/Admin/ResourceManager", message = "Đang chuyển hướng sang Quản lý tài nguyên..." });
+        }
+
+        private async Task<(int totalUsers, int newDocuments, int questionsCreated, double successRate)> GetDashboardStatsAsync(string timeframe)
+        {
+            // Lấy thời gian hiện tại theo múi giờ Việt Nam (UTC+7)
+            var localNow = DateTime.UtcNow.AddHours(7);
+            DateTime localStartDate;
+
+            switch (timeframe)
+            {
+                case "7days":
+                    localStartDate = localNow.Date.AddDays(-7);
+                    break;
+                case "30days":
+                    localStartDate = localNow.Date.AddDays(-30);
+                    break;
+                default:
+                    localStartDate = localNow.Date; // "today"
+                    break;
+            }
+
+            // Quy đổi ngược lại UTC để truy vấn cơ sở dữ liệu
+            DateTime startDate = localStartDate.AddHours(-7);
+
+            int totalUsers = await _context.Users.CountAsync();
+            int newDocuments = await _context.Documents.CountAsync(d => d.CreatedAt >= startDate);
+            int questionsCreated = await _context.Questions.CountAsync(q => q.CreatedAt >= startDate);
+
+            var finishedSessions = await _context.ExamSessions
+                .Where(es => es.Status == ExamSessionStatus.Completed && es.StartedAt >= startDate)
+                .ToListAsync();
+
+            double successRate = 100.0;
+            if (finishedSessions.Any())
+            {
+                successRate = finishedSessions.Average(es => es.TotalQuestions > 0 ? (double)es.CorrectAnswers * 100.0 / es.TotalQuestions : 100.0);
+            }
+            else
+            {
+                var overallSessions = await _context.ExamSessions
+                    .Where(es => es.Status == ExamSessionStatus.Completed)
+                    .ToListAsync();
+                if (overallSessions.Any())
+                {
+                    successRate = overallSessions.Average(es => es.TotalQuestions > 0 ? (double)es.CorrectAnswers * 100.0 / es.TotalQuestions : 100.0);
+                }
+            }
+            successRate = Math.Round(successRate, 1);
+
+            return (totalUsers, newDocuments, questionsCreated, successRate);
+        }
+
+        // Helper tính toán thời gian tương đối
+        private static string GetRelativeTime(DateTime utcTime)
+        {
+            var elapsed = DateTime.UtcNow - utcTime;
+            
+            // Nếu thời gian chênh lệch bị âm nhiều (do dữ liệu cũ lưu dưới dạng Giờ địa phương - Local Time),
+            // ta điều chỉnh lại khoảng thời gian so với DateTime.Now
+            if (elapsed.TotalMinutes < -5)
+            {
+                elapsed = DateTime.Now - utcTime;
+            }
+
+            if (elapsed.TotalMinutes < 1)
+                return "Vừa xong";
+            if (elapsed.TotalMinutes < 60)
+                return $"{(int)elapsed.TotalMinutes} phút trước";
+            if (elapsed.TotalHours < 24)
+                return $"{(int)elapsed.TotalHours} giờ trước";
+            return $"{(int)elapsed.TotalDays} ngày trước";
+        }
+
+        // Helper định dạng kích thước file
+        private static string FormatSize(long? bytes)
+        {
+            if (bytes == null) return "N/A";
+            if (bytes.Value == 0) return "0 B";
+            string[] suffixes = { "B", "KB", "MB", "GB" };
+            double doubleBytes = bytes.Value;
+            int i = 0;
+            while (doubleBytes >= 1024 && i < suffixes.Length - 1)
+            {
+                doubleBytes /= 1024;
+                i++;
+            }
+            return i == 0 
+                ? $"{doubleBytes:0} B" 
+                : $"{doubleBytes:0.0} {suffixes[i]}";
         }
     }
 }
