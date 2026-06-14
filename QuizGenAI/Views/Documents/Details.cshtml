@@ -178,6 +178,9 @@
     var urlExtractionWarning = urlLooksLikePdf
         ? "Hiện tại hệ thống chưa trích xuất trực tiếp PDF từ URL. Bạn có thể tải PDF về và upload file PDF để AI đọc nội dung."
         : "Không lấy được nội dung học tập rõ ràng từ liên kết này. Bạn có thể mở link gốc, copy nội dung và dùng Paste Text hoặc upload file.";
+    var emptyDocumentPreviewMessage = Model.SourceType == QuizGenAI.Models.DocumentSourceType.Word
+        ? "Chưa trích xuất được nội dung văn bản hoặc nội dung ảnh từ tài liệu Word này."
+        : "Chưa có nội dung xem trước cho tài liệu này.";
 }
 
 @functions {
@@ -362,6 +365,10 @@
         var cleaned = text
             .Replace(QuizGenAI.Services.DocxExtractionService.NormalTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
             .Replace(QuizGenAI.Services.DocxExtractionService.ImageTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.DocxExtractionService.WordTableStartMarker, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.DocxExtractionService.WordTableEndMarker, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.UrlExtractionService.UrlTableStartMarker, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.UrlExtractionService.UrlTableEndMarker, " ", StringComparison.OrdinalIgnoreCase)
             .Replace(QuizGenAI.Services.PdfExtractionService.NormalTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
             .Replace(QuizGenAI.Services.PdfExtractionService.ImageTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
             .Replace(QuizGenAI.Services.PdfExtractionService.ScannedPdfMessage, " ", StringComparison.OrdinalIgnoreCase)
@@ -455,6 +462,266 @@
         }
 
         return Math.Max(readableImageCount, 1);
+    }
+
+    private static Microsoft.AspNetCore.Html.IHtmlContent RenderReadableDocumentText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return new Microsoft.AspNetCore.Html.HtmlString(string.Empty);
+        }
+
+        var normalized = text
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Trim();
+        var html = new System.Text.StringBuilder();
+        var paragraphLines = new List<string>();
+        var isInList = false;
+
+        var lines = normalized.Split('\n');
+
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        {
+            var line = lines[lineIndex].Trim();
+
+            if (TryGetTableEndMarker(line, out var tableEndMarker))
+            {
+                AppendParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+                CloseListHtml(html, ref isInList);
+
+                var tableRows = new List<IReadOnlyList<string>>();
+                lineIndex++;
+
+                while (lineIndex < lines.Length)
+                {
+                    var tableLine = lines[lineIndex].Trim();
+
+                    if (tableLine.Equals(tableEndMarker, StringComparison.OrdinalIgnoreCase))
+                    {
+                        break;
+                    }
+
+                    if (TryGetWordTableRowCells(tableLine, out var cells))
+                    {
+                        tableRows.Add(cells);
+                    }
+
+                    lineIndex++;
+                }
+
+                AppendWordTableHtml(html, tableRows);
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                AppendParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+                CloseListHtml(html, ref isInList);
+                continue;
+            }
+
+            if (TryGetListItemText(line, out var listItemText))
+            {
+                AppendParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+
+                if (!isInList)
+                {
+                    html.Append("<ul class=\"stitch-readable-list\">");
+                    isInList = true;
+                }
+
+                html.Append("<li>");
+                html.Append(System.Net.WebUtility.HtmlEncode(listItemText));
+                html.Append("</li>");
+                continue;
+            }
+
+            CloseListHtml(html, ref isInList);
+            paragraphLines.Add(line);
+        }
+
+        AppendParagraphHtml(html, paragraphLines);
+        CloseListHtml(html, ref isInList);
+
+        return new Microsoft.AspNetCore.Html.HtmlString(html.ToString());
+    }
+
+    private static bool TryGetTableEndMarker(string line, out string tableEndMarker)
+    {
+        if (line.Equals(QuizGenAI.Services.DocxExtractionService.WordTableStartMarker, StringComparison.OrdinalIgnoreCase))
+        {
+            tableEndMarker = QuizGenAI.Services.DocxExtractionService.WordTableEndMarker;
+            return true;
+        }
+
+        if (line.Equals(QuizGenAI.Services.UrlExtractionService.UrlTableStartMarker, StringComparison.OrdinalIgnoreCase))
+        {
+            tableEndMarker = QuizGenAI.Services.UrlExtractionService.UrlTableEndMarker;
+            return true;
+        }
+
+        tableEndMarker = string.Empty;
+        return false;
+    }
+
+    private static void AppendWordTableHtml(System.Text.StringBuilder html, IReadOnlyList<IReadOnlyList<string>> rows)
+    {
+        if (rows.Count == 0)
+        {
+            return;
+        }
+
+        var maxColumnCount = rows.Max(row => row.Count);
+        if (maxColumnCount == 0)
+        {
+            return;
+        }
+
+        var hasHeader = IsLikelyHeaderRow(rows[0], rows.Skip(1));
+        var bodyStartIndex = hasHeader ? 1 : 0;
+
+        html.Append("<div class=\"stitch-word-table-wrap\"><table class=\"stitch-word-table\">");
+
+        if (hasHeader)
+        {
+            html.Append("<thead><tr>");
+            AppendTableCellsHtml(html, rows[0], maxColumnCount, "th");
+            html.Append("</tr></thead>");
+        }
+
+        html.Append("<tbody>");
+
+        for (var rowIndex = bodyStartIndex; rowIndex < rows.Count; rowIndex++)
+        {
+            html.Append("<tr>");
+            AppendTableCellsHtml(html, rows[rowIndex], maxColumnCount, "td");
+            html.Append("</tr>");
+        }
+
+        html.Append("</tbody></table></div>");
+    }
+
+    private static void AppendTableCellsHtml(
+        System.Text.StringBuilder html,
+        IReadOnlyList<string> cells,
+        int maxColumnCount,
+        string cellTagName)
+    {
+        for (var columnIndex = 0; columnIndex < maxColumnCount; columnIndex++)
+        {
+            var cellText = columnIndex < cells.Count
+                ? cells[columnIndex]
+                : string.Empty;
+
+            html.Append('<');
+            html.Append(cellTagName);
+            html.Append('>');
+            html.Append(System.Net.WebUtility.HtmlEncode(cellText));
+            html.Append("</");
+            html.Append(cellTagName);
+            html.Append('>');
+        }
+    }
+
+    private static bool IsLikelyHeaderRow(IReadOnlyList<string> firstRow, IEnumerable<IReadOnlyList<string>> remainingRows)
+    {
+        if (firstRow.Count == 0 || firstRow.All(string.IsNullOrWhiteSpace))
+        {
+            return false;
+        }
+
+        var firstRowText = string.Join(" ", firstRow).Trim();
+        var headerKeywordCount = System.Text.RegularExpressions.Regex.Matches(
+            firstRowText,
+            @"\b(?:STT|Mã|Ma|Tên|Ten|Học|Hoc|phần|phan|Số|So|tín|tin|chỉ|chi|Môn|Mon|Kỳ|Ky|Loại|Loai|Ghi chú|Ghi chu)\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant).Count;
+
+        if (headerKeywordCount >= 2)
+        {
+            return true;
+        }
+
+        var firstRowHasLetters = firstRow.Any(cell => System.Text.RegularExpressions.Regex.IsMatch(cell, @"\p{L}"));
+        var laterRowsLookDataLike = remainingRows
+            .Take(3)
+            .Any(row => row.Any(cell => System.Text.RegularExpressions.Regex.IsMatch(cell, @"\d")));
+
+        return firstRowHasLetters && laterRowsLookDataLike;
+    }
+
+    private static bool TryGetWordTableRowCells(string line, out IReadOnlyList<string> cells)
+    {
+        cells = Array.Empty<string>();
+
+        if (string.IsNullOrWhiteSpace(line) || !line.StartsWith('|') || !line.EndsWith('|'))
+        {
+            return false;
+        }
+
+        var parsedCells = line
+            .Trim('|')
+            .Split('|')
+            .Select(cell => cell.Trim())
+            .ToList();
+
+        if (parsedCells.Count == 0 || parsedCells.All(string.IsNullOrWhiteSpace))
+        {
+            return false;
+        }
+
+        cells = parsedCells;
+        return true;
+    }
+
+    private static void AppendParagraphHtml(System.Text.StringBuilder html, IReadOnlyList<string> paragraphLines)
+    {
+        if (paragraphLines.Count == 0)
+        {
+            return;
+        }
+
+        html.Append("<p>");
+
+        for (var index = 0; index < paragraphLines.Count; index++)
+        {
+            if (index > 0)
+            {
+                html.Append("<br />");
+            }
+
+            html.Append(System.Net.WebUtility.HtmlEncode(paragraphLines[index]));
+        }
+
+        html.Append("</p>");
+    }
+
+    private static void CloseListHtml(System.Text.StringBuilder html, ref bool isInList)
+    {
+        if (!isInList)
+        {
+            return;
+        }
+
+        html.Append("</ul>");
+        isInList = false;
+    }
+
+    private static bool TryGetListItemText(string line, out string listItemText)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(
+            line,
+            @"^\s*(?:[-*]\s+|\u2022\s+|\d+[\.)]\s+)(.+)$",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        listItemText = match.Success
+            ? match.Groups[1].Value.Trim()
+            : string.Empty;
+
+        return !string.IsNullOrWhiteSpace(listItemText);
     }
 }
 
@@ -601,8 +868,13 @@
                         @if (hasExtractedText)
                         {
                             <div class="stitch-document-text-wrapper collapsed">
-                                <div class="stitch-document-text">
-                                    @Model.ExtractedText
+                                <div class="stitch-url-source-inline">
+                                    <span>URL nguồn</span>
+                                    <a href="@Model.SourceUrl" target="_blank" rel="noopener noreferrer">@Model.SourceUrl</a>
+                                </div>
+
+                                <div class="stitch-document-text stitch-readable-text">
+                                    @RenderReadableDocumentText(extractedText)
                                 </div>
 
                                 <div class="stitch-document-fade"></div>
@@ -652,9 +924,18 @@
                                     {
                                     <div class="stitch-document-text-section stitch-source-text-section @(normalTextIsShort ? "is-secondary" : "")">
                                         <h4>@sourceTextSectionTitle</h4>
-                                        <div class="stitch-document-text">
-                                            @normalExtractedText
-                                        </div>
+                                        @if (isPdfDocument)
+                                        {
+                                            <div class="stitch-document-text">
+                                                @normalExtractedText
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="stitch-document-text stitch-readable-text">
+                                                @RenderReadableDocumentText(normalExtractedText)
+                                            </div>
+                                        }
                                     </div>
 
                                     }
@@ -664,9 +945,18 @@
 
                                         @if (!string.IsNullOrWhiteSpace(cleanImageTextForDisplay))
                                         {
-                                            <div class="stitch-document-text stitch-image-recognized-text">
-                                                @cleanImageTextForDisplay
-                                            </div>
+                                            @if (isPdfDocument)
+                                            {
+                                                <div class="stitch-document-text stitch-image-recognized-text">
+                                                    @cleanImageTextForDisplay
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="stitch-document-text stitch-readable-text stitch-image-recognized-text">
+                                                    @RenderReadableDocumentText(cleanImageTextForDisplay)
+                                                </div>
+                                            }
                                         }
                                         else
                                         {
@@ -678,9 +968,18 @@
                                 }
                                 else
                                 {
-                                    <div class="stitch-document-text">
-                                        @extractedText
-                                    </div>
+                                    @if (isPdfDocument)
+                                    {
+                                        <div class="stitch-document-text">
+                                            @extractedText
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="stitch-document-text stitch-readable-text">
+                                            @RenderReadableDocumentText(extractedText)
+                                        </div>
+                                    }
                                 }
 
                                 <div class="stitch-document-fade"></div>
@@ -695,7 +994,7 @@
                             <div class="stitch-placeholder-image">
                                 <div>
                                     <span class="material-symbols-outlined">description</span>
-                                    <p>Chưa có nội dung xem trước cho tài liệu này.</p>
+                                    <p>@emptyDocumentPreviewMessage</p>
                                 </div>
                             </div>
                         }

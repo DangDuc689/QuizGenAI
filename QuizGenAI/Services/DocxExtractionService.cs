@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography;
 using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
@@ -11,6 +13,8 @@ namespace QuizGenAI.Services
         public const int MaxImagesToProcess = 5;
         public const string NormalTextSectionHeading = "[Nội dung văn bản trích xuất từ Word]";
         public const string ImageTextSectionHeading = "[Nội dung nhận diện từ hình ảnh trong tài liệu]";
+        public const string WordTableStartMarker = "[WORD_TABLE]";
+        public const string WordTableEndMarker = "[/WORD_TABLE]";
         public const string ImageUnreadableMessage = "Tài liệu có chứa hình ảnh, nhưng hệ thống chưa nhận diện được đủ nội dung học tập từ các ảnh này. Bạn có thể thử dùng ảnh rõ hơn hoặc bổ sung nội dung bằng Paste Text.";
         public const string ImageVisionTroubleshootingMessage = "Nếu ảnh rõ chữ nhưng vẫn không nhận diện được, vui lòng kiểm tra model Gemini hiện tại có hỗ trợ Vision không và xem log backend để xác nhận request ảnh đã được Gemini chấp nhận.";
 
@@ -58,6 +62,7 @@ namespace QuizGenAI.Services
                 {
                     var imageParts = mainPart.ImageParts.ToList();
                     totalImageCount = imageParts.Count;
+                    var seenImageFingerprints = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                     _logger.LogInformation(
                         "DOCX image scan found {TotalImageCount} ImageParts in {FilePath}. MaxImagesToProcess={MaxImagesToProcess}",
@@ -91,6 +96,17 @@ namespace QuizGenAI.Services
                                 "Skipped DOCX image {ImageIndex} because extracted bytes are empty. ContentType={ContentType}",
                                 imageIndex,
                                 originalContentType);
+                            continue;
+                        }
+
+                        if (!TryMarkUniqueImage(imageBytes, seenImageFingerprints))
+                        {
+                            skippedImageCount++;
+                            _logger.LogInformation(
+                                "Skipped duplicate DOCX image {ImageIndex}. ContentType={ContentType}, Bytes={Bytes}",
+                                imageIndex,
+                                originalContentType,
+                                imageBytes.Length);
                             continue;
                         }
 
@@ -232,12 +248,23 @@ namespace QuizGenAI.Services
 
             var textBuilder = new StringBuilder();
 
-            foreach (var text in mainPart.Document.Body.Descendants<DocumentFormat.OpenXml.Wordprocessing.Text>())
+            foreach (var element in mainPart.Document.Body.Elements())
             {
-                if (!string.IsNullOrWhiteSpace(text.Text))
+                if (element is Paragraph paragraph)
                 {
-                    textBuilder.Append(text.Text);
-                    textBuilder.Append(' ');
+                    AppendParagraphText(textBuilder, paragraph);
+                    continue;
+                }
+
+                if (element is Table table)
+                {
+                    var tableText = ExtractTableText(table);
+
+                    if (!string.IsNullOrWhiteSpace(tableText))
+                    {
+                        textBuilder.AppendLine(tableText);
+                        textBuilder.AppendLine();
+                    }
                 }
             }
 
@@ -246,6 +273,161 @@ namespace QuizGenAI.Services
             return string.IsNullOrWhiteSpace(extractedText)
                 ? null
                 : extractedText;
+        }
+
+        private static void AppendParagraphText(StringBuilder textBuilder, Paragraph paragraph)
+        {
+            var paragraphText = ExtractParagraphText(paragraph);
+
+            if (string.IsNullOrWhiteSpace(paragraphText))
+            {
+                return;
+            }
+
+            if (IsListParagraph(paragraph))
+            {
+                var level = paragraph.ParagraphProperties?
+                    .NumberingProperties?
+                    .NumberingLevelReference?
+                    .Val?
+                    .Value ?? 0;
+                textBuilder.Append(new string(' ', Math.Min(level, 4) * 2));
+                textBuilder.Append("- ");
+            }
+
+            textBuilder.AppendLine(paragraphText);
+            textBuilder.AppendLine();
+        }
+
+        private static string? ExtractTableText(Table table)
+        {
+            var rows = new List<IReadOnlyList<string>>();
+            var maxColumnCount = 0;
+
+            foreach (var tableRow in table.Elements<TableRow>())
+            {
+                var cells = tableRow
+                    .Elements<TableCell>()
+                    .Select(ExtractTableCellText)
+                    .ToList();
+
+                if (cells.All(string.IsNullOrWhiteSpace))
+                {
+                    continue;
+                }
+
+                maxColumnCount = Math.Max(maxColumnCount, cells.Count);
+                rows.Add(cells);
+            }
+
+            if (rows.Count == 0 || maxColumnCount == 0)
+            {
+                return null;
+            }
+
+            var builder = new StringBuilder();
+            builder.AppendLine(WordTableStartMarker);
+
+            foreach (var row in rows)
+            {
+                builder.Append("| ");
+
+                for (var columnIndex = 0; columnIndex < maxColumnCount; columnIndex++)
+                {
+                    var cellText = columnIndex < row.Count
+                        ? EscapeTableCellText(row[columnIndex])
+                        : string.Empty;
+
+                    builder.Append(cellText);
+                    builder.Append(" |");
+
+                    if (columnIndex < maxColumnCount - 1)
+                    {
+                        builder.Append(' ');
+                    }
+                }
+
+                builder.AppendLine();
+            }
+
+            builder.AppendLine(WordTableEndMarker);
+
+            return builder.ToString().Trim();
+        }
+
+        private static string ExtractTableCellText(TableCell cell)
+        {
+            var paragraphTexts = cell
+                .Elements<Paragraph>()
+                .Select(ExtractParagraphText)
+                .Select(NormalizeTableCellText)
+                .Where(text => !string.IsNullOrWhiteSpace(text));
+
+            return string.Join(" ", paragraphTexts).Trim();
+        }
+
+        private static string NormalizeTableCellText(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            return Regex.Replace(text, @"\s+", " ").Trim();
+        }
+
+        private static string EscapeTableCellText(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return string.Empty;
+            }
+
+            return NormalizeTableCellText(text)
+                .Replace("|", " / ", StringComparison.Ordinal);
+        }
+
+        private static bool TryMarkUniqueImage(byte[] imageBytes, HashSet<string> seenImageFingerprints)
+        {
+            var fingerprint = Convert.ToHexString(SHA256.HashData(imageBytes));
+            return seenImageFingerprints.Add(fingerprint);
+        }
+
+        private static string ExtractParagraphText(Paragraph paragraph)
+        {
+            var builder = new StringBuilder();
+
+            foreach (var element in paragraph.Descendants())
+            {
+                switch (element)
+                {
+                    case Text text:
+                        builder.Append(text.Text);
+                        break;
+                    case TabChar:
+                        builder.Append(' ');
+                        break;
+                    case Break:
+                    case CarriageReturn:
+                        builder.AppendLine();
+                        break;
+                }
+            }
+
+            var lines = builder
+                .ToString()
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace('\r', '\n')
+                .Split('\n')
+                .Select(line => Regex.Replace(line, @"[ \t\f\v]+", " ").Trim())
+                .Where(line => !string.IsNullOrWhiteSpace(line));
+
+            return string.Join(Environment.NewLine, lines).Trim();
+        }
+
+        private static bool IsListParagraph(Paragraph paragraph)
+        {
+            return paragraph.ParagraphProperties?.NumberingProperties != null;
         }
 
         private static string? MergeNormalTextAndImageText(
