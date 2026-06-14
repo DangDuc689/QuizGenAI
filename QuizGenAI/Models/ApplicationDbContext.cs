@@ -62,6 +62,30 @@ namespace QuizGenAI.Models
                 .WithMany(qs => qs.ExamSessions)
                 .HasForeignKey(es => es.QuizSetId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            // Configure DateTime properties to always be UTC when loaded from DB
+            var dateTimeConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTime, DateTime>(
+                v => v,
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+            var nullableDateTimeConverter = new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTime?, DateTime?>(
+                v => v,
+                v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : null);
+
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    if (property.ClrType == typeof(DateTime))
+                    {
+                        property.SetValueConverter(dateTimeConverter);
+                    }
+                    else if (property.ClrType == typeof(DateTime?))
+                    {
+                        property.SetValueConverter(nullableDateTimeConverter);
+                    }
+                }
+            }
         }
     }
 }

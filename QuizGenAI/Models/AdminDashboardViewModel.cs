@@ -6,16 +6,12 @@ namespace QuizGenAI.Models
     {
         // 4 Thẻ thống kê
         public int TotalUsers { get; set; } = 12450;
-        public string TotalUsersChange { get; set; } = "+12%";
 
         public int NewDocuments { get; set; } = 842;
-        public string NewDocumentsChange { get; set; } = "+5%";
 
         public int QuestionsCreated { get; set; } = 3120;
-        public string QuestionsCreatedChange { get; set; } = "Tăng trưởng";
 
         public double SuccessRate { get; set; } = 98.5;
-        public string SuccessRateChange { get; set; } = "Ổn định";
 
         // Tài liệu mới nhất
         public List<AdminRecentDocumentItemViewModel> RecentDocuments { get; set; } = new();

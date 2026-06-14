@@ -235,7 +235,7 @@ namespace QuizGenAI.Controllers
                     ? SourceUrl?.Trim()
                     : null,
                 FilePath = filePath,
-                CreatedAt = DateTime.Now,
+                CreatedAt = DateTime.UtcNow,
                 PageCount = pageCount > 0 ? pageCount : (SourceType == "File" ? 1 : 0),
                 FileSizeBytes = fileSizeBytes,
                 UserId = userId
@@ -392,7 +392,7 @@ namespace QuizGenAI.Controllers
             }
 
             quizSet.IsPublic = !quizSet.IsPublic;
-            quizSet.UpdatedAt = DateTime.Now;
+            quizSet.UpdatedAt = DateTime.UtcNow;
 
             _context.QuizSets.Update(quizSet);
             await _context.SaveChangesAsync();

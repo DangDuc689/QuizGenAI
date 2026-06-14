@@ -127,7 +127,7 @@
                     <div class="document-meta">
                         <span>
                             <span class="material-symbols-outlined">calendar_today</span>
-                            @document.CreatedAt.ToString("dd/MM/yyyy")
+                            @document.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")
                         </span>
 
                         <span>

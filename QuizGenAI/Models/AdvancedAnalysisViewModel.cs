@@ -5,44 +5,45 @@ namespace QuizGenAI.Models
 {
     public class AdvancedAnalysisViewModel
     {
-        // 3 Thẻ thống kê & tỉ lệ phần trăm biến động
-        public double CompletionRate { get; set; } = 76.0;
-        public double CompletionRateChange { get; set; } = 4.2;
+        // 3 Thẻ thống kê & tỉ lệ phần trăm biến động hoặc nhãn đánh giá
+        public int TotalExams { get; set; }
+        public string TotalExamsChangeText { get; set; } = "+0%";
 
-        public double ErrorQuestionRate { get; set; } = 2.4;
-        public double ErrorQuestionRateChange { get; set; } = -0.5;
+        public double AverageScore { get; set; }
+        public string AverageScoreText { get; set; } = "N/A";
 
-        public double AiQualityScore { get; set; } = 8.8;
-        public double AiQualityScoreChange { get; set; } = 0.3;
+        public double CompletionRate { get; set; }
+        public string CompletionStatusText { get; set; } = "Ổn định";
 
-        // Dữ liệu biểu đồ xu hướng (Chart.js)
+        // Dữ liệu biểu đồ xu hướng (Chart.js) - Số lượt thi tăng trưởng theo từng ngày trong tuần
         public List<string> ChartLabels { get; set; } = new();
-        public List<int> QuestionsCreatedData { get; set; } = new();
         public List<int> ExamsTakenData { get; set; } = new();
 
-        // Danh sách câu hỏi cần phân tích
-        public List<AnalysisQuestionItemViewModel> Questions { get; set; } = new();
-
-        // Số lượng câu hỏi cảnh báo nghiêm trọng
-        public int TotalWarningsCount { get; set; } = 12;
+        // Danh sách lượt làm bài gần đây
+        public List<RecentExamSessionViewModel> RecentSessions { get; set; } = new();
 
         // Trạng thái tìm kiếm, lọc & phân trang
         public string? SearchQuery { get; set; }
-        public string? SelectedSubject { get; set; }
-        public string? SelectedWarningType { get; set; }
-        public string SelectedTimeframe { get; set; } = "7days";
+        public string SelectedTimeframe { get; set; } = "thisweek"; // "thisweek", "lastweek"
         public int CurrentPage { get; set; } = 1;
         public int PageSize { get; set; } = 5;
+        public int TotalSessionsCount { get; set; }
         public int TotalPages { get; set; } = 1;
     }
 
-    public class AnalysisQuestionItemViewModel
+    public class RecentExamSessionViewModel
     {
-        public string QuestionId { get; set; } = string.Empty;
-        public string Content { get; set; } = string.Empty;
-        public string Subject { get; set; } = string.Empty;
-        public string BloomLevel { get; set; } = string.Empty; // "Ghi nhớ" hoặc "Vận dụng"
-        public string WarningType { get; set; } = string.Empty; // "Độ khó không khớp", "Lỗi logic AI", "Nội dung trùng lặp"
-        public double LogicScore { get; set; }
+        public int SessionId { get; set; }
+        public string UserFullName { get; set; } = string.Empty;
+        public string UserEmail { get; set; } = string.Empty;
+        public string QuizSetTitle { get; set; } = string.Empty;
+        public double Score { get; set; } // Điểm số trên thang điểm 10 (ví dụ 8.5)
+        public int CorrectAnswers { get; set; }
+        public int TotalQuestions { get; set; }
+        public string DurationText { get; set; } = string.Empty; // e.g., "15 phút 42 giây"
+        public string StatusText { get; set; } = string.Empty; // "HOÀN THÀNH", "BỎ DỞ", "ĐANG THI"
+        public string StatusCssClass { get; set; } = string.Empty; // css class cho badge trạng thái
+        public DateTime StartedAt { get; set; }
     }
 }
+

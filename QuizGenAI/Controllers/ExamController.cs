@@ -213,7 +213,7 @@ namespace QuizGenAI.Controllers
                 .Include(es => es.ExamAnswers)
                     .ThenInclude(ea => ea.Question!)
                         .ThenInclude(q => q.AnswerOptions)
-                .FirstOrDefaultAsync(es => es.Id == sessionId && es.UserId == userId);
+                .FirstOrDefaultAsync(es => es.Id == sessionId && (es.UserId == userId || User.IsInRole(SD.Role_Admin)));
 
             if (session == null)
             {
@@ -396,7 +396,7 @@ namespace QuizGenAI.Controllers
                                  DocumentSourceType.PastedText,
                     ExtractedText = extractedText,
                     FilePath = $"/uploads/documents/{safeFileName}",
-                    CreatedAt = DateTime.Now,
+                    CreatedAt = DateTime.UtcNow,
                     PageCount = pageCount,
                     FileSizeBytes = file.Length,
                     UserId = userId
@@ -410,7 +410,7 @@ namespace QuizGenAI.Controllers
                     documentId = document.Id,
                     title = document.Title,
                     description = document.Description,
-                    createdAt = document.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+                    createdAt = document.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
                     sourceType = document.SourceType.ToString(),
                     pageCount = document.PageCount,
                     fileSize = FormatFileSize(document.FileSizeBytes)

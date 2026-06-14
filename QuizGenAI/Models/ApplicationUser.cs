@@ -18,6 +18,8 @@ namespace QuizGenAI.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public bool IsActive { get; set; } = true;
+        
+        public DateTime? LockedAt { get; set; }
 
         // Navigation
         public ICollection<Document> Documents { get; set; } = new List<Document>();

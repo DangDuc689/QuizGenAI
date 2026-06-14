@@ -241,7 +241,7 @@
                         <div class="pb-4 border-b last:border-b-0 border-slate-100 dark:border-outline-variant flex justify-between items-center gap-4">
                             <div class="truncate">
                                 <span class="font-medium text-body text-on-surface dark:text-on-primary-container block truncate">@exam.Title</span>
-                                <span class="text-caption text-secondary dark:text-secondary-fixed-dim mt-0.5 block">@exam.TakenAt.ToString("dd/MM/yyyy HH:mm")</span>
+                                <span class="text-caption text-secondary dark:text-secondary-fixed-dim mt-0.5 block">@exam.TakenAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
                             </div>
                             <div class="shrink-0 flex items-center gap-3">
                                 <div class="text-right">

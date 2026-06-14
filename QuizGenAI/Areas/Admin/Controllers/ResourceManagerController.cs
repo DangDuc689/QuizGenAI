@@ -87,26 +87,7 @@ namespace QuizGenAI.Areas.Admin.Controllers
                 PageCount = d.PageCount
             }).ToList();
 
-            // Nếu DB chưa có tài liệu nào, nạp mock dữ liệu chất lượng cao để giao diện hiển thị đẹp mắt
-            if (!docItems.Any() && string.IsNullOrEmpty(search) && string.IsNullOrEmpty(format))
-            {
-                docItems = GetMockDocuments();
-            }
-            else if (!docItems.Any() && (!string.IsNullOrEmpty(search) || !string.IsNullOrEmpty(format)))
-            {
-                // Nếu tìm kiếm/lọc không thấy, thực hiện tìm kiếm/lọc trên tập mock data
-                var mockDocs = GetMockDocuments();
-                if (!string.IsNullOrEmpty(search))
-                {
-                    var searchLower = search.ToLower();
-                    mockDocs = mockDocs.Where(d => d.Title.ToLower().Contains(searchLower) || d.OwnerEmail.ToLower().Contains(searchLower)).ToList();
-                }
-                if (!string.IsNullOrEmpty(format))
-                {
-                    mockDocs = mockDocs.Where(d => d.Format.Equals(format, StringComparison.OrdinalIgnoreCase)).ToList();
-                }
-                docItems = mockDocs;
-            }
+
 
             // Sắp xếp
             if (sortBy == "oldest")
@@ -174,35 +155,13 @@ namespace QuizGenAI.Areas.Admin.Controllers
                     title = doc.Title,
                     ownerName = doc.User?.FullName ?? "Người dùng ẩn danh",
                     ownerEmail = doc.User?.Email ?? "no-email@quizgen.ai",
-                    createdAt = doc.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
+                    createdAt = doc.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm"),
                     fileSize = FormatSize(doc.FileSizeBytes),
                     format = GetFormatString(doc.SourceType),
                     analysis = analysis,
                     description = doc.Description ?? "Không có mô tả.",
                     pageCount = doc.PageCount ?? 0,
                     sourceUrl = doc.SourceUrl
-                });
-            }
-
-            var mock = GetMockDocuments().FirstOrDefault(d => d.Id == id);
-            if (mock != null)
-            {
-                var mockText = $"[NỘI DUNG TRÍCH XUẤT GIẢ LẬP] Đây là nội dung văn bản gốc đã được công cụ AI trích xuất tự động từ tài liệu \"{mock.Title}\". Mô tả chi tiết: {mock.Description}. Vui lòng liên hệ hỗ trợ tại support@quizgen.ai hoặc số điện thoại 0901234567 nếu có thắc mắc.";
-                var analysis = AnalyzeDocumentMetadata(mockText, 2, mock.QuestionsCount);
-
-                return Json(new
-                {
-                    success = true,
-                    title = mock.Title,
-                    ownerName = mock.OwnerName,
-                    ownerEmail = mock.OwnerEmail,
-                    createdAt = mock.CreatedAt.ToString("dd/MM/yyyy HH:mm"),
-                    fileSize = mock.FileSize,
-                    format = mock.Format,
-                    analysis = analysis,
-                    description = mock.Description,
-                    pageCount = mock.PageCount ?? 0,
-                    sourceUrl = mock.SourceUrl
                 });
             }
 
@@ -316,12 +275,6 @@ namespace QuizGenAI.Areas.Admin.Controllers
                 return Json(new { success = true, message = $"Xóa tài liệu \"{doc.Title}\" thành công!" });
             }
 
-            var mock = GetMockDocuments().FirstOrDefault(d => d.Id == id);
-            if (mock != null)
-            {
-                return Json(new { success = true, message = $"[Giả lập] Xóa tài liệu \"{mock.Title}\" thành công!" });
-            }
-
             return Json(new { success = false, message = "Không tìm thấy tài liệu để xóa." });
         }
 
@@ -340,10 +293,7 @@ namespace QuizGenAI.Areas.Admin.Controllers
                 }
             }
 
-            var title = doc?.Title ?? GetMockDocuments().FirstOrDefault(d => d.Id == id)?.Title ?? "Document.txt";
-            var mockContent = $"NỘI DUNG TÀI LIỆU GIẢ LẬP: {title}\nĐược tải xuống từ trang quản lý tài nguyên hệ thống QuizGen AI.";
-            var bytes = Encoding.UTF8.GetBytes(mockContent);
-            return File(bytes, "application/octet-stream", title);
+            return NotFound();
         }
 
         // Helpers
@@ -399,21 +349,6 @@ namespace QuizGenAI.Areas.Admin.Controllers
             }
         }
 
-        private static List<DocumentItemViewModel> GetMockDocuments()
-        {
-            return new List<DocumentItemViewModel>
-            {
-                new DocumentItemViewModel { Id = 101, Title = "Biology_Final.pdf", OwnerName = "Nguyễn Văn A", OwnerEmail = "nguyenwana@gmail.com", CreatedAt = DateTime.UtcNow.AddMinutes(-2), FileSize = "2.4 MB", Format = "pdf", QuestionsCount = 45, Description = "Tài liệu ôn thi cuối kỳ môn Sinh học tế bào và Sinh học phân tử.", PageCount = 12 },
-                new DocumentItemViewModel { Id = 102, Title = "Intro_Computer_Sci.docx", OwnerName = "Trần Thị B", OwnerEmail = "tranthib@gmail.com", CreatedAt = DateTime.UtcNow.AddMinutes(-15), FileSize = "1.1 MB", Format = "docx", QuestionsCount = 30, Description = "Giáo trình nhập môn khoa học máy tính và lập trình Python căn bản.", PageCount = 8 },
-                new DocumentItemViewModel { Id = 103, Title = "English_Vocabulary_Test.docx", OwnerName = "Hoàng Anh E", OwnerEmail = "hoanganhe@gmail.com", CreatedAt = DateTime.UtcNow.AddHours(-1), FileSize = "0.5 MB", Format = "docx", QuestionsCount = 120, Description = "Tổng hợp 1000 từ vựng tiếng Anh thông dụng ôn thi IELTS.", PageCount = 5 },
-                new DocumentItemViewModel { Id = 104, Title = "World_History_Notes.pdf", OwnerName = "Phạm Minh D", OwnerEmail = "phamminhd@gmail.com", CreatedAt = DateTime.UtcNow.AddHours(-3), FileSize = "4.8 MB", Format = "pdf", QuestionsCount = 15, Description = "Ghi chép lịch sử thế giới cận đại và các cuộc chiến tranh lớn thế kỷ XX.", PageCount = 35 },
-                new DocumentItemViewModel { Id = 105, Title = "https://vi.wikipedia.org/wiki/Tri-tue-nhan-tao", OwnerName = "Đỗ Thị F", OwnerEmail = "dothif@gmail.com", CreatedAt = DateTime.UtcNow.AddDays(-1), FileSize = "N/A", Format = "url", QuestionsCount = 50, Description = "Nội dung bài viết về Trí tuệ nhân tạo trên Wikipedia Việt Nam.", SourceUrl = "https://vi.wikipedia.org/wiki/Tri-tue-nhan-tao" },
-                new DocumentItemViewModel { Id = 106, Title = "Chemistry_Organic_Ch1.pdf", OwnerName = "Nguyễn Văn A", OwnerEmail = "nguyenwana@gmail.com", CreatedAt = DateTime.UtcNow.AddDays(-2), FileSize = "1.8 MB", Format = "pdf", QuestionsCount = 28, Description = "Hóa học hữu cơ chương 1: Ankan và các dẫn xuất hydrocarbon.", PageCount = 15 },
-                new DocumentItemViewModel { Id = 107, Title = "Math_Linear_Algebra.docx", OwnerName = "Trần Thị B", OwnerEmail = "tranthib@gmail.com", CreatedAt = DateTime.UtcNow.AddDays(-3), FileSize = "3.2 MB", Format = "docx", QuestionsCount = 60, Description = "Tóm tắt định lý và bài tập Đại số tuyến tính, Ma trận và Không gian vectơ.", PageCount = 20 },
-                new DocumentItemViewModel { Id = 108, Title = "Physics_Mechanics_Quiz.txt", OwnerName = "Lê Văn C", OwnerEmail = "levanc@gmail.com", CreatedAt = DateTime.UtcNow.AddDays(-4), FileSize = "12 KB", Format = "txt", QuestionsCount = 10, Description = "Câu hỏi trắc nghiệm ôn tập Cơ học cổ điển Vật lý 10.", PageCount = 1 },
-                new DocumentItemViewModel { Id = 109, Title = "Data_Structure_Summary.pdf", OwnerName = "Vũ Thị K", OwnerEmail = "vuthik@gmail.com", CreatedAt = DateTime.UtcNow.AddDays(-5), FileSize = "2.9 MB", Format = "pdf", QuestionsCount = 40, Description = "Cấu trúc dữ liệu giải thuật: Cây, Đồ thị và các thuật toán tìm kiếm.", PageCount = 18 },
-                new DocumentItemViewModel { Id = 110, Title = "SQL_Database_Design.docx", OwnerName = "Phan Văn L", OwnerEmail = "phanvanl@gmail.com", CreatedAt = DateTime.UtcNow.AddDays(-6), FileSize = "1.5 MB", Format = "docx", QuestionsCount = 35, Description = "Thiết kế cơ sở dữ liệu quan hệ, chuẩn hóa dữ liệu 1NF, 2NF, 3NF và câu lệnh SQL.", PageCount = 14 }
-            };
-        }
+
     }
 }
