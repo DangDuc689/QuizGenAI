@@ -4,7 +4,7 @@
 <!-- Tiêu đề trang -->
 <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>
-        <h2 class="font-h1 text-h1 text-on-background">Quản lý Tài liệu</h2>
+        <h2 class="font-h1 text-h1 text-on-background dark:text-on-primary-container">Quản lý Tài liệu</h2>
         <p class="font-body text-body text-secondary">Xem, lọc, tải xuống và quản lý toàn bộ tài liệu học tập của người dùng trên hệ thống.</p>
     </div>
 </div>
@@ -13,13 +13,13 @@
 <form method="get" action="@Url.Action("Index", "ResourceManager", new { area = "Admin" })" id="filterForm" class="p-6 border border-slate-100 dark:border-outline-variant/30 bg-white dark:bg-[#0d1c2f] rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
     <div class="relative flex-1 max-w-lg">
         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
-        <input type="text" name="search" value="@Model.SearchQuery" placeholder="Tìm kiếm theo tên tài liệu hoặc email..." class="w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-slate-50/50 dark:bg-slate-800/20 focus:bg-white dark:focus:bg-[#0d1c2f] focus:outline-none focus:border-primary text-sm font-body text-on-surface transition-all placeholder-slate-400" />
+        <input type="text" name="search" value="@Model.SearchQuery" placeholder="Tìm kiếm theo tên tài liệu hoặc email..." class="w-full pl-11 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-slate-50/50 dark:bg-slate-800/20 focus:bg-white dark:focus:bg-[#0d1c2f] focus:outline-none focus:border-primary text-sm font-body text-on-surface dark:text-on-primary-container transition-all placeholder-slate-400" />
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
         <!-- Bộ lọc định dạng -->
         <div class="relative">
-            <select name="format" onchange="this.form.submit()" class="appearance-none pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#0d1c2f] text-sm font-semibold text-secondary hover:text-on-surface dark:text-secondary-fixed-dim transition cursor-pointer focus:outline-none focus:border-primary">
+            <select name="format" onchange="this.form.submit()" class="appearance-none pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#0d1c2f] text-sm font-semibold text-secondary hover:text-on-surface dark:text-secondary-fixed-dim dark:hover:text-on-primary-container transition cursor-pointer focus:outline-none focus:border-primary">
                 <option value="">Tất cả định dạng</option>
                 <option value="pdf" selected="@(Model.SelectedFormat == "pdf" ? "selected" : null)">PDF</option>
                 <option value="docx" selected="@(Model.SelectedFormat == "docx" ? "selected" : null)">Word (.docx)</option>
@@ -32,7 +32,7 @@
 
         <!-- Tiêu chí sắp xếp -->
         <div class="relative">
-            <select name="sortBy" onchange="this.form.submit()" class="appearance-none pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#0d1c2f] text-sm font-semibold text-secondary hover:text-on-surface dark:text-secondary-fixed-dim transition cursor-pointer focus:outline-none focus:border-primary">
+            <select name="sortBy" onchange="this.form.submit()" class="appearance-none pl-4 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#0d1c2f] text-sm font-semibold text-secondary hover:text-on-surface dark:text-secondary-fixed-dim dark:hover:text-on-primary-container transition cursor-pointer focus:outline-none focus:border-primary">
                 <option value="newest" selected="@(Model.SelectedSort == "newest" ? "selected" : null)">Mới nhất</option>
                 <option value="oldest" selected="@(Model.SelectedSort == "oldest" ? "selected" : null)">Cũ nhất</option>
                 <option value="size_desc" selected="@(Model.SelectedSort == "size_desc" ? "selected" : null)">Kích thước lớn nhất</option>
@@ -197,7 +197,7 @@
         <div class="px-6 py-5 border-b border-slate-100 dark:border-outline-variant flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <span class="material-symbols-outlined text-primary text-[24px]" id="modal-format-icon">description</span>
-                <h3 class="font-h3 text-h3 text-on-surface" id="modal-title">Chi tiết tài liệu</h3>
+                <h3 class="font-h3 text-h3 text-on-surface dark:text-on-primary-container" id="modal-title">Chi tiết tài liệu</h3>
             </div>
             <button onclick="closeDetailModal()" class="text-secondary hover:text-on-surface dark:text-secondary-fixed-dim dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-150 transition cursor-pointer">
                 <span class="material-symbols-outlined">close</span>
@@ -209,19 +209,19 @@
             <div class="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-[#132337] p-4 rounded-xl border border-slate-100 dark:border-outline-variant/30 text-xs font-semibold text-secondary dark:text-secondary-fixed-dim">
                 <div>
                     <span class="text-outline dark:text-secondary-fixed-dim/60 block mb-1">Người tải lên</span>
-                    <span class="text-on-surface font-bold text-sm" id="modal-owner">...</span>
+                    <span class="text-on-surface dark:text-on-primary-container font-bold text-sm" id="modal-owner">...</span>
                 </div>
                 <div>
                     <span class="text-outline dark:text-secondary-fixed-dim/60 block mb-1">Thời gian tạo</span>
-                    <span class="text-on-surface font-bold text-sm" id="modal-date">...</span>
+                    <span class="text-on-surface dark:text-on-primary-container font-bold text-sm" id="modal-date">...</span>
                 </div>
                 <div>
                     <span class="text-outline dark:text-secondary-fixed-dim/60 block mb-1">Dung lượng</span>
-                    <span class="text-on-surface font-bold text-sm" id="modal-size">...</span>
+                    <span class="text-on-surface dark:text-on-primary-container font-bold text-sm" id="modal-size">...</span>
                 </div>
                 <div>
                     <span class="text-outline dark:text-secondary-fixed-dim/60 block mb-1">Số trang</span>
-                    <span class="text-on-surface font-bold text-sm" id="modal-pages">...</span>
+                    <span class="text-on-surface dark:text-on-primary-container font-bold text-sm" id="modal-pages">...</span>
                 </div>
             </div>
 
@@ -253,19 +253,19 @@
                         <div class="grid grid-cols-2 gap-2 text-xs">
                             <div>
                                 <span class="text-outline dark:text-secondary-fixed-dim/60 block">Tổng số từ</span>
-                                <span class="font-bold text-on-surface" id="modal-word-count">0</span>
+                                <span class="font-bold text-on-surface dark:text-on-primary-container" id="modal-word-count">0</span>
                             </div>
                             <div>
                                 <span class="text-outline dark:text-secondary-fixed-dim/60 block">Tổng số ký tự</span>
-                                <span class="font-bold text-on-surface" id="modal-char-count">0</span>
+                                <span class="font-bold text-on-surface dark:text-on-primary-container" id="modal-char-count">0</span>
                             </div>
                             <div>
                                 <span class="text-outline dark:text-secondary-fixed-dim/60 block">Số đoạn văn</span>
-                                <span class="font-bold text-on-surface" id="modal-para-count">0</span>
+                                <span class="font-bold text-on-surface dark:text-on-primary-container" id="modal-para-count">0</span>
                             </div>
                             <div>
                                 <span class="text-outline dark:text-secondary-fixed-dim/60 block">Độ dài</span>
-                                <span class="font-bold text-on-surface" id="modal-length-cat">N/A</span>
+                                <span class="font-bold text-on-surface dark:text-on-primary-container" id="modal-length-cat">N/A</span>
                             </div>
                         </div>
                     </div>
@@ -279,7 +279,7 @@
                         <div class="space-y-2.5 text-xs">
                             <div class="flex justify-between items-center">
                                 <span class="text-outline dark:text-secondary-fixed-dim/60">Ngôn ngữ</span>
-                                <span class="font-bold text-on-surface" id="modal-lang">N/A</span>
+                                <span class="font-bold text-on-surface dark:text-on-primary-container" id="modal-lang">N/A</span>
                             </div>
                             <div class="flex justify-between items-center">
                                 <span class="text-outline dark:text-secondary-fixed-dim/60">Liên kết ngoài</span>
@@ -310,7 +310,7 @@
                             </div>
                             <div>
                                 <span class="text-outline dark:text-secondary-fixed-dim/60 block text-[10px]">Bộ đề đã tạo</span>
-                                <span class="font-bold text-on-surface text-sm" id="modal-quiz-count">0</span>
+                                <span class="font-bold text-on-surface dark:text-on-primary-container text-sm" id="modal-quiz-count">0</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
@@ -319,7 +319,7 @@
                             </div>
                             <div>
                                 <span class="text-outline dark:text-secondary-fixed-dim/60 block text-[10px]">Câu hỏi đã tạo</span>
-                                <span class="font-bold text-on-surface text-sm" id="modal-question-count">0</span>
+                                <span class="font-bold text-on-surface dark:text-on-primary-container text-sm" id="modal-question-count">0</span>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
@@ -352,7 +352,7 @@
                 <span class="material-symbols-outlined text-[22px]">warning</span>
             </div>
             <div>
-                <h3 class="font-h3 text-h3 text-on-surface mb-2">Xóa tài liệu?</h3>
+                <h3 class="font-h3 text-h3 text-on-surface dark:text-on-primary-container mb-2">Xóa tài liệu?</h3>
                 <p class="text-sm text-secondary dark:text-secondary-fixed-dim leading-relaxed mb-6">
                     Bạn có chắc chắn muốn xóa tài liệu <strong class="text-on-surface dark:text-white font-semibold" id="delete-doc-title"></strong>? Hành động này sẽ gỡ bỏ dữ liệu khỏi hệ thống và có thể ảnh hưởng đến các bộ đề liên kết.
                 </p>

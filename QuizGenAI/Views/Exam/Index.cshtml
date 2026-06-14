@@ -21,6 +21,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"]</title>
     
+    <!-- Inline Theme Detection to prevent FOUC -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    
     <!-- Fonts & Icons from design -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -434,7 +446,7 @@
                         indicatorHtml = `<div class="ml-auto shrink-0 text-primary dark:text-primary-fixed-dim flex items-center h-8"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span></div>`;
                     } else {
                         btnClass = "border-slate-200 dark:border-outline-variant bg-surface-container-lowest dark:bg-on-secondary-fixed hover:border-primary-fixed dark:hover:border-primary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant";
-                        numClass = "bg-slate-100 dark:bg-secondary-container text-secondary dark:text-secondary-fixed-dim group-hover:bg-white dark:group-hover:bg-on-secondary-fixed transition-colors";
+                        numClass = "bg-slate-100 dark:bg-secondary-container/10 text-secondary dark:text-secondary-fixed-dim group-hover:bg-white dark:group-hover:bg-on-secondary-fixed transition-colors";
                         textClass = "text-on-surface dark:text-on-primary-container";
                     }
                 }

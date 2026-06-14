@@ -65,7 +65,7 @@
                     <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-6">
                         <div class="relative flex-1 max-w-md">
                             <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary dark:text-secondary-fixed-dim">search</span>
-                            <input type="text" id="search-docs" class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary dark:focus:border-primary-fixed-dim outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface-variant font-body text-body" placeholder="Tìm kiếm tài liệu..." />
+                            <input type="text" id="search-docs" class="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary dark:focus:border-primary-fixed-dim outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-primary-container font-body text-body" placeholder="Tìm kiếm tài liệu..." />
                         </div>
                         <div class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim flex items-center justify-end gap-2">
                             <span class="material-symbols-outlined text-[16px]">info</span>
@@ -181,19 +181,19 @@
                 
                 <div class="flex flex-col gap-2">
                     <label class="font-button text-button text-on-surface dark:text-primary-fixed-dim" for="quiz-title">Tên bộ đề ôn tập <span class="text-danger">*</span></label>
-                    <input type="text" id="quiz-title" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface" placeholder="Ví dụ: Đề kiểm tra cuối kỳ, Ôn tập chương 1..." maxlength="200" required />
+                    <input type="text" id="quiz-title" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-primary-container" placeholder="Ví dụ: Đề kiểm tra cuối kỳ, Ôn tập chương 1..." maxlength="200" required />
                     <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Nhập tên để dễ dàng quản lý và phân biệt các bộ đề.</span>
                 </div>
 
                 <div class="flex flex-col gap-2">
                     <label class="font-button text-button text-on-surface dark:text-primary-fixed-dim" for="total-questions">Số lượng câu hỏi</label>
-                    <input type="number" id="total-questions" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface" min="5" max="50" value="20" />
+                    <input type="number" id="total-questions" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-primary-container" min="5" max="50" value="20" />
                     <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Mặc định 20 câu hỏi (Giới hạn từ 5 - 50 câu)</span>
                 </div>
 
                 <div class="flex flex-col gap-2">
                     <label class="font-button text-button text-on-surface dark:text-primary-fixed-dim" for="time-limit">Thời gian làm bài</label>
-                    <select id="time-limit" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface">
+                    <select id="time-limit" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-primary-container">
                         <option value="15">15 phút</option>
                         <option value="30" selected>30 phút</option>
                         <option value="45">45 phút</option>
@@ -204,7 +204,7 @@
 
                 <div class="flex flex-col gap-2">
                     <label class="font-button text-button text-on-surface dark:text-primary-fixed-dim" for="output-lang">Ngôn ngữ bộ đề</label>
-                    <select id="output-lang" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface">
+                    <select id="output-lang" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-primary-container">
                         <option value="0" selected>Tiếng Việt</option>
                         <option value="1">Tiếng Anh (English)</option>
                     </select>
@@ -212,7 +212,7 @@
 
                 <div class="flex flex-col gap-2">
                     <label class="font-button text-button text-on-surface dark:text-primary-fixed-dim" for="difficulty">Mức độ đề thi</label>
-                    <select id="difficulty" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-surface">
+                    <select id="difficulty" class="w-full p-3 rounded-lg border border-slate-200 dark:border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface-bright dark:bg-surface-dim/20 text-on-surface dark:text-on-primary-container">
                         <option value="0">Dễ</option>
                         <option value="1" selected>Trung bình</option>
                         <option value="2">Khó</option>

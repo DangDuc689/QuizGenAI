@@ -7,7 +7,7 @@
     <!-- Header Title & Action -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-h1 font-h1 text-on-background">Tổng quan</h1>
+            <h1 class="text-h1 font-h1 text-on-background dark:text-on-primary-container">Tổng quan</h1>
             <p class="text-body text-secondary dark:text-secondary-fixed-dim">Chào mừng trở lại, xem tiến độ học tập và hiệu suất ôn tập của bạn.</p>
         </div>
         <div>
@@ -267,10 +267,30 @@
             const labels = @Html.Raw(Json.Serialize(Model.TrendLabels));
             const data = @Html.Raw(Json.Serialize(Model.TrendScores));
 
-            // Custom gradient background under the curve
-            const gradient = ctx.createLinearGradient(0, 0, 0, 280);
-            gradient.addColorStop(0, 'rgba(0, 55, 176, 0.25)'); // Primary color light
-            gradient.addColorStop(1, 'rgba(0, 55, 176, 0.00)');
+            function getChartColors() {
+                const isDark = document.documentElement.classList.contains('dark');
+                const primaryColor = isDark ? '#5795ff' : '#0037b0';
+                
+                const grad = ctx.createLinearGradient(0, 0, 0, 280);
+                if (isDark) {
+                    grad.addColorStop(0, 'rgba(87, 149, 255, 0.25)');
+                    grad.addColorStop(1, 'rgba(87, 149, 255, 0.00)');
+                } else {
+                    grad.addColorStop(0, 'rgba(0, 55, 176, 0.25)');
+                    grad.addColorStop(1, 'rgba(0, 55, 176, 0.00)');
+                }
+
+                return {
+                    borderColor: primaryColor,
+                    pointBackgroundColor: primaryColor,
+                    pointBorderColor: isDark ? '#1e293b' : '#ffffff',
+                    gridColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(116, 118, 134, 0.15)',
+                    textColor: isDark ? '#b9c7e0' : '#4b5563',
+                    gradient: grad
+                };
+            }
+
+            let colors = getChartColors();
 
             const chart = new Chart(ctx, {
                 type: 'line',
@@ -279,15 +299,15 @@
                     datasets: [{
                         label: 'Điểm số (%)',
                         data: data,
-                        borderColor: '#0037b0', // primary theme color
+                        borderColor: colors.borderColor,
                         borderWidth: 3,
-                        pointBackgroundColor: '#0037b0',
-                        pointBorderColor: '#ffffff',
+                        pointBackgroundColor: colors.pointBackgroundColor,
+                        pointBorderColor: colors.pointBorderColor,
                         pointBorderWidth: 2,
                         pointRadius: 6,
                         pointHoverRadius: 8,
                         fill: true,
-                        backgroundColor: gradient,
+                        backgroundColor: colors.gradient,
                         tension: 0.35 // smooth curve
                     }]
                 },
@@ -318,9 +338,10 @@
                             max: 100,
                             grid: {
                                 borderDash: [5, 5],
-                                color: 'rgba(116, 118, 134, 0.15)' // outline-variant alpha
+                                color: colors.gridColor
                             },
                             ticks: {
+                                color: colors.textColor,
                                 callback: function(value) {
                                     return value + '%';
                                 },
@@ -335,6 +356,7 @@
                                 display: false
                             },
                             ticks: {
+                                color: colors.textColor,
                                 font: {
                                     family: 'Inter',
                                     size: 11
@@ -343,6 +365,21 @@
                         }
                     }
                 }
+            });
+
+            // Listen for theme switch events
+            window.addEventListener('theme-change', function () {
+                const newColors = getChartColors();
+                chart.data.datasets[0].borderColor = newColors.borderColor;
+                chart.data.datasets[0].pointBackgroundColor = newColors.pointBackgroundColor;
+                chart.data.datasets[0].pointBorderColor = newColors.pointBorderColor;
+                chart.data.datasets[0].backgroundColor = newColors.gradient;
+                
+                chart.options.scales.y.grid.color = newColors.gridColor;
+                chart.options.scales.y.ticks.color = newColors.textColor;
+                chart.options.scales.x.ticks.color = newColors.textColor;
+                
+                chart.update();
             });
         });
     </script>

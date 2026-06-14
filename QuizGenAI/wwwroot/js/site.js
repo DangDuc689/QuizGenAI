@@ -65,12 +65,12 @@ $(document).ready(function () {
         localStorage.theme = 'light';
     }
 
-    // Khởi tạo trạng thái ban đầu khi tải trang (Mặc định là Light Mode để đảm bảo giao diện sáng sủa)
+    // Khởi tạo trạng thái ban đầu khi tải trang (Đồng bộ biểu tượng dựa trên class dark đang có)
     function initializeTheme() {
-        if (localStorage.theme === 'dark') {
-            applyDarkTheme();
+        if ($('html').hasClass('dark')) {
+            $darkModeIcon.text('light_mode');
         } else {
-            applyLightTheme();
+            $darkModeIcon.text('dark_mode');
         }
     }
 
@@ -81,6 +81,8 @@ $(document).ready(function () {
         } else {
             applyDarkTheme();
         }
+        // Phát sự kiện để đồng bộ biểu đồ Chart.js và các thành phần khác
+        window.dispatchEvent(new Event('theme-change'));
     });
 
     // Chạy cấu hình ban đầu

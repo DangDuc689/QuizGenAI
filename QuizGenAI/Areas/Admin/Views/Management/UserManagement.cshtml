@@ -14,37 +14,37 @@
 
 <!-- Dashboard Content -->
 <div class="mb-8">
-    <h2 class="font-h1 text-h1 text-on-background">Quản lý Người dùng</h2>
+    <h2 class="font-h1 text-h1 text-on-background dark:text-on-primary-container">Quản lý Người dùng</h2>
     <p class="font-body text-body text-secondary">Quản lý và phân loại tài khoản người dùng trên hệ thống.</p>
 </div>
 
 <!-- Summary Cards Grid -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
     <!-- Total Users -->
-    <div class="bg-surface rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex items-start justify-between">
+    <div class="bg-surface dark:bg-on-secondary-fixed rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant flex items-start justify-between">
         <div>
-            <p class="text-on-surface-variant font-body text-body mb-1">Tổng người dùng</p>
-            <h3 class="font-h1 text-h1 text-on-surface">@Model.TotalUsers.ToString("N0")</h3>
+            <p class="text-on-surface-variant dark:text-secondary-fixed-dim font-body text-body mb-1">Tổng người dùng</p>
+            <h3 class="font-h1 text-h1 text-on-surface dark:text-on-primary-container">@Model.TotalUsers.ToString("N0")</h3>
         </div>
         <div class="bg-primary-fixed p-3 rounded-lg text-primary">
             <span class="material-symbols-outlined" data-icon="group">group</span>
         </div>
     </div>
     <!-- Active Now -->
-    <div class="bg-surface rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex items-start justify-between">
+    <div class="bg-surface dark:bg-on-secondary-fixed rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant flex items-start justify-between">
         <div>
-            <p class="text-on-surface-variant font-body text-body mb-1">Đang hoạt động</p>
-            <h3 class="font-h1 text-h1 text-on-surface">@Model.ActiveUsers.ToString("N0")</h3>
+            <p class="text-on-surface-variant dark:text-secondary-fixed-dim font-body text-body mb-1">Đang hoạt động</p>
+            <h3 class="font-h1 text-h1 text-on-surface dark:text-on-primary-container">@Model.ActiveUsers.ToString("N0")</h3>
         </div>
         <div class="bg-secondary-fixed p-3 rounded-lg text-secondary">
             <span class="material-symbols-outlined" data-icon="bolt">bolt</span>
         </div>
     </div>
     <!-- New Signups -->
-    <div class="bg-surface rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex items-start justify-between">
+    <div class="bg-surface dark:bg-on-secondary-fixed rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant flex items-start justify-between">
         <div>
-            <p class="text-on-surface-variant font-body text-body mb-1">Đăng ký mới hôm nay</p>
-            <h3 class="font-h1 text-h1 text-on-surface">@Model.NewUsersToday.ToString("N0")</h3>
+            <p class="text-on-surface-variant dark:text-secondary-fixed-dim font-body text-body mb-1">Đăng ký mới hôm nay</p>
+            <h3 class="font-h1 text-h1 text-on-surface dark:text-on-primary-container">@Model.NewUsersToday.ToString("N0")</h3>
         </div>
         <div class="bg-tertiary-fixed p-3 rounded-lg text-tertiary">
             <span class="material-symbols-outlined" data-icon="person_add">person_add</span>
@@ -53,9 +53,9 @@
 </div>
 
 <!-- Table Section -->
-<div class="bg-surface rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden">
+<div class="bg-surface dark:bg-on-secondary-fixed rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant overflow-hidden">
     <!-- Table Header with Search & Filter Form -->
-    <form method="get" action="@Url.Action("Index", "UserManagement", new { area = "Admin" })" id="filterForm" class="p-6 border-b border-outline-variant flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <form method="get" action="@Url.Action("Index", "UserManagement", new { area = "Admin" })" id="filterForm" class="p-6 border-b border-outline-variant/30 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <input type="hidden" name="role" id="selectedRole" value="@Model.SelectedRole" />
         
         <div class="flex flex-col lg:flex-row lg:items-center gap-4 w-full">
@@ -63,26 +63,26 @@
             <div class="relative w-full lg:max-w-md">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
                 <input type="text" name="search" value="@Model.SearchQuery" placeholder="Tìm kiếm người dùng..." 
-                       class="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-lg text-body focus:ring-2 focus:ring-primary-container outline-none transition-all text-on-surface dark:text-on-primary-container" />
+                       class="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800/40 border-none rounded-lg text-body focus:ring-2 focus:ring-primary-container outline-none transition-all text-on-surface dark:text-on-primary-container" />
             </div>
 
             <!-- Tabs group & Filter button -->
             <div class="flex flex-wrap items-center gap-3 ml-auto">
-                <div class="flex border border-slate-200 rounded-lg overflow-hidden bg-white dark:bg-[#132337]">
+                <div class="flex border border-slate-200 dark:border-outline-variant/30 rounded-lg overflow-hidden bg-white dark:bg-[#132337]">
                     <button type="button" onclick="selectRoleFilter('')" 
-                            class="px-4 py-2 font-button text-button transition-colors @(string.IsNullOrEmpty(Model.SelectedRole) ? "bg-slate-100 text-primary" : "text-secondary hover:bg-slate-50")">
+                            class="px-4 py-2 font-button text-button transition-colors @(string.IsNullOrEmpty(Model.SelectedRole) ? "bg-slate-100 dark:bg-secondary-container/20 text-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-secondary-container/10")">
                         Tất cả
                     </button>
                     <button type="button" onclick="selectRoleFilter('Người dùng')" 
-                            class="px-4 py-2 font-button text-button transition-colors border-l border-r border-slate-200 @(Model.SelectedRole == "Người dùng" ? "bg-slate-100 text-primary" : "text-secondary hover:bg-slate-50")">
+                            class="px-4 py-2 font-button text-button transition-colors border-l border-r border-slate-200 dark:border-outline-variant/30 @(Model.SelectedRole == "Người dùng" ? "bg-slate-100 dark:bg-secondary-container/20 text-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-secondary-container/10")">
                         Người dùng
                     </button>
                     <button type="button" onclick="selectRoleFilter('Quản trị viên')" 
-                            class="px-4 py-2 font-button text-button transition-colors @(Model.SelectedRole == "Quản trị viên" ? "bg-slate-100 text-primary" : "text-secondary hover:bg-slate-50")">
+                            class="px-4 py-2 font-button text-button transition-colors @(Model.SelectedRole == "Quản trị viên" ? "bg-slate-100 dark:bg-secondary-container/20 text-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-secondary-container/10")">
                         Quản trị viên
                     </button>
                 </div>
-                <button type="submit" class="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-primary hover:bg-primary-container text-white rounded-lg transition-colors font-button text-button cursor-pointer">
+                <button type="submit" class="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-outline-variant/30 bg-primary hover:bg-primary-container text-white rounded-lg transition-colors font-button text-button cursor-pointer">
                     <span class="material-symbols-outlined text-lg" data-icon="filter_list">filter_list</span>
                     Lọc
                 </button>
@@ -94,7 +94,7 @@
     <div class="overflow-x-auto">
         <table class="w-full text-left">
             <thead>
-                <tr class="bg-slate-50 border-b border-outline-variant text-on-surface-variant font-label-sm text-label-sm">
+                <tr class="bg-slate-50 dark:bg-surface-dim/20 border-b border-outline-variant/30 text-on-surface-variant dark:text-secondary-fixed-dim font-label-sm text-label-sm">
                     <th class="px-6 py-4 uppercase tracking-wider">Người dùng</th>
                     <th class="px-6 py-4 uppercase tracking-wider">Vai trò</th>
                     <th class="px-6 py-4 uppercase tracking-wider">Ngày tham gia</th>
@@ -102,7 +102,7 @@
                     <th class="px-6 py-4 uppercase tracking-wider text-right">Hành động</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100" id="user-table-body">
+            <tbody class="divide-y divide-slate-100 dark:divide-outline-variant/20" id="user-table-body">
                 @if (Model.Users.Count == 0)
                 {
                     <tr>
@@ -116,16 +116,16 @@
                     @foreach (var user in Model.Users)
                     {
                         var initials = GetInitials(user.FullName);
-                        <tr class="hover:bg-slate-50/50 transition-colors" id="user-row-@user.Id">
+                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/10 transition-colors" id="user-row-@user.Id">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
                                     <!-- Dynamic Initials Avatar badge matching the layout style -->
-                                    <div class="w-10 h-10 rounded-full bg-primary-fixed text-primary flex items-center justify-center font-bold select-none border border-slate-200 shadow-sm shrink-0">
+                                    <div class="w-10 h-10 rounded-full bg-primary-fixed dark:bg-primary/20 text-primary dark:text-primary-fixed-dim flex items-center justify-center font-bold select-none border border-slate-200 dark:border-outline-variant/30 shadow-sm shrink-0">
                                         @initials
                                     </div>
                                     <div>
-                                        <p class="font-button text-on-surface user-fullname">@user.FullName</p>
-                                        <p class="font-caption text-on-surface-variant user-email">@user.Email</p>
+                                        <p class="font-button text-on-surface dark:text-on-primary-container user-fullname">@user.FullName</p>
+                                        <p class="font-caption text-on-surface-variant dark:text-secondary-fixed-dim user-email">@user.Email</p>
                                     </div>
                                 </div>
                             </td>
@@ -134,7 +134,7 @@
                                     @user.Role
                                 </span>
                             </td>
-                            <td class="px-6 py-4 font-body text-body text-on-surface-variant">
+                            <td class="px-6 py-4 font-body text-body text-on-surface-variant dark:text-secondary-fixed-dim">
                                 @user.JoinedDate.ToString("'Ngày' dd 'thg' MM, yyyy")
                             </td>
                             <td class="px-6 py-4">
@@ -147,13 +147,13 @@
                                 <div class="flex justify-end gap-2">
                                     <!-- Edit Button -->
                                     <button type="button" onclick="openEditModal('@user.Id', '@Html.Raw(JavaScriptEncoder.Default.Encode(user.FullName))', '@Html.Raw(JavaScriptEncoder.Default.Encode(user.Email))', '@user.Role')" 
-                                            class="p-2 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-full transition-all cursor-pointer"
+                                            class="p-2 text-on-surface-variant dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim hover:bg-primary/10 rounded-full transition-all cursor-pointer"
                                             title="Sửa thông tin">
                                         <span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
                                     </button>
                                     <!-- Lock / Unlock Button -->
                                     <button type="button" onclick="openLockModal('@user.Id', '@Html.Raw(JavaScriptEncoder.Default.Encode(user.FullName))', @(user.IsActive ? "true" : "false"))"
-                                            class="toggle-lock-btn p-2 rounded-full transition-all cursor-pointer @(user.IsActive ? "text-on-surface-variant hover:text-error hover:bg-error/10" : "text-on-surface-variant hover:text-success hover:bg-success/10")" 
+                                            class="toggle-lock-btn p-2 rounded-full transition-all cursor-pointer @(user.IsActive ? "text-on-surface-variant dark:text-secondary-fixed-dim hover:text-error hover:bg-error/10" : "text-on-surface-variant dark:text-secondary-fixed-dim hover:text-success hover:bg-success/10")" 
                                             title="@(user.IsActive ? "Khóa tài khoản" : "Mở khóa tài khoản")">
                                         <span class="material-symbols-outlined text-lg lock-icon">@(user.IsActive ? "block" : "lock_open")</span>
                                     </button>
@@ -169,8 +169,8 @@
     <!-- Pagination -->
     @if (Model.TotalPages > 1)
     {
-        <div class="px-6 py-4 bg-slate-50 border-t border-outline-variant flex items-center justify-between flex-wrap gap-4">
-            <p class="font-caption text-caption text-on-surface-variant">
+        <div class="px-6 py-4 bg-slate-50 dark:bg-surface-dim/20 border-t border-outline-variant/30 flex items-center justify-between flex-wrap gap-4">
+            <p class="font-caption text-caption text-on-surface-variant dark:text-secondary-fixed-dim">
                 Hiển thị @((Model.CurrentPage - 1) * Model.PageSize + 1) - @Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalUsers) trên @Model.TotalUsers.ToString("N0") người dùng
             </p>
             <div class="flex items-center gap-1">
@@ -178,13 +178,13 @@
                 @if (Model.CurrentPage > 1)
                 {
                     <a href="@Url.Action("Index", new { search = Model.SearchQuery, role = Model.SelectedRole, page = Model.CurrentPage - 1 })" 
-                       class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-on-surface-variant hover:bg-white transition-all shadow-sm">
+                       class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-outline-variant/30 text-on-surface-variant dark:text-secondary-fixed-dim bg-white dark:bg-on-secondary-fixed hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm">
                         <span class="material-symbols-outlined text-sm">chevron_left</span>
                     </a>
                 }
                 else
                 {
-                    <button disabled class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-on-surface-variant opacity-50 cursor-not-allowed shadow-sm">
+                    <button disabled class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-outline-variant/30 text-on-surface-variant dark:text-secondary-fixed-dim bg-white dark:bg-on-secondary-fixed opacity-50 cursor-not-allowed shadow-sm">
                         <span class="material-symbols-outlined text-sm">chevron_left</span>
                     </button>
                 }
@@ -199,7 +199,7 @@
                     else
                     {
                         <a href="@Url.Action("Index", new { search = Model.SearchQuery, role = Model.SelectedRole, page = i })" 
-                           class="w-8 h-8 flex items-center justify-center rounded-lg border border-transparent text-on-surface-variant hover:border-slate-200 hover:bg-white transition-all font-button text-button">
+                           class="w-8 h-8 flex items-center justify-center rounded-lg border border-transparent text-on-surface-variant dark:text-secondary-fixed-dim hover:border-slate-200 dark:hover:border-outline-variant/30 hover:bg-white dark:hover:bg-slate-800 transition-all font-button text-button">
                             @i
                         </a>
                     }
@@ -209,13 +209,13 @@
                 @if (Model.CurrentPage < Model.TotalPages)
                 {
                     <a href="@Url.Action("Index", new { search = Model.SearchQuery, role = Model.SelectedRole, page = Model.CurrentPage + 1 })" 
-                       class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-on-surface-variant hover:bg-white transition-all shadow-sm">
+                       class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-outline-variant/30 text-on-surface-variant dark:text-secondary-fixed-dim bg-white dark:bg-on-secondary-fixed hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm">
                         <span class="material-symbols-outlined text-sm">chevron_right</span>
                     </a>
                 }
                 else
                 {
-                    <button disabled class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 text-on-surface-variant opacity-50 cursor-not-allowed shadow-sm">
+                    <button disabled class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-outline-variant/30 text-on-surface-variant dark:text-secondary-fixed-dim bg-white dark:bg-on-secondary-fixed opacity-50 cursor-not-allowed shadow-sm">
                         <span class="material-symbols-outlined text-sm">chevron_right</span>
                     </button>
                 }

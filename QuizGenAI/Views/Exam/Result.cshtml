@@ -25,6 +25,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"]</title>
 
+    <!-- Inline Theme Detection to prevent FOUC -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+
     <!-- Fonts & Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -143,9 +155,13 @@
             background: linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%);
             border: 1px solid #dde1ff;
         }
+        .dark .ai-explanation-box {
+            background: linear-gradient(135deg, rgba(87, 149, 255, 0.05) 0%, rgba(113, 42, 226, 0.05) 100%);
+            border: 1px solid rgba(221, 225, 255, 0.15);
+        }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-on-background min-h-screen font-sans text-on-surface antialiased transition-colors duration-300">
+<body class="bg-slate-50 dark:bg-on-background min-h-screen font-sans text-on-surface dark:text-on-primary-container antialiased transition-colors duration-300">
 
     <!-- MAIN SCROLL AREA -->
     <main class="max-w-3xl mx-auto px-4 sm:px-6 py-10 pb-32 flex flex-col gap-10">
@@ -279,9 +295,9 @@
     }
 
     function bloomBadgeClass(level) {
-        if (level === "Nhận biết")  return "bg-blue-100 text-bloom-remember border-blue-200";
-        if (level === "Thông hiểu") return "bg-purple-100 text-bloom-understand border-purple-200";
-        return "bg-orange-100 text-bloom-apply border-orange-200";
+        if (level === "Nhận biết")  return "bg-blue-100 text-bloom-remember border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/30";
+        if (level === "Thông hiểu") return "bg-purple-100 text-bloom-understand border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900/30";
+        return "bg-orange-100 text-bloom-apply border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900/30";
     }
 
     function barColor(level) {
@@ -324,9 +340,9 @@
     // RENDER COGNITIVE LEVEL CARDS
     function renderCognitiveLevels() {
         const levels = [
-            { name: "NHẬN BIẾT",   sub: "Ghi nhớ sự kiện cơ bản",       data: RESULT.remember,   color: "bg-bloom-remember",   badge: "bg-blue-50 text-bloom-remember border border-blue-200" },
-            { name: "THÔNG HIỂU", sub: "Giải thích ý tưởng hoặc khái niệm", data: RESULT.understand,  color: "bg-bloom-understand",  badge: "bg-purple-50 text-bloom-understand border border-purple-200" },
-            { name: "VẬN DỤNG",    sub: "Áp dụng kiến thức vào tình huống mới", data: RESULT.apply,       color: "bg-bloom-apply",       badge: "bg-orange-50 text-bloom-apply border border-orange-200" },
+            { name: "NHẬN BIẾT",   sub: "Ghi nhớ sự kiện cơ bản",       data: RESULT.remember,   color: "bg-bloom-remember",   badge: "bg-blue-50 text-bloom-remember border border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/30" },
+            { name: "THÔNG HIỂU", sub: "Giải thích ý tưởng hoặc khái niệm", data: RESULT.understand,  color: "bg-bloom-understand",  badge: "bg-purple-50 text-bloom-understand border border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900/30" },
+            { name: "VẬN DỤNG",    sub: "Áp dụng kiến thức vào tình huống mới", data: RESULT.apply,       color: "bg-bloom-apply",       badge: "bg-orange-50 text-bloom-apply border border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900/30" },
         ];
 
         const grid = document.getElementById("cognitive-grid");
