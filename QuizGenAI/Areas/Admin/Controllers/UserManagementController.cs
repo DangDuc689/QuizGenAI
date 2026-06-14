@@ -72,7 +72,7 @@ namespace QuizGenAI.Areas.Admin.Controllers
             }
 
             // Phân trang
-            int pageSize = 5;
+            int pageSize = 10;
             int totalItems = await query.CountAsync();
             int totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
             if (totalPages == 0) totalPages = 1;

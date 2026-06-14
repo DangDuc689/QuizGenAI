@@ -121,7 +121,7 @@ namespace QuizGenAI.Areas.Admin.Controllers
             }
 
             int totalFilteredSessions = await recentQuery.CountAsync();
-            int pageSize = 3; // Đồng bộ theo thiết kế giao diện (hiển thị 3 hàng mỗi trang)
+            int pageSize = 10; // Đồng bộ theo thiết kế giao diện (hiển thị 10 hàng mỗi trang)
             int totalPages = (int)Math.Ceiling((double)totalFilteredSessions / pageSize);
             if (totalPages <= 0) totalPages = 1;
 
@@ -137,7 +137,7 @@ namespace QuizGenAI.Areas.Admin.Controllers
             var recentViewModels = dbSessions.Select(es => new RecentExamSessionViewModel
             {
                 SessionId = es.Id,
-                UserFullName = es.User?.FullName ?? "Học sinh ẩn danh",
+                UserFullName = es.User?.FullName ?? "Người dùng ẩn danh",
                 UserEmail = es.User?.Email ?? "--",
                 QuizSetTitle = es.QuizSet?.Title ?? "Bài thi chưa xác định",
                 Score = es.TotalQuestions > 0 ? Math.Round((double)es.CorrectAnswers * 10.0 / es.TotalQuestions, 1) : 0.0,
@@ -203,7 +203,7 @@ namespace QuizGenAI.Areas.Admin.Controllers
 
             foreach (var es in sessions)
             {
-                string userName = es.User?.FullName ?? "Học sinh ẩn danh";
+                string userName = es.User?.FullName ?? "Người dùng ẩn danh";
                 string email = es.User?.Email ?? "--";
                 string quizTitle = es.QuizSet?.Title ?? "Bài thi chưa xác định";
                 double score = es.TotalQuestions > 0 ? Math.Round((double)es.CorrectAnswers * 10.0 / es.TotalQuestions, 1) : 0.0;

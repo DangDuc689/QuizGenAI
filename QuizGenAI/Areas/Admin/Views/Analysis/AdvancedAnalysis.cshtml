@@ -65,11 +65,11 @@
         </div>
     </div>
 
-    <!-- Card 2: Điểm trung bình của tất cả học sinh -->
+    <!-- Card 2: Điểm trung bình của tất cả người dùng -->
     <div class="bg-surface rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 flex flex-col justify-between gap-4 hover:shadow-md transition-all duration-200">
         <div class="flex items-start justify-between">
             <div>
-                <p class="text-on-surface-variant font-body text-body mb-1">ĐIỂM TRUNG BÌNH CỦA TẤT CẢ HỌC SINH</p>
+                <p class="text-on-surface-variant font-body text-body mb-1">ĐIỂM TRUNG BÌNH CỦA TẤT CẢ NGƯỜI DÙNG</p>
                 <h3 class="font-h1 text-h1 text-on-surface">@Model.AverageScore.ToString("0.0")/10</h3>
             </div>
             <div class="bg-purple-50 p-2 rounded-lg text-purple-600 flex items-center gap-0.5 text-xs font-bold shadow-inner">
@@ -148,7 +148,7 @@
     <div class="p-6 border-b border-outline-variant flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <h4 class="font-h3 text-h3 text-on-surface">Giám sát lượt làm bài gần đây</h4>
-            <p class="text-xs text-outline font-body">Cập nhật thời gian thực các phiên làm bài của học sinh trên hệ thống.</p>
+            <p class="text-xs text-outline font-body">Cập nhật thời gian thực các phiên làm bài của người dùng trên hệ thống.</p>
         </div>
     </div>
 
@@ -159,7 +159,7 @@
         <!-- Ô tìm kiếm -->
         <div class="relative flex-1">
             <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
-            <input type="text" name="search" value="@Model.SearchQuery" placeholder="Tìm kiếm theo tên học sinh, email hoặc tên bộ đề..." 
+            <input type="text" name="search" value="@Model.SearchQuery" placeholder="Tìm kiếm theo tên người dùng, email hoặc tên bộ đề..." 
                    class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-body focus:ring-2 focus:ring-primary-container outline-none transition-all" />
         </div>
 
@@ -241,8 +241,7 @@
                             <!-- Thao tác -->
                             <td class="px-6 py-4 text-right">
                                 <a href="@Url.Action("Details", "AdvancedAnalysis", new { area = "Admin", id = s.SessionId })" 
-                                   class="inline-flex items-center gap-1.5 text-primary hover:text-[#002f9c] font-semibold text-sm transition-all hover:underline">
-                                    <span class="material-symbols-outlined text-sm font-semibold">visibility</span>
+                                   class="text-primary hover:text-[#002f9c] font-semibold text-sm transition-all hover:underline whitespace-nowrap">
                                     Xem chi tiết
                                 </a>
                             </td>
