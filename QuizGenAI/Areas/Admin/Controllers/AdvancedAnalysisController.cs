@@ -176,7 +176,7 @@ namespace QuizGenAI.Areas.Admin.Controllers
         public IActionResult Details(int id)
         {
             // Chuyển hướng sang trang kết quả làm bài gốc
-            return RedirectToAction("Result", "Exam", new { area = "", sessionId = id });
+            return RedirectToAction("Result", "Exam", new { area = "", sessionId = id, returnUrl = "AdvancedAnalysis" });
         }
 
         // Action API Xuất báo cáo (Mã hóa CSV UTF-8 kèm BOM giúp tương thích tốt với Microsoft Excel)

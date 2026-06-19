@@ -520,6 +520,157 @@ main:has(.documents-page) {
     padding-left: 52px !important;
 }
 
+/* --- Dark Mode Overrides for Create Document Page --- */
+.dark main:has(.documents-page) {
+    background: #0f172a;
+}
+
+.dark .documents-page {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    border-color: #334155;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.dark .documents-header h1 {
+    color: #f8fafc;
+}
+
+.dark .documents-header p {
+    color: #94a3b8;
+}
+
+.dark .back-icon-button {
+    color: #94a3b8;
+}
+
+.dark .back-icon-button:hover {
+    background: #1e293b;
+    color: #3b82f6;
+}
+
+.dark .document-form-card {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: #334155;
+}
+
+.dark .document-form-card .document-label {
+    color: #e2e8f0 !important;
+}
+
+.dark .document-form-card .document-control {
+    color: #f8fafc !important;
+    background: rgba(15, 23, 42, 0.8) !important;
+    border-color: #334155 !important;
+}
+
+.dark .document-form-card .document-control::placeholder {
+    color: #475569;
+}
+
+.dark .document-form-card .document-control:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+
+.dark .document-tabs {
+    border-color: #334155;
+    background: rgba(15, 23, 42, 0.4);
+}
+
+.dark .tab-header {
+    background: #1e293b;
+    border-bottom-color: #334155;
+}
+
+.dark .tab-btn {
+    color: #94a3b8;
+}
+
+.dark .tab-btn:hover {
+    color: #60a5fa;
+    background: #1e293b;
+}
+
+.dark .tab-btn.active {
+    color: #60a5fa;
+    background: #0f172a;
+    border-bottom-color: #60a5fa;
+}
+
+.dark .tab-content-box {
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.dark .document-form-card .document-content-textarea {
+    color: #f8fafc !important;
+    background: rgba(15, 23, 42, 0.8) !important;
+    border-color: #334155 !important;
+}
+
+.dark .document-form-card .document-content-textarea::placeholder {
+    color: #475569;
+}
+
+.dark .document-form-card .document-content-textarea:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+
+.dark .char-counter {
+    border-color: #334155;
+    color: #94a3b8;
+    background: #1e293b;
+}
+
+.dark .ai-note {
+    border-color: #1e3a8a;
+    color: #60a5fa;
+    background: linear-gradient(90deg, #172554 0%, #1e1b4b 100%);
+}
+
+.dark .upload-box {
+    border-color: #475569;
+    background: #0f172a;
+}
+
+.dark .upload-box:hover {
+    border-color: #60a5fa;
+    background: #1e293b;
+}
+
+.dark .upload-box h3 {
+    color: #f8fafc;
+}
+
+.dark .upload-box p {
+    color: #94a3b8;
+}
+
+.dark .upload-icon {
+    color: #60a5fa;
+    background: #1e293b;
+}
+
+.dark .btn-upload,
+.dark .btn-save-document {
+    background: #2563eb;
+}
+
+.dark .btn-upload:hover,
+.dark .btn-save-document:hover {
+    background: #1d4ed8;
+}
+
+.dark .btn-cancel {
+    color: #94a3b8;
+}
+
+.dark .btn-cancel:hover {
+    color: #f8fafc;
+    background: #1e293b;
+}
+
+
 /* -------------------------------------------------------------
    6. MODULE TÀI LIỆU - DOCUMENT MANAGEMENT PAGE
    Người thực hiện: Lê An
@@ -2903,6 +3054,136 @@ main:has(.documents-page) {
 }
 
 /* Document Details Page */
+.dark .document-detail-page.stitch-detail-page {
+    background: linear-gradient(180deg, #0d1c2f 0%, #131b2e 100%);
+}
+.dark .stitch-detail-header-card {
+    background: #0d1c2f;
+    border-color: #3a485c;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+.dark .stitch-detail-title-row h1 {
+    color: #cad3ff;
+}
+.dark .document-detail-description {
+    color: #b9c7e0;
+}
+.dark .stitch-back-link {
+    color: #b9c7e0;
+}
+.dark .stitch-back-link:hover {
+    color: #3b82f6;
+}
+.dark .stitch-document-meta {
+    color: #b9c7e0;
+}
+.dark .stitch-file-badge.pdf {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+}
+.dark .stitch-file-badge.word {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+.dark .stitch-file-badge.url {
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+}
+.dark .stitch-file-badge.excel {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}
+.dark .stitch-file-badge.text {
+    background: rgba(249, 115, 22, 0.15);
+    color: #fb923c;
+}
+.dark .stitch-create-quiz-btn {
+    background: #2563eb;
+    color: #ffffff;
+    box-shadow: 0 12px 22px rgba(37, 99, 235, 0.18);
+}
+.dark .stitch-create-quiz-btn:hover {
+    background: #1d4ed8;
+}
+.dark .stitch-preview-card,
+.dark .stitch-side-card {
+    background: #0d1c2f;
+    border-color: #3a485c;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+.dark .stitch-preview-toolbar {
+    background: #0d1c2f;
+    border-bottom-color: #3a485c;
+}
+.dark .stitch-preview-tools {
+    color: #b9c7e0;
+}
+.dark .stitch-download-btn {
+    color: #b9c7e0;
+}
+.dark .stitch-download-btn:hover {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.15);
+}
+.dark .stitch-document-viewer {
+    background: #131b2e;
+}
+.dark .stitch-document-page {
+    background: #0d1c2f;
+    color: #cad3ff;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.3);
+}
+.dark .stitch-document-page h2,
+.dark .stitch-document-page h3 {
+    color: #cad3ff;
+}
+.dark .stitch-document-page p {
+    color: #b9c7e0;
+}
+.dark .stitch-side-title h3 {
+    color: #cad3ff;
+}
+.dark .stitch-side-title .material-symbols-outlined {
+    color: #3b82f6;
+}
+.dark .stitch-quiz-card {
+    background: #131b2e;
+    border-color: #3a485c;
+}
+.dark .stitch-quiz-card h4 {
+    color: #cad3ff;
+}
+.dark .stitch-quiz-card p {
+    color: #b9c7e0;
+}
+.dark .stitch-quiz-footer a {
+    color: #3b82f6;
+}
+.dark .stitch-quiz-footer a:hover {
+    color: #60a5fa;
+}
+.dark .stitch-analysis-list div {
+    border-bottom-color: #3a485c;
+}
+.dark .stitch-analysis-list span {
+    color: #b9c7e0;
+}
+.dark .stitch-analysis-list strong {
+    color: #cad3ff;
+}
+.dark .stitch-document-fade {
+    background: linear-gradient(180deg, rgba(13, 28, 47, 0), #0d1c2f 85%);
+}
+.dark .btn-toggle-document-text {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+}
+.dark .btn-toggle-document-text:hover {
+    background: #3b82f6;
+    color: #ffffff;
+    border-color: #3b82f6;
+}
 .dark .stitch-document-text-section h4 {
     color: #cad3ff;
 }
@@ -2934,6 +3215,88 @@ main:has(.documents-page) {
 }
 .dark .stitch-document-traits strong {
     color: #cad3ff;
+}
+.dark .stitch-trait-status.success {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.15);
+}
+.dark .stitch-trait-status.warning {
+    color: #facc15;
+    background: rgba(250, 250, 21, 0.15);
+}
+.dark .stitch-trait-status.danger {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.15);
+}
+.dark .stitch-usage-suggestion {
+    border-color: #3a485c;
+    background: rgba(15, 23, 42, 0.3);
+}
+.dark .stitch-usage-suggestion.success {
+    border-color: rgba(74, 222, 128, 0.3);
+    background: rgba(74, 222, 128, 0.05);
+}
+.dark .stitch-usage-suggestion.warning {
+    border-color: rgba(250, 250, 21, 0.3);
+    background: rgba(250, 250, 21, 0.05);
+}
+.dark .stitch-usage-suggestion.danger {
+    border-color: rgba(248, 113, 113, 0.3);
+    background: rgba(248, 113, 113, 0.05);
+}
+.dark .stitch-usage-suggestion p {
+    color: #b9c7e0;
+}
+.dark .stitch-usage-suggestion-hint {
+    color: #94a3b8;
+}
+.dark .stitch-usage-suggestion-meta div {
+    background: rgba(15, 23, 42, 0.5);
+    border-color: rgba(58, 72, 92, 0.5);
+}
+.dark .stitch-usage-suggestion-meta span {
+    color: #b9c7e0;
+}
+.dark .stitch-usage-suggestion-meta strong {
+    color: #cad3ff;
+}
+.dark .stitch-usage-suggestion-header strong {
+    color: #cad3ff;
+}
+.dark .stitch-usage-suggestion-header span:not(.material-symbols-outlined) {
+    color: #b9c7e0;
+}
+.dark .stitch-url-preview-card {
+    background: #0d1c2f;
+    border-color: #3a485c;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+}
+.dark .stitch-url-icon {
+    background: rgba(59, 130, 246, 0.15);
+    color: #3b82f6;
+}
+.dark .stitch-url-label {
+    color: #b9c7e0;
+}
+.dark .stitch-url-content h2 {
+    color: #cad3ff;
+}
+.dark .stitch-url-desc {
+    color: #b9c7e0;
+}
+.dark .stitch-url-link {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+    border-color: rgba(59, 130, 246, 0.2);
+}
+.dark .stitch-url-link:hover {
+    color: #60a5fa;
+    background: rgba(59, 130, 246, 0.1);
+}
+.dark .stitch-url-extraction-warning {
+    color: #facc15;
+    background: rgba(250, 250, 21, 0.05);
+    border-color: rgba(250, 250, 21, 0.2);
 }
 
 /* Auth Page overrides */
@@ -2979,6 +3342,15 @@ main:has(.documents-page) {
     background: #131b2e;
     color: #cad3ff;
     border-color: #3a485c;
+}
+.dark .auth-input:-webkit-autofill,
+.dark .auth-input:-webkit-autofill:hover, 
+.dark .auth-input:-webkit-autofill:focus, 
+.dark .auth-input:-webkit-autofill:active {
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: #cad3ff !important;
+    transition: background-color 5000s ease-in-out 0s;
+    box-shadow: 0 0 0px 1000px #131b2e inset !important;
 }
 .dark .auth-input:focus {
     border-color: #3b82f6;

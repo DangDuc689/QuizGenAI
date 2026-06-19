@@ -233,17 +233,18 @@ namespace QuizGenAI.Services
             var prompt = """
                 Bạn là hệ thống đọc và trích xuất nội dung học tập từ tài liệu PDF cho QuizGen AI.
 
-                Nhiệm vụ:
-                1. Đọc kỹ và trích xuất toàn bộ văn bản xuất hiện trong file PDF.
-                2. Nếu tài liệu chứa các bảng biểu, hãy chuyển đổi chúng thành định dạng bảng Markdown rõ ràng.
-                3. Nếu tài liệu chứa hình ảnh, sơ đồ hoặc công thức toán, hãy mô tả chi tiết nội dung học tập và mối quan hệ được hiển thị trong đó.
-                4. Giữ nguyên cấu trúc logic của tài liệu (tiêu đề, các mục lớn, mục con).
-                5. Không thêm kiến thức ngoài tài liệu, không tự bịa thông tin không có trong PDF.
+                Nhiệm vụ bắt buộc:
+                1. Đọc TOÀN BỘ từ đầu đến cuối file PDF, tuyệt đối không được tóm tắt, cắt xén, bỏ qua hay dừng giữa chừng dưới bất kỳ hình thức nào. Với tài liệu PDF dài nhiều trang, bạn phải kiên trì đọc hết từng trang một cho đến trang cuối cùng và trích xuất đầy đủ nội dung.
+                2. Nếu tài liệu chứa các bảng biểu, hãy chuyển đổi chúng thành định dạng bảng Markdown rõ ràng (| Cột 1 | Cột 2 |).
+                3. Nếu tài liệu chứa hình ảnh, sơ đồ, hãy mô tả chi tiết và chính xác thông tin học tập, quy trình hoặc mối quan hệ được thể hiện trong hình ảnh đó.
+                4. Đối với công thức toán học, vật lý, hóa học, hãy trích xuất chính xác ký tự và ký hiệu khoa học.
+                5. Giữ nguyên cấu trúc logic, thứ tự của tài liệu (tiêu đề, mục lớn, mục con).
+                6. Không tự bịa thông tin, không thêm thắt kiến thức ngoài tài liệu.
 
                 Định dạng trả về:
-                - Trả về bằng tiếng Việt dạng văn bản sạch, có cấu trúc tốt.
-                - Sử dụng Markdown cơ bản để định dạng tiêu đề, danh sách và bảng biểu.
-                - Không thêm bất kỳ lời dẫn đề hay lời kết nào của AI (ví dụ: không viết "Đây là nội dung...", chỉ trả về nội dung trích xuất).
+                - Trả về bằng tiếng Việt dạng văn bản có cấu trúc tốt.
+                - Tự do sử dụng các cấu trúc trình bày phù hợp nhất cho từng nội dung (văn bản thường, danh sách gạch đầu dòng, bảng biểu...) bằng định dạng Markdown tiêu chuẩn để tối ưu hiển thị.
+                - Tuyệt đối không thêm bất kỳ lời dẫn hay lời kết nào của AI (ví dụ: không viết "Dưới đây là...", "Hy vọng...", chỉ trả về duy nhất nội dung trích xuất).
                 """;
 
             var requestBody = new
@@ -269,7 +270,7 @@ namespace QuizGenAI.Services
                 generationConfig = new
                 {
                     temperature = 0.2,
-                    maxOutputTokens = 65000
+                    maxOutputTokens = 65536
                 }
             };
 

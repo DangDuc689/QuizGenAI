@@ -723,6 +723,228 @@
 
         return !string.IsNullOrWhiteSpace(listItemText);
     }
+
+    private static string ProcessInlineMarkdown(string encodedText)
+    {
+        if (string.IsNullOrEmpty(encodedText)) return encodedText;
+        var boldProcessed = System.Text.RegularExpressions.Regex.Replace(
+            encodedText,
+            @"\*\*(?=\S)(.+?)(?<=\S)\*\*",
+            "<strong>$1</strong>");
+        var italicProcessed = System.Text.RegularExpressions.Regex.Replace(
+            boldProcessed,
+            @"\*(?=\S)(.+?)(?<=\S)\*",
+            "<em>$1</em>");
+        return italicProcessed;
+    }
+
+    private static bool IsMarkdownTableRow(string line)
+    {
+        var trimmed = line.Trim();
+        return trimmed.StartsWith('|') && trimmed.EndsWith('|') && trimmed.Length > 1;
+    }
+
+    private static bool IsMarkdownTableSeparator(string line)
+    {
+        var trimmed = line.Trim();
+        if (!trimmed.StartsWith('|') || !trimmed.EndsWith('|')) return false;
+        return System.Text.RegularExpressions.Regex.IsMatch(trimmed, @"^\|(?:\s*:?-+:?\s*\|)+$");
+    }
+
+    private static IReadOnlyList<string> ParseMarkdownTableCell(string line)
+    {
+        var trimmed = line.Trim();
+        var content = trimmed;
+        if (content.StartsWith('|')) content = content[1..];
+        if (content.EndsWith('|')) content = content[..^1];
+        return content.Split('|').Select(c => c.Trim()).ToList();
+    }
+
+    private static void AppendPdfTableHtml(System.Text.StringBuilder html, IReadOnlyList<IReadOnlyList<string>> rows)
+    {
+        if (rows.Count == 0) return;
+        var maxColumnCount = rows.Max(row => row.Count);
+        if (maxColumnCount == 0) return;
+        
+        html.Append("<div class=\"stitch-word-table-wrap\"><table class=\"stitch-word-table\">");
+        
+        var hasHeader = rows.Count > 1;
+        var bodyStartIndex = 0;
+        
+        if (hasHeader)
+        {
+            html.Append("<thead><tr>");
+            var headerCells = rows[0];
+            for (var colIndex = 0; colIndex < maxColumnCount; colIndex++)
+            {
+                var cellText = colIndex < headerCells.Count ? headerCells[colIndex] : string.Empty;
+                var encoded = System.Net.WebUtility.HtmlEncode(cellText);
+                html.Append("<th>").Append(ProcessInlineMarkdown(encoded)).Append("</th>");
+            }
+            html.Append("</tr></thead>");
+            bodyStartIndex = 1;
+        }
+        
+        html.Append("<tbody>");
+        for (var rowIndex = bodyStartIndex; rowIndex < rows.Count; rowIndex++)
+        {
+            html.Append("<tr>");
+            var cells = rows[rowIndex];
+            for (var colIndex = 0; colIndex < maxColumnCount; colIndex++)
+            {
+                var cellText = colIndex < cells.Count ? cells[colIndex] : string.Empty;
+                var encoded = System.Net.WebUtility.HtmlEncode(cellText);
+                html.Append("<td>").Append(ProcessInlineMarkdown(encoded)).Append("</td>");
+            }
+            html.Append("</tr>");
+        }
+        html.Append("</tbody></table></div>");
+    }
+
+    private static void AppendPdfParagraphHtml(System.Text.StringBuilder html, IReadOnlyList<string> paragraphLines)
+    {
+        if (paragraphLines.Count == 0) return;
+        
+        html.Append("<p>");
+        for (var index = 0; index < paragraphLines.Count; index++)
+        {
+            if (index > 0)
+            {
+                html.Append("<br />");
+            }
+            var encoded = System.Net.WebUtility.HtmlEncode(paragraphLines[index]);
+            html.Append(ProcessInlineMarkdown(encoded));
+        }
+        html.Append("</p>");
+    }
+
+    private static Microsoft.AspNetCore.Html.IHtmlContent RenderPdfTextWithFormatting(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return new Microsoft.AspNetCore.Html.HtmlString(string.Empty);
+        }
+
+        var normalized = text
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Trim();
+        var html = new System.Text.StringBuilder();
+        var paragraphLines = new List<string>();
+        var isInList = false;
+        var isInTable = false;
+        var tableRows = new List<IReadOnlyList<string>>();
+
+        var lines = normalized.Split('\n');
+
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        {
+            var line = lines[lineIndex];
+            var trimmed = line.Trim();
+
+            // 1. Kiểm tra bảng Markdown
+            if (IsMarkdownTableRow(trimmed))
+            {
+                CloseListHtml(html, ref isInList);
+                AppendPdfParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+
+                if (IsMarkdownTableSeparator(trimmed))
+                {
+                    continue;
+                }
+
+                var cells = ParseMarkdownTableCell(trimmed);
+                tableRows.Add(cells);
+                isInTable = true;
+                continue;
+            }
+
+            if (isInTable)
+            {
+                AppendPdfTableHtml(html, tableRows);
+                tableRows.Clear();
+                isInTable = false;
+            }
+
+            if (string.IsNullOrWhiteSpace(trimmed))
+            {
+                CloseListHtml(html, ref isInList);
+                AppendPdfParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+                continue;
+            }
+
+            // 2. Kiểm tra Tiêu đề
+            if (trimmed.StartsWith("#"))
+            {
+                CloseListHtml(html, ref isInList);
+                AppendPdfParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+
+                if (trimmed.StartsWith("####"))
+                {
+                    var headingText = trimmed[4..].TrimStart(' ', '#').Trim();
+                    html.Append("<h4 class=\"font-bold text-base mt-3 mb-1 text-slate-700 dark:text-slate-300\">")
+                        .Append(ProcessInlineMarkdown(System.Net.WebUtility.HtmlEncode(headingText)))
+                        .Append("</h4>");
+                }
+                else if (trimmed.StartsWith("###"))
+                {
+                    var headingText = trimmed[3..].TrimStart(' ', '#').Trim();
+                    html.Append("<h3 class=\"font-bold text-lg mt-4 mb-2 text-slate-800 dark:text-slate-200\">")
+                        .Append(ProcessInlineMarkdown(System.Net.WebUtility.HtmlEncode(headingText)))
+                        .Append("</h3>");
+                }
+                else if (trimmed.StartsWith("##"))
+                {
+                    var headingText = trimmed[2..].TrimStart(' ', '#').Trim();
+                    html.Append("<h2 class=\"font-bold text-xl mt-6 mb-3 text-slate-900 dark:text-slate-100\">")
+                        .Append(ProcessInlineMarkdown(System.Net.WebUtility.HtmlEncode(headingText)))
+                        .Append("</h2>");
+                }
+                else
+                {
+                    var headingText = trimmed[1..].TrimStart(' ', '#').Trim();
+                    html.Append("<h2 class=\"font-bold text-xl mt-6 mb-3 text-slate-900 dark:text-slate-100\">")
+                        .Append(ProcessInlineMarkdown(System.Net.WebUtility.HtmlEncode(headingText)))
+                        .Append("</h2>");
+                }
+                continue;
+            }
+
+            // 3. Kiểm tra List
+            if (TryGetListItemText(trimmed, out var listItemText))
+            {
+                AppendPdfParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+
+                if (!isInList)
+                {
+                    html.Append("<ul class=\"stitch-readable-list\">");
+                    isInList = true;
+                }
+
+                html.Append("<li>")
+                    .Append(ProcessInlineMarkdown(System.Net.WebUtility.HtmlEncode(listItemText)))
+                    .Append("</li>");
+                continue;
+            }
+
+            // 4. Dòng thường
+            CloseListHtml(html, ref isInList);
+            paragraphLines.Add(line);
+        }
+
+        if (isInTable)
+        {
+            AppendPdfTableHtml(html, tableRows);
+        }
+        CloseListHtml(html, ref isInList);
+        AppendPdfParagraphHtml(html, paragraphLines);
+
+        return new Microsoft.AspNetCore.Html.HtmlString(html.ToString());
+    }
 }
 
 <div class="document-detail-page stitch-detail-page">
@@ -926,8 +1148,8 @@
                                         <h4>@sourceTextSectionTitle</h4>
                                         @if (isPdfDocument)
                                         {
-                                            <div class="stitch-document-text">
-                                                @normalExtractedText
+                                            <div class="stitch-document-text stitch-readable-text">
+                                                @RenderPdfTextWithFormatting(normalExtractedText)
                                             </div>
                                         }
                                         else
@@ -947,8 +1169,8 @@
                                         {
                                             @if (isPdfDocument)
                                             {
-                                                <div class="stitch-document-text stitch-image-recognized-text">
-                                                    @cleanImageTextForDisplay
+                                                <div class="stitch-document-text stitch-readable-text stitch-image-recognized-text">
+                                                    @RenderPdfTextWithFormatting(cleanImageTextForDisplay)
                                                 </div>
                                             }
                                             else
@@ -970,8 +1192,8 @@
                                 {
                                     @if (isPdfDocument)
                                     {
-                                        <div class="stitch-document-text">
-                                            @extractedText
+                                        <div class="stitch-document-text stitch-readable-text">
+                                            @RenderPdfTextWithFormatting(extractedText)
                                         </div>
                                     }
                                     else

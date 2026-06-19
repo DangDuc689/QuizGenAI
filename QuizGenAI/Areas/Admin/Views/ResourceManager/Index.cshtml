@@ -5,7 +5,7 @@
 <div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <div>
         <h2 class="font-h1 text-h1 text-on-background dark:text-on-primary-container">Quản lý Tài liệu</h2>
-        <p class="font-body text-body text-secondary">Xem, lọc, tải xuống và quản lý toàn bộ tài liệu học tập của người dùng trên hệ thống.</p>
+        <p class="font-body text-body text-secondary dark:text-secondary-fixed-dim">Xem, lọc, tải xuống và quản lý toàn bộ tài liệu học tập của người dùng trên hệ thống.</p>
     </div>
 </div>
 
@@ -44,7 +44,7 @@
 </form>
 
 <!-- Bảng hiển thị danh sách -->
-<div class="bg-surface rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] border border-slate-100 dark:border-outline-variant/30 overflow-hidden mb-8">
+<div class="bg-surface dark:bg-on-secondary-fixed rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.06)] border border-slate-100 dark:border-outline-variant/30 overflow-hidden mb-8">
     <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
             <thead>
@@ -90,14 +90,14 @@
                                     <div class="max-w-[240px] sm:max-w-xs lg:max-w-md">
                                         @if (doc.Format == "url")
                                         {
-                                            <a href="@doc.SourceUrl" target="_blank" class="font-button text-on-surface font-semibold hover:text-primary transition-colors flex items-center gap-1.5 leading-snug">
+                                            <a href="@doc.SourceUrl" target="_blank" class="font-button text-on-surface dark:text-on-primary-container font-semibold hover:text-primary transition-colors flex items-center gap-1.5 leading-snug">
                                                 <span class="truncate block">@doc.Title</span>
                                                 <span class="material-symbols-outlined text-[13px] shrink-0">open_in_new</span>
                                             </a>
                                         }
                                         else
                                         {
-                                            <span class="font-button text-on-surface font-semibold block truncate leading-snug" title="@doc.Title">@doc.Title</span>
+                                            <span class="font-button text-on-surface dark:text-on-primary-container font-semibold block truncate leading-snug" title="@doc.Title">@doc.Title</span>
                                         }
                                         <span class="text-[11px] text-outline dark:text-secondary-fixed-dim block truncate mt-0.5 font-medium">@doc.Description</span>
                                     </div>
@@ -105,7 +105,7 @@
                             </td>
                             <!-- Cột người đăng -->
                             <td class="px-6 py-4">
-                                <span class="font-semibold text-on-surface block text-sm leading-normal">@doc.OwnerName</span>
+                                <span class="font-semibold text-on-surface dark:text-on-primary-container block text-sm leading-normal">@doc.OwnerName</span>
                                 <span class="text-xs text-outline dark:text-secondary-fixed-dim block font-medium">@doc.OwnerEmail</span>
                             </td>
                             <!-- Cột ngày đăng -->
@@ -118,7 +118,7 @@
                             </td>
                             <!-- Cột số câu hỏi -->
                             <td class="px-6 py-4">
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-primary-fixed text-primary shadow-sm dark:bg-primary-fixed-dim dark:text-[#b7c4ff]">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-primary-fixed text-primary shadow-sm dark:bg-primary/20 dark:text-primary-fixed-dim">
                                     @doc.QuestionsCount câu hỏi
                                 </span>
                             </td>

@@ -17,6 +17,10 @@
     {
         backUrl = "/Exam/Review";
     }
+    else if (returnUrl == "AdvancedAnalysis")
+    {
+        backUrl = "/Admin/AdvancedAnalysis";
+    }
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -232,21 +236,24 @@
             <span class="material-symbols-outlined text-[18px] transition-transform group-hover:-translate-x-0.5">arrow_back</span>
             Quay lại
         </a>
-        @if (Model.IsPracticeMode)
+        @if (!User.IsInRole(SD.Role_Admin))
         {
-            <a asp-controller="Practice" asp-action="Index"
-               class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary-container text-white font-semibold text-[14px] shadow-md hover:shadow-lg active:scale-95 transition-all duration-200 focus:ring-4 focus:ring-primary/20 cursor-pointer">
-                <span class="material-symbols-outlined text-[18px] animate-spin" style="animation-duration: 4s;">loop</span>
-                Xem danh sách chủ đề yếu
-            </a>
-        }
-        else
-        {
-            <button id="practice-btn"
-                    class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-[14px] shadow-md hover:bg-primary/90 active:scale-95 transition-all duration-200 focus:ring-4 focus:ring-primary/20">
-                <span class="material-symbols-outlined text-[18px] sparkle-icon" style="font-variation-settings:'FILL' 1;">auto_awesome</span>
-                Luyện tập chủ đề còn yếu
-            </button>
+            @if (Model.IsPracticeMode)
+            {
+                <a asp-controller="Practice" asp-action="Index"
+                   class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary-container text-white font-semibold text-[14px] shadow-md hover:shadow-lg active:scale-95 transition-all duration-200 focus:ring-4 focus:ring-primary/20 cursor-pointer">
+                    <span class="material-symbols-outlined text-[18px] animate-spin" style="animation-duration: 4s;">loop</span>
+                    Xem danh sách chủ đề yếu
+                </a>
+            }
+            else
+            {
+                <button id="practice-btn"
+                        class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-[14px] shadow-md hover:bg-primary/90 active:scale-95 transition-all duration-200 focus:ring-4 focus:ring-primary/20">
+                    <span class="material-symbols-outlined text-[18px] sparkle-icon" style="font-variation-settings:'FILL' 1;">auto_awesome</span>
+                    Luyện tập chủ đề còn yếu
+                </button>
+            }
         }
     </div>
 
