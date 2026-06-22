@@ -18,6 +18,10 @@ namespace QuizGenAI.Services
         private readonly string _apiKey; // Lưu key mặc định đầu tiên để tương thích ngược
         private readonly string _modelName;
 
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, List<DateTime>> KeyUsageHistory = new();
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> KeyCooldowns = new();
+        private const int SafeRequestsPerMinute = 14; // Ngưỡng an toàn chủ động (dưới 15 RPM)
+
         public GeminiService(
             HttpClient httpClient,
             IConfiguration configuration,
@@ -62,8 +66,47 @@ namespace QuizGenAI.Services
             {
                 return string.Empty;
             }
-            var index = Math.Abs(_currentKeyIndex) % _apiKeys.Count;
-            return _apiKeys[index];
+
+            var now = DateTime.UtcNow;
+
+            // Lọc ra các key chưa bị cooldown (hoặc đã hết cooldown)
+            var activeKeys = _apiKeys
+                .Where(k => !KeyCooldowns.TryGetValue(k, out var cooldown) || cooldown < now)
+                .ToList();
+
+            if (activeKeys.Count == 0)
+            {
+                // Nếu tất cả các key đều bị cooldown, lấy key có thời gian cooldown ngắn nhất để tiếp tục
+                return _apiKeys
+                    .OrderBy(k => KeyCooldowns.TryGetValue(k, out var c) ? c : DateTime.MinValue)
+                    .First();
+            }
+
+            // Tìm key trong danh sách hoạt động chưa vượt quá SafeRequestsPerMinute trong 60 giây qua
+            foreach (var key in activeKeys)
+            {
+                var history = KeyUsageHistory.GetOrAdd(key, _ => new List<DateTime>());
+                lock (history)
+                {
+                    history.RemoveAll(t => (now - t).TotalSeconds > 60);
+                    if (history.Count < SafeRequestsPerMinute)
+                    {
+                        history.Add(now);
+                        return key;
+                    }
+                }
+            }
+
+            // Nếu tất cả các active keys đều đã đạt giới hạn 14 request/phút:
+            // Chọn key có số lượng request ít nhất trong phút qua để giảm tải
+            return activeKeys.OrderBy(k => {
+                var h = KeyUsageHistory.GetOrAdd(k, _ => new List<DateTime>());
+                lock (h)
+                {
+                    h.RemoveAll(t => (DateTime.UtcNow - t).TotalSeconds > 60);
+                    return h.Count;
+                }
+            }).First();
         }
 
         private void RotateToNextKey()
@@ -72,6 +115,13 @@ namespace QuizGenAI.Services
             {
                 System.Threading.Interlocked.Increment(ref _currentKeyIndex);
             }
+        }
+
+        private void MarkKeyAsCooldown(string key)
+        {
+            // Tạm dừng sử dụng key này trong 1 phút để tránh bị ghim/ban
+            KeyCooldowns[key] = DateTime.UtcNow.AddMinutes(1);
+            RotateToNextKey();
         }
 
         /// <summary>
@@ -125,7 +175,14 @@ namespace QuizGenAI.Services
                     return (true, statusCode, $"OK - Gemini trả lời: {text?.Trim() ?? "(empty)"}");
                 }
 
-                RotateToNextKey(); // Xoay key khi gặp lỗi
+                if (IsGeminiRateLimited(response.StatusCode, responseText) || (int)response.StatusCode == 403)
+                {
+                    MarkKeyAsCooldown(activeKey);
+                }
+                else
+                {
+                    RotateToNextKey();
+                }
                 return (false, statusCode, $"Gemini lỗi {statusCode} (Key: {keyFingerprint}): {SanitizeForLog(responseText[..Math.Min(300, responseText.Length)])}");
             }
             catch (Exception ex)
@@ -231,20 +288,18 @@ namespace QuizGenAI.Services
             }
 
             var prompt = """
-                Bạn là hệ thống đọc và trích xuất nội dung học tập từ tài liệu PDF cho QuizGen AI.
+                Bạn là hệ thống trích xuất nội dung học tập nguyên bản từ tài liệu PDF cho QuizGen AI.
 
-                Nhiệm vụ bắt buộc:
-                1. Đọc TOÀN BỘ từ đầu đến cuối file PDF, tuyệt đối không được tóm tắt, cắt xén, bỏ qua hay dừng giữa chừng dưới bất kỳ hình thức nào. Với tài liệu PDF dài nhiều trang, bạn phải kiên trì đọc hết từng trang một cho đến trang cuối cùng và trích xuất đầy đủ nội dung.
-                2. Nếu tài liệu chứa các bảng biểu, hãy chuyển đổi chúng thành định dạng bảng Markdown rõ ràng (| Cột 1 | Cột 2 |).
-                3. Nếu tài liệu chứa hình ảnh, sơ đồ, hãy mô tả chi tiết và chính xác thông tin học tập, quy trình hoặc mối quan hệ được thể hiện trong hình ảnh đó.
-                4. Đối với công thức toán học, vật lý, hóa học, hãy trích xuất chính xác ký tự và ký hiệu khoa học.
-                5. Giữ nguyên cấu trúc logic, thứ tự của tài liệu (tiêu đề, mục lớn, mục con).
-                6. Không tự bịa thông tin, không thêm thắt kiến thức ngoài tài liệu.
+                Quy tắc tối cao về Nội dung:
+                - SAO CHÉP CHÍNH XÁC 100% CHỮ (Verbatim): Bạn phải sao chép chính xác từng câu, từng chữ xuất hiện trong tài liệu. Tuyệt đối cấm tự ý viết lại câu, diễn giải lại (no paraphrasing), cấm thay đổi đại từ hoặc chỉnh sửa từ ngữ của tài liệu gốc.
 
-                Định dạng trả về:
-                - Trả về bằng tiếng Việt dạng văn bản có cấu trúc tốt.
-                - Tự do sử dụng các cấu trúc trình bày phù hợp nhất cho từng nội dung (văn bản thường, danh sách gạch đầu dòng, bảng biểu...) bằng định dạng Markdown tiêu chuẩn để tối ưu hiển thị.
-                - Tuyệt đối không thêm bất kỳ lời dẫn hay lời kết nào của AI (ví dụ: không viết "Dưới đây là...", "Hy vọng...", chỉ trả về duy nhất nội dung trích xuất).
+                Quy tắc tối cao về Trình bày (Định dạng):
+                - Bạn được phép và BẮT BUỘC chèn thêm các ký tự định dạng Markdown (như #, ##, ###, *, -, |) xung quanh văn bản gốc để cấu trúc lại nội dung trực quan:
+                  + Chuyển các tiêu đề thành dạng tiêu đề Markdown (ví dụ: "Tiêu đề 1" -> "## Tiêu đề 1").
+                  + Chuyển đổi bảng biểu thành bảng Markdown rõ ràng (| Cột 1 | Cột 2 |).
+                  + Tạo danh sách gạch đầu dòng cho các mục liệt kê.
+                  + Giữ nguyên công thức toán học/ký hiệu khoa học.
+                - Tuyệt đối không thêm bất kỳ lời dẫn hay lời kết nào của AI. Chỉ trả về duy nhất nội dung trích xuất đã được định dạng.
                 """;
 
             var requestBody = new
@@ -267,10 +322,17 @@ namespace QuizGenAI.Services
                         }
                     }
                 },
+                systemInstruction = new
+                {
+                    parts = new[]
+                    {
+                        new { text = "Bạn là hệ thống trích xuất văn bản có cấu trúc. Nhiệm vụ của bạn là sao chép y nguyên 100% từng câu, từng chữ từ tài liệu gốc (không tự ý diễn đạt lại, tóm tắt hoặc sửa đổi câu chữ). Tuy nhiên, bạn CẦN trình bày văn bản trích xuất bằng định dạng Markdown tiêu chuẩn (sử dụng #, ## cho tiêu đề, | cho bảng biểu, - hoặc * cho danh sách) để giữ nguyên cấu trúc trực quan của tài liệu." }
+                    }
+                },
                 generationConfig = new
                 {
-                    temperature = 0.2,
-                    maxOutputTokens = 65536
+                    temperature = 0.0,
+                    maxOutputTokens = 8192
                 }
             };
 
@@ -725,7 +787,14 @@ namespace QuizGenAI.Services
                     jsonContent.Length,
                     TruncateForLog(SanitizeForLog(responseText)));
 
-                RotateToNextKey(); // Xoay sang key tiếp theo ngay lập tức khi gặp lỗi
+                if (IsGeminiRateLimited(response.StatusCode, responseText) || (int)response.StatusCode == 403)
+                {
+                    MarkKeyAsCooldown(activeKey);
+                }
+                else
+                {
+                    RotateToNextKey();
+                }
 
                 if ((int)response.StatusCode == 400)
                 {

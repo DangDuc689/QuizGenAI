@@ -10,7 +10,7 @@ namespace QuizGenAI.Services
 {
     public sealed class DocxExtractionService
     {
-        public const int MaxImagesToProcess = 5;
+        public const int MaxImagesToProcess = 20;
         public const string NormalTextSectionHeading = "[Nội dung văn bản trích xuất từ Word]";
         public const string ImageTextSectionHeading = "[Nội dung nhận diện từ hình ảnh trong tài liệu]";
         public const string WordTableStartMarker = "[WORD_TABLE]";
@@ -52,10 +52,13 @@ namespace QuizGenAI.Services
             var skippedImageCount = 0;
             var failedImageCount = 0;
             var unreadableImageCount = 0;
+            var pageCount = 1;
 
             try
             {
                 using var wordDocument = WordprocessingDocument.Open(filePath, false);
+                pageCount = EstimateWordPageCount(wordDocument, normalText);
+
                 var mainPart = wordDocument.MainDocumentPart;
 
                 if (mainPart != null)
@@ -70,6 +73,7 @@ namespace QuizGenAI.Services
                         filePath,
                         MaxImagesToProcess);
 
+                    var validImages = new List<ImageExtractionTask>();
                     var imageIndex = 0;
 
                     foreach (var imagePart in imageParts.Take(MaxImagesToProcess))
@@ -79,7 +83,6 @@ namespace QuizGenAI.Services
 
                         var originalContentType = imagePart.ContentType;
                         var mimeType = NormalizeImageMimeType(originalContentType);
-                        var relationshipId = mainPart.GetIdOfPart(imagePart);
 
                         byte[] imageBytes;
                         await using (var imageStream = imagePart.GetStream(FileMode.Open, FileAccess.Read))
@@ -113,17 +116,6 @@ namespace QuizGenAI.Services
                         mimeType = DetectMimeTypeFromBytes(imageBytes) ?? mimeType;
                         var hasDimensions = TryGetImageDimensions(imageBytes, out var width, out var height);
 
-                        _logger.LogInformation(
-                            "DOCX image {ImageIndex}/{TotalImageCount}. RelationshipId={RelationshipId}, ContentType={ContentType}, DetectedMimeType={MimeType}, Bytes={Bytes}, Width={Width}, Height={Height}",
-                            imageIndex,
-                            totalImageCount,
-                            relationshipId,
-                            originalContentType,
-                            mimeType,
-                            imageBytes.Length,
-                            hasDimensions ? width : (int?)null,
-                            hasDimensions ? height : (int?)null);
-
                         if (!SupportedImageMimeTypes.Contains(mimeType))
                         {
                             skippedImageCount++;
@@ -155,53 +147,86 @@ namespace QuizGenAI.Services
                             continue;
                         }
 
-                        processedImageCount++;
-
-                        try
+                        validImages.Add(new ImageExtractionTask
                         {
-                            _logger.LogInformation(
-                                "Sending DOCX image {ImageIndex} to Gemini Vision. MimeType={MimeType}, Bytes={Bytes}, Width={Width}, Height={Height}",
-                                imageIndex,
-                                mimeType,
-                                imageBytes.Length,
-                                hasDimensions ? width : (int?)null,
-                                hasDimensions ? height : (int?)null);
+                            ImageIndex = imageIndex,
+                            ImageBytes = imageBytes,
+                            MimeType = mimeType,
+                            Width = width,
+                            Height = height,
+                            HasDimensions = hasDimensions
+                        });
+                    }
 
-                            var imageText = await _geminiService.ExtractTextFromImageBytesAsync(
-                                imageBytes,
-                                mimeType,
-                                cancellationToken);
+                    if (validImages.Count > 0)
+                    {
+                        using var semaphore = new SemaphoreSlim(4);
+                        var imageTextResults = new System.Collections.Concurrent.ConcurrentBag<(int Index, string Text)>();
 
-                            var isUsefulImageText = IsUsefulImageText(imageText);
-
-                            _logger.LogInformation(
-                                "Gemini Vision result for DOCX image {ImageIndex}. IsUseful={IsUsefulImageText}, Text={ImageText}",
-                                imageIndex,
-                                isUsefulImageText,
-                                TruncateForLog(imageText));
-
-                            if (isUsefulImageText)
-                            {
-                                imageTexts.Add(imageText.Trim());
-                            }
-                            else
-                            {
-                                unreadableImageCount++;
-                            }
-                        }
-                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        var tasks = validImages.Select(async img =>
                         {
-                            failedImageCount++;
-                            _logger.LogWarning(
-                                ex,
-                                "Could not extract text from DOCX image {ImageIndex}. MimeType={MimeType}, Bytes={Bytes}, Width={Width}, Height={Height}. If the image is clear, verify that Gemini model {ModelHint} supports vision and that the inline image request is accepted.",
-                                imageIndex,
-                                mimeType,
-                                imageBytes.Length,
-                                hasDimensions ? width : (int?)null,
-                                hasDimensions ? height : (int?)null,
-                                "Gemini:ModelName");
-                        }
+                            await semaphore.WaitAsync(cancellationToken);
+                            try
+                            {
+                                Interlocked.Increment(ref processedImageCount);
+
+                                _logger.LogInformation(
+                                    "Sending DOCX image {ImageIndex} to Gemini Vision (Parallel). MimeType={MimeType}, Bytes={Bytes}, Width={Width}, Height={Height}",
+                                    img.ImageIndex,
+                                    img.MimeType,
+                                    img.ImageBytes.Length,
+                                    img.HasDimensions ? img.Width : (int?)null,
+                                    img.HasDimensions ? img.Height : (int?)null);
+
+                                var imageText = await _geminiService.ExtractTextFromImageBytesAsync(
+                                    img.ImageBytes,
+                                    img.MimeType,
+                                    cancellationToken);
+
+                                var isUsefulImageText = IsUsefulImageText(imageText);
+
+                                _logger.LogInformation(
+                                    "Gemini Vision result for DOCX image {ImageIndex} (Parallel). IsUseful={IsUsefulImageText}, Text={ImageText}",
+                                    img.ImageIndex,
+                                    isUsefulImageText,
+                                    TruncateForLog(imageText));
+
+                                if (isUsefulImageText)
+                                {
+                                    imageTextResults.Add((img.ImageIndex, imageText.Trim()));
+                                }
+                                else
+                                {
+                                    Interlocked.Increment(ref unreadableImageCount);
+                                }
+                            }
+                            catch (Exception ex) when (ex is not OperationCanceledException)
+                            {
+                                Interlocked.Increment(ref failedImageCount);
+                                _logger.LogWarning(
+                                    ex,
+                                    "Could not extract text from DOCX image {ImageIndex} (Parallel). MimeType={MimeType}, Bytes={Bytes}, Width={Width}, Height={Height}.",
+                                    img.ImageIndex,
+                                    img.MimeType,
+                                    img.ImageBytes.Length,
+                                    img.HasDimensions ? img.Width : (int?)null,
+                                    img.HasDimensions ? img.Height : (int?)null);
+                            }
+                            finally
+                            {
+                                semaphore.Release();
+                            }
+                        });
+
+                        await Task.WhenAll(tasks);
+
+                        // Sắp xếp lại kết quả theo thứ tự ảnh xuất hiện trong tài liệu Word
+                        var sortedTexts = imageTextResults
+                            .OrderBy(r => r.Index)
+                            .Select(r => r.Text)
+                            .ToList();
+
+                        imageTexts.AddRange(sortedTexts);
                     }
                 }
             }
@@ -232,7 +257,8 @@ namespace QuizGenAI.Services
                 ReadableImageCount = imageTexts.Count,
                 SkippedImageCount = skippedImageCount,
                 FailedImageCount = failedImageCount,
-                UnreadableImageCount = unreadableImageCount
+                UnreadableImageCount = unreadableImageCount,
+                PageCount = pageCount
             };
         }
 
@@ -750,6 +776,67 @@ namespace QuizGenAI.Services
                 | (bytes[startIndex + 2] << 8)
                 | bytes[startIndex + 3];
         }
+
+        private static int EstimateWordPageCount(WordprocessingDocument wordDocument, string? normalText)
+        {
+            try
+            {
+                var mainPart = wordDocument.MainDocumentPart;
+                if (mainPart == null) return 1;
+
+                // 1. Kiểm tra số trang trong Extended File Properties (metadata cached)
+                var pagesText = wordDocument.ExtendedFilePropertiesPart?.Properties?.Pages?.InnerText;
+                int pageCount = 0;
+                if (int.TryParse(pagesText, out var parsedPages) && parsedPages > 0)
+                {
+                    pageCount = parsedPages;
+                }
+
+                // 2. Đếm các thẻ ngắt trang trong XML (lastRenderedPageBreak và manual breaks)
+                var body = mainPart.Document?.Body;
+                if (body != null)
+                {
+                    var lastRenderedBreaks = body.Descendants<LastRenderedPageBreak>().Count();
+                    var manualBreaks = body.Descendants<Break>().Count(b => b.Type != null && b.Type.Value == BreakValues.Page);
+
+                    var breakBasedPages = Math.Max(lastRenderedBreaks, manualBreaks) + 1;
+                    pageCount = Math.Max(pageCount, breakBasedPages);
+                }
+
+                // 3. Ước lượng dựa trên Word Count từ metadata hoặc đếm từ thực tế
+                if (pageCount <= 1)
+                {
+                    var wordsText = wordDocument.ExtendedFilePropertiesPart?.Properties?.Words?.InnerText;
+                    if (int.TryParse(wordsText, out var parsedWords) && parsedWords > 0)
+                    {
+                        int estimatedPages = (int)Math.Ceiling(parsedWords / 400.0);
+                        pageCount = Math.Max(pageCount, estimatedPages);
+                    }
+                    else if (!string.IsNullOrEmpty(normalText))
+                    {
+                        var wordCount = normalText.Split(new[] { ' ', '\r', '\n', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+                        int estimatedPages = (int)Math.Ceiling(wordCount / 400.0);
+                        pageCount = Math.Max(pageCount, estimatedPages);
+                    }
+                }
+
+                return pageCount > 0 ? pageCount : 1;
+            }
+            catch
+            {
+                return 1;
+            }
+        }
+
+        private sealed class ImageExtractionTask
+        {
+            public int ImageIndex { get; set; }
+            public required byte[] ImageBytes { get; set; }
+            public required string MimeType { get; set; }
+            public int Width { get; set; }
+            public int Height { get; set; }
+            public bool HasDimensions { get; set; }
+        }
     }
 
     public sealed class DocxExtractionResult
@@ -764,5 +851,6 @@ namespace QuizGenAI.Services
         public int SkippedImageCount { get; init; }
         public int FailedImageCount { get; init; }
         public int UnreadableImageCount { get; init; }
+        public int PageCount { get; init; }
     }
 }

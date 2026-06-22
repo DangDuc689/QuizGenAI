@@ -164,7 +164,7 @@
                 @if (Model.AiFeedbackTargetBloom != "None" && !string.IsNullOrEmpty(Model.AiFeedbackTargetBloom))
                 {
                     <div>
-                        <a asp-controller="Exam" asp-action="Review" class="inline-flex w-full items-center justify-center gap-2 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-button text-button shadow-sm transition-all">
+                        <a asp-controller="Practice" asp-action="Index" asp-route-level="@Model.AiFeedbackTargetBloom.ToLower()" class="inline-flex w-full items-center justify-center gap-2 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-button text-button shadow-sm transition-all">
                             <span class="material-symbols-outlined text-[18px]">bolt</span>
                             Luyện Nhanh "@(Model.AiFeedbackTargetBloom == "Apply" ? "Vận dụng" : Model.AiFeedbackTargetBloom == "Understand" ? "Thông hiểu" : "Nhận biết")"
                         </a>
@@ -173,9 +173,9 @@
                 else
                 {
                     <div>
-                        <a asp-controller="Exam" asp-action="Review" class="inline-flex w-full items-center justify-center gap-2 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-button text-button shadow-sm transition-all">
+                        <a asp-controller="Practice" asp-action="Index" class="inline-flex w-full items-center justify-center gap-2 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-button text-button shadow-sm transition-all">
                             <span class="material-symbols-outlined text-[18px]">bolt</span>
-                            Bắt đầu ôn tập ôn luyện
+                            Bắt đầu luyện tập chủ đề yếu
                         </a>
                     </div>
                 }

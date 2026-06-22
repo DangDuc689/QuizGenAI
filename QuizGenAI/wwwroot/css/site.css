@@ -3140,6 +3140,18 @@ main:has(.documents-page) {
 .dark .stitch-document-page p {
     color: #b9c7e0;
 }
+.dark .stitch-readable-text {
+    color: #b9c7e0 !important;
+}
+.dark .stitch-readable-text p {
+    color: #b9c7e0 !important;
+}
+.dark .stitch-readable-list {
+    color: #b9c7e0 !important;
+}
+.dark .stitch-readable-list li {
+    color: #b9c7e0 !important;
+}
 .dark .stitch-side-title h3 {
     color: #cad3ff;
 }

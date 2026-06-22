@@ -54,7 +54,7 @@ namespace QuizGenAI.Controllers
             _logger = logger;
         }
 
-        /// <summary>Dev test: gọi Gemini với prompt cực nhỏ để kiểm tra quota/rate limit.</summary>
+        // Dev test: gọi Gemini với prompt cực nhỏ để kiểm tra quota/rate limit.
         [HttpGet]
         public async Task<IActionResult> PingGemini()
         {
@@ -68,7 +68,7 @@ namespace QuizGenAI.Controllers
             return RedirectToAction("Index", new { quizSetId = id, returnUrl = returnUrl });
         }
 
-        /// <summary>Trang thi thử chính.</summary>
+        // Trang thi thử chính.
         public async Task<IActionResult> Index(int? quizSetId, int? id, string? returnUrl)
         {
             ViewData["ActivePage"] = "Exam";
@@ -186,7 +186,7 @@ namespace QuizGenAI.Controllers
             return View(quizSet);
         }
 
-        /// <summary>Trang kết quả hiển thị sau khi nộp bài.</summary>
+        // Trang kết quả hiển thị sau khi nộp bài.
         public async Task<IActionResult> Result(int sessionId, string? returnUrl)
         {
             ViewData["ActivePage"] = "History";
@@ -235,7 +235,7 @@ namespace QuizGenAI.Controllers
             return View(session);
         }
 
-        /// <summary>Trang tạo đề ôn tập.</summary>
+        // Trang tạo đề ôn tập.
         public async Task<IActionResult> Review()
         {
             ViewData["ActivePage"] = "Review";
@@ -276,7 +276,7 @@ namespace QuizGenAI.Controllers
             return View(documents);
         }
 
-        /// <summary>Lịch sử các lần thi thử.</summary>
+        // Lịch sử các lần thi thử.
         public async Task<IActionResult> History()
         {
             ViewData["ActivePage"] = "History";
@@ -321,7 +321,7 @@ namespace QuizGenAI.Controllers
             return View(model);
         }
 
-        /// <summary>AJAX: Tải nhanh tài liệu mới tại màn hình ôn tập.</summary>
+        // AJAX: Tải nhanh tài liệu mới tại màn hình ôn tập.
         [HttpPost]
         public async Task<IActionResult> QuickUpload(IFormFile file)
         {
@@ -338,9 +338,9 @@ namespace QuizGenAI.Controllers
                 return Json(new { success = false, message = "Chỉ hỗ trợ file PDF, DOCX hoặc TXT." });
             }
 
-            if (fileExtension == ".pdf" && file.Length > 15 * 1024 * 1024)
+            if (fileExtension == ".pdf" && file.Length > 10 * 1024 * 1024)
             {
-                return Json(new { success = false, message = "Kích thước file PDF vượt quá giới hạn cho phép (tối đa 15MB)." });
+                return Json(new { success = false, message = "Kích thước file PDF vượt quá giới hạn cho phép (tối đa 10MB)." });
             }
 
             var userId = _userManager.GetUserId(User);
@@ -381,7 +381,7 @@ namespace QuizGenAI.Controllers
                         HttpContext.RequestAborted);
 
                     extractedText = docxExtraction.ExtractedText;
-                    pageCount = GetWordPageCountFromMetadata(fullPath);
+                    pageCount = docxExtraction.PageCount;
                 }
                 else if (fileExtension == ".txt")
                 {
@@ -428,7 +428,7 @@ namespace QuizGenAI.Controllers
             }
         }
 
-        /// <summary>AJAX: Gọi AI sinh đề thi trắc nghiệm theo thang Bloom.</summary>
+        // AJAX: Gọi AI sinh đề thi trắc nghiệm theo thang Bloom.
         [HttpPost]
         public async Task<IActionResult> CreateQuizSet([FromBody] CreateQuizSetModel model)
         {
@@ -484,6 +484,15 @@ namespace QuizGenAI.Controllers
                 containsUrlDocument ? MaxUrlQuizContentCharacters : MaxQuizContentCharacters);
             // Làm sạch warning text/heading markers trước khi check và gửi AI
             var usefulTextForQuiz = RemoveDocxImageWarningText(mergedText);
+
+            // Logging để theo dõi smart sampling behavior
+            _logger.LogInformation(
+                "QuizSet content prepared. OriginalLength={OriginalLength}, ProcessedLength={ProcessedLength}, UsedSmartSampling={UsedSmartSampling}",
+                textBuilder.Length,
+                usefulTextForQuiz.Length,
+                textBuilder.Length > (containsUrlDocument ? MaxUrlQuizContentCharacters : MaxQuizContentCharacters) * 2
+            );
+
             if (string.IsNullOrWhiteSpace(usefulTextForQuiz))
             {
                 return Json(new { success = false, message = EmptyAiContentMessage });
@@ -512,26 +521,11 @@ namespace QuizGenAI.Controllers
 
             try
             {
-                byte[]? pdfBytes = null;
-                if (documents.Count == 1 && documents[0].SourceType == DocumentSourceType.PDF && !string.IsNullOrWhiteSpace(documents[0].FilePath))
-                {
-                    try
-                    {
-                        var physicalPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", documents[0].FilePath!.TrimStart('/'));
-                        if (System.IO.File.Exists(physicalPath))
-                        {
-                            pdfBytes = await System.IO.File.ReadAllBytesAsync(physicalPath);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to read physical PDF file: {FilePath}", documents[0].FilePath);
-                    }
-                }
+                byte[]? pdfBytes = null; // Luôn để null để tối ưu hóa việc sinh quiz bằng text trích xuất từ database
 
-                // Gọi AI sinh câu hỏi - dùng usefulTextForQuiz (đã cleaned) thay vì mergedText
+                // Gọi AI sinh câu hỏi - dùng usefulTextForQuiz (đã cleaned)
                 var generatedQuestions = await _geminiService.GenerateQuestionsAsync(
-                    pdfBytes != null ? string.Empty : usefulTextForQuiz,
+                    usefulTextForQuiz,
                     model.TotalQuestions,
                     model.BloomRememberPercent,
                     model.BloomUnderstandPercent,
@@ -1210,6 +1204,14 @@ namespace QuizGenAI.Controllers
                 return normalized;
             }
 
+            // Nếu tài liệu dài > 2x maxCharacters → dùng smart sampling để tăng coverage
+            // Ví dụ: tài liệu 30k ký tự với limit 12k → sampling để phân bổ đều khắp tài liệu
+            if (normalized.Length > maxCharacters * 2)
+            {
+                return SmartSampleContent(normalized, maxCharacters);
+            }
+
+            // Giữ nguyên logic cũ cho tài liệu ngắn (12k-24k ký tự) - backward compatible
             var trimmed = normalized[..maxCharacters];
             var lastParagraphBreak = trimmed.LastIndexOf("\n\n", StringComparison.Ordinal);
             var lastSentenceBreak = Math.Max(
@@ -1225,6 +1227,59 @@ namespace QuizGenAI.Controllers
                     : maxCharacters;
 
             return trimmed[..cutIndex].Trim() + "\n\n[Nội dung đã được rút gọn trước khi gửi AI để tránh quá tải.]";
+        }
+
+        private static string SmartSampleContent(string text, int maxCharacters)
+        {
+            const int numSamples = 5; // Chia tài liệu thành 5 phần
+            int partSize = text.Length / numSamples;
+            int sampleSize = maxCharacters / numSamples; // Mỗi phần lấy ~2400 ký tự (với 12k limit)
+
+            var samples = new StringBuilder();
+            int totalSampled = 0;
+
+            for (int i = 0; i < numSamples; i++)
+            {
+                int start = i * partSize;
+
+                // Tránh vượt quá độ dài text
+                if (start >= text.Length)
+                    break;
+
+                int remaining = Math.Min(sampleSize, text.Length - start);
+                remaining = Math.Min(remaining, maxCharacters - totalSampled);
+
+                if (remaining <= 0)
+                    break;
+
+                var sample = text.Substring(start, remaining);
+
+                // Tìm điểm ngắt tự nhiên: ưu tiên đoạn văn, sau đó câu
+                var lastParagraphBreak = sample.LastIndexOf("\n\n", StringComparison.Ordinal);
+                var lastSentenceBreak = Math.Max(
+                    sample.LastIndexOf(". ", StringComparison.Ordinal),
+                    Math.Max(
+                        sample.LastIndexOf("? ", StringComparison.Ordinal),
+                        sample.LastIndexOf("! ", StringComparison.Ordinal)));
+
+                // Chỉ cắt nếu điểm ngắt nằm sau 50% sample (tránh mất quá nhiều nội dung)
+                var cutIndex = lastParagraphBreak > remaining * 0.5
+                    ? lastParagraphBreak
+                    : lastSentenceBreak > remaining * 0.5
+                        ? lastSentenceBreak + 1
+                        : remaining;
+
+                sample = sample[..cutIndex].Trim();
+
+                if (!string.IsNullOrWhiteSpace(sample))
+                {
+                    samples.AppendLine(sample);
+                    samples.AppendLine(); // Ngăn cách giữa các phần
+                    totalSampled += sample.Length + 2; // +2 cho \n\n
+                }
+            }
+
+            return samples.ToString().Trim();
         }
 
         private static string NormalizeQuizText(string text)
@@ -1344,20 +1399,6 @@ namespace QuizGenAI.Controllers
             }
         }
 
-        private static int GetWordPageCountFromMetadata(string filePath)
-        {
-            try
-            {
-                using var wordDocument = WordprocessingDocument.Open(filePath, false);
-                var pagesText = wordDocument.ExtendedFilePropertiesPart?.Properties?.Pages?.InnerText;
-                if (int.TryParse(pagesText, out var pageCount) && pageCount > 0)
-                {
-                    return pageCount;
-                }
-            }
-            catch { }
-            return 1;
-        }
 
         private static string FormatFileSize(long? bytes)
         {

@@ -131,9 +131,9 @@ namespace QuizGenAI.Controllers
                     return View();
                 }
 
-                if (fileExtension == ".pdf" && UploadedFile.Length > 15 * 1024 * 1024)
+                if (fileExtension == ".pdf" && UploadedFile.Length > 10 * 1024 * 1024)
                 {
-                    ModelState.AddModelError("UploadedFile", "Kích thước file PDF vượt quá giới hạn cho phép (tối đa 15MB).");
+                    ModelState.AddModelError("UploadedFile", "Kích thước file PDF vượt quá giới hạn cho phép (tối đa 10MB).");
                     return View();
                 }
             }
@@ -205,7 +205,7 @@ namespace QuizGenAI.Controllers
                         HttpContext.RequestAborted);
 
                     extractedTextFromFile = docxExtraction.ExtractedText;
-                    pageCount = GetWordPageCountFromMetadata(fullPath);     
+                    pageCount = docxExtraction.PageCount;
                 }
             }
 
@@ -431,21 +431,5 @@ namespace QuizGenAI.Controllers
                 : extractedText;
         }
 
-        private static int GetWordPageCountFromMetadata(string filePath)
-        {
-            using var wordDocument = WordprocessingDocument.Open(filePath, false);
-
-            var pagesText = wordDocument.ExtendedFilePropertiesPart?
-                .Properties?
-                .Pages?
-                .InnerText;
-
-            if (int.TryParse(pagesText, out var pageCount) && pageCount > 0)
-            {
-                return pageCount;
-            }
-
-            return 1;
-        }
     }
 }
