@@ -1,0 +1,25 @@
+<!-- Question Map Sidebar -->
+<aside class="hidden lg:flex w-sidebar-width shrink-0 border-l border-slate-200 dark:border-outline-variant bg-surface-container-lowest dark:bg-on-secondary-fixed flex-col transition-colors duration-300">
+    <!-- Header -->
+    <div class="p-4 border-b border-slate-200 dark:border-outline-variant flex items-center gap-2">
+        <span class="material-symbols-outlined text-secondary dark:text-secondary-fixed-dim">grid_view</span>
+        <h3 class="font-button text-button text-on-surface dark:text-on-primary-container">Danh sách câu hỏi</h3>
+    </div>
+    
+    <!-- Question Grid (Dynamically Populated) -->
+    <div class="p-4 overflow-y-auto flex-1">
+        <div id="question-map-grid" class="grid grid-cols-4 gap-2">
+            <!-- Dynamic buttons will be injected here by exam.js -->
+        </div>
+    </div>
+    
+    <!-- Map Legend -->
+    <div class="p-4 border-t border-slate-200 dark:border-outline-variant bg-slate-50 dark:bg-surface-dim/20 flex flex-col gap-2 transition-colors duration-300">
+        <div class="flex items-center gap-2 font-caption text-caption text-secondary dark:text-secondary-fixed-dim">
+            <div class="w-3 h-3 rounded-sm bg-primary dark:bg-primary-container shadow-sm"></div> Đã trả lời
+        </div>
+        <div class="flex items-center gap-2 font-caption text-caption text-secondary dark:text-secondary-fixed-dim">
+            <div class="w-3 h-3 rounded-sm border border-slate-300 dark:border-outline-variant bg-white dark:bg-transparent"></div> Chưa trả lời
+        </div>
+    </div>
+</aside>

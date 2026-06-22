@@ -1,0 +1,26 @@
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Kiểm tra email";
+}
+
+<main class="auth-shell auth-shell-forgot">
+    <section class="auth-card auth-card-forgot">
+        <div class="auth-card-brand">
+            <a asp-controller="Home" asp-action="Index">QuizGen AI</a>
+            <p>Học tập xuất sắc</p>
+        </div>
+
+        <div class="auth-status-icon">
+            <span class="material-symbols-outlined">mark_email_read</span>
+        </div>
+
+        <div class="auth-panel-heading centered">
+            <h1>Kiểm tra email của bạn</h1>
+            <p>Nếu email tồn tại trong hệ thống, QuizGen AI đã gửi liên kết đặt lại mật khẩu đến hộp thư đó.</p>
+        </div>
+
+        <div style="display: flex; justify-content: center; margin-top: 1.5rem;">
+            <a class="auth-primary-button" style="width: auto; min-width: 190px;" href="/Identity/Account/Login">Quay lại đăng nhập</a>
+        </div>
+    </section>
+</main>

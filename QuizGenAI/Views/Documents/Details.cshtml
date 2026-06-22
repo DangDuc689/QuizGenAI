@@ -1,0 +1,1697 @@
+@model QuizGenAI.Models.Document
+
+@Html.AntiForgeryToken()
+
+@{
+    ViewData["Title"] = "Chi tiết tài liệu";
+
+    var textLength = Model.SourceType == QuizGenAI.Models.DocumentSourceType.PDF
+        ? RemovePdfMetadataBlock(Model.ExtractedText).Length
+        : (Model.ExtractedText?.Length ?? 0);
+
+    var estimatedQuestions = textLength switch
+    {
+        < 500 => "5 - 10 câu",
+        < 2000 => "10 - 20 câu",
+        < 5000 => "20 - 35 câu",
+        _ => "35 - 50 câu"
+    };
+
+    var contentLevel = textLength switch
+    {
+        < 1000 => "Cơ bản",
+        < 4000 => "Trung bình",
+        _ => "Nâng cao"
+    };
+
+    var mainTopic = Model.Title;
+
+    var badgeClass = Model.SourceType switch
+    {
+        QuizGenAI.Models.DocumentSourceType.PDF => "pdf",
+        QuizGenAI.Models.DocumentSourceType.Word => "word",
+        QuizGenAI.Models.DocumentSourceType.URL => "url",
+        QuizGenAI.Models.DocumentSourceType.Excel => "excel",
+        _ => "text"
+    };
+
+    var isUrlDocument = Model.SourceType == QuizGenAI.Models.DocumentSourceType.URL;
+    var isPdfDocument = Model.SourceType == QuizGenAI.Models.DocumentSourceType.PDF;
+    var rawExtractedText = Model.ExtractedText ?? string.Empty;
+    var pdfMetadata = isPdfDocument
+        ? ParsePdfExtractionMetadata(rawExtractedText)
+        : null;
+    var extractedText = isPdfDocument
+        ? RemovePdfMetadataBlock(rawExtractedText)
+        : rawExtractedText;
+    var hasExtractedText = !string.IsNullOrWhiteSpace(extractedText);
+    var normalTextSectionHeading = isPdfDocument
+        ? QuizGenAI.Services.PdfExtractionService.NormalTextSectionHeading
+        : QuizGenAI.Services.DocxExtractionService.NormalTextSectionHeading;
+    var imageTextSectionHeading = isPdfDocument
+        ? QuizGenAI.Services.PdfExtractionService.ImageTextSectionHeading
+        : QuizGenAI.Services.DocxExtractionService.ImageTextSectionHeading;
+    var imageUnreadableMessage = isPdfDocument
+        ? QuizGenAI.Services.PdfExtractionService.ImageUnreadableMessage
+        : QuizGenAI.Services.DocxExtractionService.ImageUnreadableMessage;
+    var imageVisionTroubleshootingMessage = isPdfDocument
+        ? "__PDF_IMAGE_VISION_TROUBLESHOOTING_UNUSED__"
+        : QuizGenAI.Services.DocxExtractionService.ImageVisionTroubleshootingMessage;
+    var sourceTextSectionTitle = isPdfDocument
+        ? "Nội dung văn bản trích xuất từ PDF"
+        : "Nội dung văn bản trích xuất từ Word";
+    var imageTextSectionTitle = isPdfDocument
+        ? "Nội dung nhận diện từ hình ảnh trong PDF"
+        : "Nội dung nhận diện từ hình ảnh trong tài liệu";
+    var imageSectionStart = extractedText.IndexOf(imageTextSectionHeading, StringComparison.Ordinal);
+    var hasImageTextSection = imageSectionStart >= 0;
+    var normalExtractedText = extractedText;
+    var imageExtractedText = string.Empty;
+
+    if (hasImageTextSection)
+    {
+        normalExtractedText = extractedText[..imageSectionStart].Trim();
+        imageExtractedText = extractedText[(imageSectionStart + imageTextSectionHeading.Length)..].Trim();
+
+        if (normalExtractedText.StartsWith(normalTextSectionHeading, StringComparison.Ordinal))
+        {
+            normalExtractedText = normalExtractedText[normalTextSectionHeading.Length..].Trim();
+        }
+    }
+
+    var cleanNormalText = CleanDocumentTextForCounting(normalExtractedText, imageUnreadableMessage, imageVisionTroubleshootingMessage);
+    var cleanImageTextForDisplay = CleanImageTextForDisplay(imageExtractedText, imageUnreadableMessage, imageVisionTroubleshootingMessage);
+    var normalUsefulWords = CountUsefulWords(cleanNormalText);
+    var imageUsefulWords = CountUsefulWords(cleanImageTextForDisplay);
+    var hasPdfMetadata = pdfMetadata?.IsPresent == true;
+    var pdfHasEnoughRawText = hasPdfMetadata
+        ? pdfMetadata!.HasEnoughRawText
+        : normalUsefulWords >= 80 || HasEnoughMathLearningSignals(cleanNormalText);
+    var metadataHasImageContent = hasPdfMetadata && pdfMetadata!.HasImageContent;
+    var parsedReadableImageCount = CountReadableImageSections(imageExtractedText);
+    var parsedDetectedImageCount = GetDetectedImageCount(imageExtractedText, parsedReadableImageCount, hasImageTextSection);
+    var readableImageCount = isPdfDocument && hasPdfMetadata
+        ? pdfMetadata!.RecognizedImageCount
+        : parsedReadableImageCount;
+    var detectedImageCount = isPdfDocument && hasPdfMetadata
+        ? (metadataHasImageContent ? Math.Max(pdfMetadata!.DetectedImageCount, readableImageCount) : 0)
+        : parsedDetectedImageCount;
+    var imageTextHasUnreadableMessage = imageExtractedText.Contains(imageUnreadableMessage, StringComparison.OrdinalIgnoreCase);
+    var hasReadableImageText = isPdfDocument && hasPdfMetadata
+        ? metadataHasImageContent
+        : hasImageTextSection
+            && !string.IsNullOrWhiteSpace(cleanImageTextForDisplay)
+            && !imageTextHasUnreadableMessage;
+    var normalTextIsShort = isPdfDocument
+        ? hasReadableImageText && !pdfHasEnoughRawText
+        : hasImageTextSection && hasReadableImageText && normalUsefulWords < 80;
+    var mainUsefulWords = CountUsefulWords($"{cleanNormalText} {cleanImageTextForDisplay}");
+    var contentTypeLabel = (isUrlDocument, hasExtractedText, hasImageTextSection, normalUsefulWords < 80) switch
+    {
+        (true, true, _, _) => "Văn bản từ liên kết",
+        (true, false, _, _) => "Chưa lấy được nội dung",
+        (_, _, false, _) => "Văn bản",
+        (_, _, true, true) => "Chủ yếu là hình ảnh",
+        _ => "Văn bản + hình ảnh"
+    };
+    var mainContentSource = (isUrlDocument, hasExtractedText, hasImageTextSection, normalTextIsShort, hasReadableImageText && normalUsefulWords >= 80) switch
+    {
+        (true, true, _, _, _) => "Văn bản từ liên kết",
+        (true, false, _, _, _) => "Liên kết URL",
+        (_, _, false, _, _) => "Văn bản",
+        (_, _, true, true, _) => "Hình ảnh",
+        (_, _, true, _, true) => "Văn bản + hình ảnh",
+        _ => "Văn bản"
+    };
+    if (isPdfDocument)
+    {
+        if (hasReadableImageText)
+        {
+            contentTypeLabel = pdfHasEnoughRawText
+                ? "Văn bản + hình ảnh"
+                : "Chủ yếu là hình ảnh";
+            mainContentSource = pdfHasEnoughRawText
+                ? "Văn bản + hình ảnh"
+                : "Hình ảnh";
+        }
+        else
+        {
+            contentTypeLabel = "Văn bản";
+            mainContentSource = "Văn bản";
+            detectedImageCount = 0;
+            readableImageCount = 0;
+        }
+    }
+
+    var quizLearningText = $"{cleanNormalText} {cleanImageTextForDisplay}";
+    var hasMathLearningSignals = HasEnoughMathLearningSignals(quizLearningText);
+    var hasEnoughQuizContent = mainUsefulWords >= 80 || hasMathLearningSignals;
+    var contentTypeHasImages = hasReadableImageText;
+    var quizContentStatus = !hasEnoughQuizContent
+        ? "Chưa đủ nội dung"
+        : mainUsefulWords < 200
+            ? "Đủ tạo quiz cơ bản"
+            : "Đủ nội dung";
+    var quizStatusClass = !hasEnoughQuizContent
+        ? "danger"
+        : mainUsefulWords < 200
+            ? "warning"
+            : "success";
+    var usageSuggestionTitle = quizStatusClass switch
+    {
+        "danger" => "Cần bổ sung nội dung",
+        "warning" => "Phù hợp tạo quiz cơ bản",
+        _ => "Sẵn sàng tạo quiz"
+    };
+    var usageSuggestionText = quizStatusClass switch
+    {
+        "danger" => "Tài liệu hiện còn ít nội dung học tập. Bạn nên bổ sung thêm văn bản, dùng ảnh rõ chữ hơn hoặc nhập thêm nội dung bằng Paste Text để AI tạo đề chính xác hơn.",
+        "warning" => "Tài liệu có thể tạo quiz ở mức cơ bản. Nên chọn số lượng câu hỏi vừa phải để tránh AI phải suy luận quá nhiều ngoài nội dung tài liệu.",
+        _ => "Tài liệu có đủ nội dung để tạo quiz. Bạn có thể tạo bộ đề với số lượng câu hỏi nhiều hơn và phân bổ mức độ Bloom phù hợp."
+    };
+    var usageSuggestionHint = contentTypeHasImages
+        ? "Với tài liệu dạng ảnh, hãy ưu tiên ảnh rõ nét, không bị cắt chữ và có đủ ngữ cảnh học tập."
+        : "Với tài liệu dạng văn bản, nội dung càng rõ chủ đề thì câu hỏi AI tạo ra càng sát tài liệu.";
+    var urlLooksLikePdf = isUrlDocument
+        && !string.IsNullOrWhiteSpace(Model.SourceUrl)
+        && Model.SourceUrl.Contains(".pdf", StringComparison.OrdinalIgnoreCase);
+    var urlExtractionWarning = urlLooksLikePdf
+        ? "Hiện tại hệ thống chưa trích xuất trực tiếp PDF từ URL. Bạn có thể tải PDF về và upload file PDF để AI đọc nội dung."
+        : "Không lấy được nội dung học tập rõ ràng từ liên kết này. Bạn có thể mở link gốc, copy nội dung và dùng Paste Text hoặc upload file.";
+    var emptyDocumentPreviewMessage = Model.SourceType == QuizGenAI.Models.DocumentSourceType.Word
+        ? "Chưa trích xuất được nội dung văn bản hoặc nội dung ảnh từ tài liệu Word này."
+        : "Chưa có nội dung xem trước cho tài liệu này.";
+}
+
+@functions {
+    private sealed class PdfExtractionMetadata
+    {
+        public bool IsPresent { get; init; }
+        public int PageCount { get; init; }
+        public int RawTextLength { get; init; }
+        public bool HasEnoughRawText { get; init; }
+        public bool IsScanPdf { get; init; }
+        public int TotalImageCount { get; init; }
+        public int DetectedImageCount { get; init; }
+        public int ProcessedImageCount { get; init; }
+        public int RecognizedImageCount { get; init; }
+        public bool HasImageContent { get; init; }
+    }
+
+    private static PdfExtractionMetadata? ParsePdfExtractionMetadata(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var metadataText = ExtractPdfMetadataBlock(text);
+        if (string.IsNullOrWhiteSpace(metadataText))
+        {
+            return null;
+        }
+
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var line in metadataText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separatorIndex = line.IndexOf('=', StringComparison.Ordinal);
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            values[line[..separatorIndex].Trim()] = line[(separatorIndex + 1)..].Trim();
+        }
+
+        return new PdfExtractionMetadata
+        {
+            IsPresent = true,
+            PageCount = GetMetadataInt(values, "PageCount"),
+            RawTextLength = GetMetadataInt(values, "RawTextLength"),
+            HasEnoughRawText = GetMetadataBool(values, "HasEnoughRawText"),
+            IsScanPdf = GetMetadataBool(values, "IsScanPdf"),
+            TotalImageCount = GetMetadataInt(values, "TotalImageCount"),
+            DetectedImageCount = GetMetadataInt(values, "DetectedImageCount"),
+            ProcessedImageCount = GetMetadataInt(values, "ProcessedImageCount"),
+            RecognizedImageCount = GetMetadataInt(values, "RecognizedImageCount"),
+            HasImageContent = GetMetadataBool(values, "HasImageContent")
+        };
+    }
+
+    private static string RemovePdfMetadataBlock(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        var start = text.IndexOf(QuizGenAI.Services.PdfExtractionService.MetadataSectionHeading, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return text.Trim();
+        }
+
+        var end = text.IndexOf(
+            QuizGenAI.Services.PdfExtractionService.MetadataSectionEndHeading,
+            start,
+            StringComparison.Ordinal);
+
+        if (end < 0)
+        {
+            return text[..start].Trim();
+        }
+
+        end += QuizGenAI.Services.PdfExtractionService.MetadataSectionEndHeading.Length;
+
+        return (text[..start] + text[end..]).Trim();
+    }
+
+    private static string? ExtractPdfMetadataBlock(string text)
+    {
+        var start = text.IndexOf(QuizGenAI.Services.PdfExtractionService.MetadataSectionHeading, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            return null;
+        }
+
+        start += QuizGenAI.Services.PdfExtractionService.MetadataSectionHeading.Length;
+
+        var end = text.IndexOf(
+            QuizGenAI.Services.PdfExtractionService.MetadataSectionEndHeading,
+            start,
+            StringComparison.Ordinal);
+
+        if (end < 0)
+        {
+            return text[start..].Trim();
+        }
+
+        return text[start..end].Trim();
+    }
+
+    private static int GetMetadataInt(IReadOnlyDictionary<string, string> values, string key)
+    {
+        return values.TryGetValue(key, out var value) && int.TryParse(value, out var number)
+            ? number
+            : 0;
+    }
+
+    private static bool GetMetadataBool(IReadOnlyDictionary<string, string> values, string key)
+    {
+        return values.TryGetValue(key, out var value) && bool.TryParse(value, out var flag) && flag;
+    }
+
+    private static int CountUsefulWords(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return 0;
+        }
+
+        return System.Text.RegularExpressions.Regex.Matches(text, @"\b[\p{L}\p{N}]{2,}\b").Count;
+    }
+
+    private static bool HasEnoughMathLearningSignals(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var normalized = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
+        var compactLength = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s+", string.Empty).Length;
+
+        if (compactLength < 12)
+        {
+            return false;
+        }
+
+        var signalCount = 0;
+
+        signalCount += System.Text.RegularExpressions.Regex.Matches(
+            normalized,
+            @"[\p{L}\p{N}]\s*[=+\-*/÷×]\s*[\p{L}\p{N}]",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant).Count;
+
+        signalCount += System.Text.RegularExpressions.Regex.Matches(
+            normalized,
+            @"\b\d+\s*/\s*\d+\b|\\frac\s*\{|[¼½¾⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant).Count;
+
+        signalCount += System.Text.RegularExpressions.Regex.Matches(
+            normalized,
+            @"\b(?:[\p{L}\p{N}]\s*\^\s*\d+|\d+\s*\^\s*[\p{L}\p{N}])|[⁰¹²³⁴⁵⁶⁷⁸⁹]",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant).Count;
+
+        signalCount += System.Text.RegularExpressions.Regex.Matches(
+            normalized,
+            @"√|\\sqrt|π|∞|≤|≥|≠|≈|∑|∫|∆|Δ|α|β|γ|θ|\b(?:sin|cos|tan|log|ln)\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant).Count;
+
+        return signalCount >= 3;
+    }
+
+    private static string CleanDocumentTextForCounting(
+        string? text,
+        string imageUnreadableMessage,
+        string imageVisionTroubleshootingMessage)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        var cleaned = text
+            .Replace(QuizGenAI.Services.DocxExtractionService.NormalTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.DocxExtractionService.ImageTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.DocxExtractionService.WordTableStartMarker, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.DocxExtractionService.WordTableEndMarker, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.UrlExtractionService.UrlTableStartMarker, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.UrlExtractionService.UrlTableEndMarker, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.PdfExtractionService.NormalTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.PdfExtractionService.ImageTextSectionHeading, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.PdfExtractionService.ScannedPdfMessage, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(QuizGenAI.Services.PdfExtractionService.ImageUnreadableMessage, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(imageUnreadableMessage, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace(imageVisionTroubleshootingMessage, " ", StringComparison.OrdinalIgnoreCase)
+            .Replace("KHONG_DOC_DUOC_NOI_DUNG_ANH", " ", StringComparison.OrdinalIgnoreCase);
+
+        cleaned = RemovePdfMetadataBlock(cleaned);
+
+        cleaned = System.Text.RegularExpressions.Regex.Replace(
+            cleaned,
+            @"(?:^|\r?\n)\s*Ghi chú(?: kỹ thuật)?:[^\r\n]*",
+            " ",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        cleaned = System.Text.RegularExpressions.Regex.Replace(
+            cleaned,
+            @"\(Không có nội dung văn bản thường được trích xuất từ Word\.\)",
+            " ",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        cleaned = System.Text.RegularExpressions.Regex.Replace(
+            cleaned,
+            @"\(KhÃ´ng cÃ³ ná»™i dung vÄƒn báº£n .*PDF\.\)",
+            " ",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        return cleaned.Trim();
+    }
+
+    private static string CleanImageTextForDisplay(
+        string? imageText,
+        string imageUnreadableMessage,
+        string imageVisionTroubleshootingMessage)
+    {
+        var cleaned = CleanDocumentTextForCounting(
+            imageText,
+            imageUnreadableMessage,
+            imageVisionTroubleshootingMessage);
+
+        return string.IsNullOrWhiteSpace(cleaned)
+            ? string.Empty
+            : cleaned.Trim();
+    }
+
+    private static int CountReadableImageSections(string? imageText)
+    {
+        if (string.IsNullOrWhiteSpace(imageText))
+        {
+            return 0;
+        }
+
+        return System.Text.RegularExpressions.Regex.Matches(
+            imageText,
+            @"(?:^|\r?\n)\s*Ảnh\s+\d+\s*:",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant).Count;
+    }
+
+    private static int GetDetectedImageCount(string? imageText, int readableImageCount, bool hasImageTextSection)
+    {
+        if (!hasImageTextSection)
+        {
+            return 0;
+        }
+
+        if (!string.IsNullOrWhiteSpace(imageText))
+        {
+            var totalMatch = System.Text.RegularExpressions.Regex.Match(
+                imageText,
+                @"tài liệu có\s+(\d+)\s+ảnh",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+            if (totalMatch.Success && int.TryParse(totalMatch.Groups[1].Value, out var totalImages) && totalImages > 0)
+            {
+                return Math.Max(totalImages, readableImageCount);
+            }
+
+            var technicalMatch = System.Text.RegularExpressions.Regex.Match(
+                imageText,
+                @"đã gửi\s+(\d+)\s+ảnh cho AI;\s*bỏ qua\s+(\d+)\s+ảnh[^;]*;\s*(\d+)\s+ảnh lỗi",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+            if (technicalMatch.Success &&
+                int.TryParse(technicalMatch.Groups[1].Value, out var processed) &&
+                int.TryParse(technicalMatch.Groups[2].Value, out var skipped) &&
+                int.TryParse(technicalMatch.Groups[3].Value, out var failed))
+            {
+                return Math.Max(processed + skipped + failed, readableImageCount);
+            }
+        }
+
+        return Math.Max(readableImageCount, 1);
+    }
+
+    private static Microsoft.AspNetCore.Html.IHtmlContent RenderReadableDocumentText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return new Microsoft.AspNetCore.Html.HtmlString(string.Empty);
+        }
+
+        var normalized = text
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Trim();
+        var html = new System.Text.StringBuilder();
+        var paragraphLines = new List<string>();
+        var isInList = false;
+
+        var lines = normalized.Split('\n');
+
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        {
+            var line = lines[lineIndex].Trim();
+
+            if (TryGetTableEndMarker(line, out var tableEndMarker))
+            {
+                AppendParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+                CloseListHtml(html, ref isInList);
+
+                var tableRows = new List<IReadOnlyList<string>>();
+                lineIndex++;
+
+                while (lineIndex < lines.Length)
+                {
+                    var tableLine = lines[lineIndex].Trim();
+
+                    if (tableLine.Equals(tableEndMarker, StringComparison.OrdinalIgnoreCase))
+                    {
+                        break;
+                    }
+
+                    if (TryGetWordTableRowCells(tableLine, out var cells))
+                    {
+                        tableRows.Add(cells);
+                    }
+
+                    lineIndex++;
+                }
+
+                AppendWordTableHtml(html, tableRows);
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                AppendParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+                CloseListHtml(html, ref isInList);
+                continue;
+            }
+
+            if (TryGetListItemText(line, out var listItemText))
+            {
+                AppendParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+
+                if (!isInList)
+                {
+                    html.Append("<ul class=\"stitch-readable-list\">");
+                    isInList = true;
+                }
+
+                html.Append("<li>");
+                html.Append(System.Net.WebUtility.HtmlEncode(listItemText));
+                html.Append("</li>");
+                continue;
+            }
+
+            CloseListHtml(html, ref isInList);
+            paragraphLines.Add(line);
+        }
+
+        AppendParagraphHtml(html, paragraphLines);
+        CloseListHtml(html, ref isInList);
+
+        return new Microsoft.AspNetCore.Html.HtmlString(html.ToString());
+    }
+
+    private static bool TryGetTableEndMarker(string line, out string tableEndMarker)
+    {
+        if (line.Equals(QuizGenAI.Services.DocxExtractionService.WordTableStartMarker, StringComparison.OrdinalIgnoreCase))
+        {
+            tableEndMarker = QuizGenAI.Services.DocxExtractionService.WordTableEndMarker;
+            return true;
+        }
+
+        if (line.Equals(QuizGenAI.Services.UrlExtractionService.UrlTableStartMarker, StringComparison.OrdinalIgnoreCase))
+        {
+            tableEndMarker = QuizGenAI.Services.UrlExtractionService.UrlTableEndMarker;
+            return true;
+        }
+
+        tableEndMarker = string.Empty;
+        return false;
+    }
+
+    private static void AppendWordTableHtml(System.Text.StringBuilder html, IReadOnlyList<IReadOnlyList<string>> rows)
+    {
+        if (rows.Count == 0)
+        {
+            return;
+        }
+
+        var maxColumnCount = rows.Max(row => row.Count);
+        if (maxColumnCount == 0)
+        {
+            return;
+        }
+
+        var hasHeader = IsLikelyHeaderRow(rows[0], rows.Skip(1));
+        var bodyStartIndex = hasHeader ? 1 : 0;
+
+        html.Append("<div class=\"stitch-word-table-wrap\"><table class=\"stitch-word-table\">");
+
+        if (hasHeader)
+        {
+            html.Append("<thead><tr>");
+            AppendTableCellsHtml(html, rows[0], maxColumnCount, "th");
+            html.Append("</tr></thead>");
+        }
+
+        html.Append("<tbody>");
+
+        for (var rowIndex = bodyStartIndex; rowIndex < rows.Count; rowIndex++)
+        {
+            html.Append("<tr>");
+            AppendTableCellsHtml(html, rows[rowIndex], maxColumnCount, "td");
+            html.Append("</tr>");
+        }
+
+        html.Append("</tbody></table></div>");
+    }
+
+    private static void AppendTableCellsHtml(
+        System.Text.StringBuilder html,
+        IReadOnlyList<string> cells,
+        int maxColumnCount,
+        string cellTagName)
+    {
+        for (var columnIndex = 0; columnIndex < maxColumnCount; columnIndex++)
+        {
+            var cellText = columnIndex < cells.Count
+                ? cells[columnIndex]
+                : string.Empty;
+
+            html.Append('<');
+            html.Append(cellTagName);
+            html.Append('>');
+            html.Append(System.Net.WebUtility.HtmlEncode(cellText));
+            html.Append("</");
+            html.Append(cellTagName);
+            html.Append('>');
+        }
+    }
+
+    private static bool IsLikelyHeaderRow(IReadOnlyList<string> firstRow, IEnumerable<IReadOnlyList<string>> remainingRows)
+    {
+        if (firstRow.Count == 0 || firstRow.All(string.IsNullOrWhiteSpace))
+        {
+            return false;
+        }
+
+        var firstRowText = string.Join(" ", firstRow).Trim();
+        var headerKeywordCount = System.Text.RegularExpressions.Regex.Matches(
+            firstRowText,
+            @"\b(?:STT|Mã|Ma|Tên|Ten|Học|Hoc|phần|phan|Số|So|tín|tin|chỉ|chi|Môn|Mon|Kỳ|Ky|Loại|Loai|Ghi chú|Ghi chu)\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant).Count;
+
+        if (headerKeywordCount >= 2)
+        {
+            return true;
+        }
+
+        var firstRowHasLetters = firstRow.Any(cell => System.Text.RegularExpressions.Regex.IsMatch(cell, @"\p{L}"));
+        var laterRowsLookDataLike = remainingRows
+            .Take(3)
+            .Any(row => row.Any(cell => System.Text.RegularExpressions.Regex.IsMatch(cell, @"\d")));
+
+        return firstRowHasLetters && laterRowsLookDataLike;
+    }
+
+    private static bool TryGetWordTableRowCells(string line, out IReadOnlyList<string> cells)
+    {
+        cells = Array.Empty<string>();
+
+        if (string.IsNullOrWhiteSpace(line) || !line.StartsWith('|') || !line.EndsWith('|'))
+        {
+            return false;
+        }
+
+        var parsedCells = line
+            .Trim('|')
+            .Split('|')
+            .Select(cell => cell.Trim())
+            .ToList();
+
+        if (parsedCells.Count == 0 || parsedCells.All(string.IsNullOrWhiteSpace))
+        {
+            return false;
+        }
+
+        cells = parsedCells;
+        return true;
+    }
+
+    private static void AppendParagraphHtml(System.Text.StringBuilder html, IReadOnlyList<string> paragraphLines)
+    {
+        if (paragraphLines.Count == 0)
+        {
+            return;
+        }
+
+        html.Append("<p>");
+
+        for (var index = 0; index < paragraphLines.Count; index++)
+        {
+            if (index > 0)
+            {
+                html.Append("<br />");
+            }
+
+            html.Append(System.Net.WebUtility.HtmlEncode(paragraphLines[index]));
+        }
+
+        html.Append("</p>");
+    }
+
+    private static void CloseListHtml(System.Text.StringBuilder html, ref bool isInList)
+    {
+        if (!isInList)
+        {
+            return;
+        }
+
+        html.Append("</ul>");
+        isInList = false;
+    }
+
+    private static bool TryGetListItemText(string line, out string listItemText)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(
+            line,
+            @"^\s*(?:[-*]\s+|\u2022\s+|\d+[\.)]\s+)(.+)$",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        listItemText = match.Success
+            ? match.Groups[1].Value.Trim()
+            : string.Empty;
+
+        return !string.IsNullOrWhiteSpace(listItemText);
+    }
+
+    private static string ProcessInlineMarkdown(string encodedText)
+    {
+        if (string.IsNullOrEmpty(encodedText)) return encodedText;
+        var boldProcessed = System.Text.RegularExpressions.Regex.Replace(
+            encodedText,
+            @"\*\*(?=\S)(.+?)(?<=\S)\*\*",
+            "<strong>$1</strong>");
+        var italicProcessed = System.Text.RegularExpressions.Regex.Replace(
+            boldProcessed,
+            @"\*(?=\S)(.+?)(?<=\S)\*",
+            "<em>$1</em>");
+        return italicProcessed;
+    }
+
+    private static bool IsMarkdownTableRow(string line)
+    {
+        var trimmed = line.Trim();
+        return trimmed.StartsWith('|') && trimmed.EndsWith('|') && trimmed.Length > 1;
+    }
+
+    private static bool IsMarkdownTableSeparator(string line)
+    {
+        var trimmed = line.Trim();
+        if (!trimmed.StartsWith('|') || !trimmed.EndsWith('|')) return false;
+        return System.Text.RegularExpressions.Regex.IsMatch(trimmed, @"^\|(?:\s*:?-+:?\s*\|)+$");
+    }
+
+    private static IReadOnlyList<string> ParseMarkdownTableCell(string line)
+    {
+        var trimmed = line.Trim();
+        var content = trimmed;
+        if (content.StartsWith('|')) content = content[1..];
+        if (content.EndsWith('|')) content = content[..^1];
+        return content.Split('|').Select(c => c.Trim()).ToList();
+    }
+
+    private static void AppendPdfTableHtml(System.Text.StringBuilder html, IReadOnlyList<IReadOnlyList<string>> rows)
+    {
+        if (rows.Count == 0) return;
+        var maxColumnCount = rows.Max(row => row.Count);
+        if (maxColumnCount == 0) return;
+        
+        html.Append("<div class=\"stitch-word-table-wrap\"><table class=\"stitch-word-table\">");
+        
+        var hasHeader = rows.Count > 1;
+        var bodyStartIndex = 0;
+        
+        if (hasHeader)
+        {
+            html.Append("<thead><tr>");
+            var headerCells = rows[0];
+            for (var colIndex = 0; colIndex < maxColumnCount; colIndex++)
+            {
+                var cellText = colIndex < headerCells.Count ? headerCells[colIndex] : string.Empty;
+                var encoded = System.Net.WebUtility.HtmlEncode(cellText);
+                html.Append("<th>").Append(ProcessInlineMarkdown(encoded)).Append("</th>");
+            }
+            html.Append("</tr></thead>");
+            bodyStartIndex = 1;
+        }
+        
+        html.Append("<tbody>");
+        for (var rowIndex = bodyStartIndex; rowIndex < rows.Count; rowIndex++)
+        {
+            html.Append("<tr>");
+            var cells = rows[rowIndex];
+            for (var colIndex = 0; colIndex < maxColumnCount; colIndex++)
+            {
+                var cellText = colIndex < cells.Count ? cells[colIndex] : string.Empty;
+                var encoded = System.Net.WebUtility.HtmlEncode(cellText);
+                html.Append("<td>").Append(ProcessInlineMarkdown(encoded)).Append("</td>");
+            }
+            html.Append("</tr>");
+        }
+        html.Append("</tbody></table></div>");
+    }
+
+    private static void AppendPdfParagraphHtml(System.Text.StringBuilder html, IReadOnlyList<string> paragraphLines)
+    {
+        if (paragraphLines.Count == 0) return;
+        
+        html.Append("<p>");
+        for (var index = 0; index < paragraphLines.Count; index++)
+        {
+            if (index > 0)
+            {
+                html.Append("<br />");
+            }
+            var encoded = System.Net.WebUtility.HtmlEncode(paragraphLines[index]);
+            html.Append(ProcessInlineMarkdown(encoded));
+        }
+        html.Append("</p>");
+    }
+
+    private static Microsoft.AspNetCore.Html.IHtmlContent RenderPdfTextWithFormatting(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return new Microsoft.AspNetCore.Html.HtmlString(string.Empty);
+        }
+
+        var normalized = text
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Trim();
+        var html = new System.Text.StringBuilder();
+        var paragraphLines = new List<string>();
+        var isInList = false;
+        var isInTable = false;
+        var tableRows = new List<IReadOnlyList<string>>();
+
+        var lines = normalized.Split('\n');
+
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+        {
+            var line = lines[lineIndex];
+            var trimmed = line.Trim();
+
+            // 1. Kiểm tra bảng Markdown
+            if (IsMarkdownTableRow(trimmed))
+            {
+                CloseListHtml(html, ref isInList);
+                AppendPdfParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+
+                if (IsMarkdownTableSeparator(trimmed))
+                {
+                    continue;
+                }
+
+                var cells = ParseMarkdownTableCell(trimmed);
+                tableRows.Add(cells);
+                isInTable = true;
+                continue;
+            }
+
+            if (isInTable)
+            {
+                AppendPdfTableHtml(html, tableRows);
+                tableRows.Clear();
+                isInTable = false;
+            }
+
+            if (string.IsNullOrWhiteSpace(trimmed))
+            {
+                CloseListHtml(html, ref isInList);
+                AppendPdfParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+                continue;
+            }
+
+            // 2. Kiểm tra Tiêu đề
+            if (trimmed.StartsWith("#"))
+            {
+                CloseListHtml(html, ref isInList);
+                AppendPdfParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+
+                if (trimmed.StartsWith("####"))
+                {
+                    var headingText = trimmed[4..].TrimStart(' ', '#').Trim();
+                    html.Append("<h4 class=\"font-bold text-base mt-3 mb-1 text-slate-700 dark:text-slate-300\">")
+                        .Append(ProcessInlineMarkdown(System.Net.WebUtility.HtmlEncode(headingText)))
+                        .Append("</h4>");
+                }
+                else if (trimmed.StartsWith("###"))
+                {
+                    var headingText = trimmed[3..].TrimStart(' ', '#').Trim();
+                    html.Append("<h3 class=\"font-bold text-lg mt-4 mb-2 text-slate-800 dark:text-slate-200\">")
+                        .Append(ProcessInlineMarkdown(System.Net.WebUtility.HtmlEncode(headingText)))
+                        .Append("</h3>");
+                }
+                else if (trimmed.StartsWith("##"))
+                {
+                    var headingText = trimmed[2..].TrimStart(' ', '#').Trim();
+                    html.Append("<h2 class=\"font-bold text-xl mt-6 mb-3 text-slate-900 dark:text-slate-100\">")
+                        .Append(ProcessInlineMarkdown(System.Net.WebUtility.HtmlEncode(headingText)))
+                        .Append("</h2>");
+                }
+                else
+                {
+                    var headingText = trimmed[1..].TrimStart(' ', '#').Trim();
+                    html.Append("<h2 class=\"font-bold text-xl mt-6 mb-3 text-slate-900 dark:text-slate-100\">")
+                        .Append(ProcessInlineMarkdown(System.Net.WebUtility.HtmlEncode(headingText)))
+                        .Append("</h2>");
+                }
+                continue;
+            }
+
+            // 3. Kiểm tra List
+            if (TryGetListItemText(trimmed, out var listItemText))
+            {
+                AppendPdfParagraphHtml(html, paragraphLines);
+                paragraphLines.Clear();
+
+                if (!isInList)
+                {
+                    html.Append("<ul class=\"stitch-readable-list\">");
+                    isInList = true;
+                }
+
+                html.Append("<li>")
+                    .Append(ProcessInlineMarkdown(System.Net.WebUtility.HtmlEncode(listItemText)))
+                    .Append("</li>");
+                continue;
+            }
+
+            // 4. Dòng thường
+            CloseListHtml(html, ref isInList);
+            paragraphLines.Add(line);
+        }
+
+        if (isInTable)
+        {
+            AppendPdfTableHtml(html, tableRows);
+        }
+        CloseListHtml(html, ref isInList);
+        AppendPdfParagraphHtml(html, paragraphLines);
+
+        return new Microsoft.AspNetCore.Html.HtmlString(html.ToString());
+    }
+}
+
+<div class="document-detail-page stitch-detail-page">
+    <div class="stitch-detail-header-card">
+        <div class="stitch-detail-top">
+            <a asp-controller="Documents" asp-action="Index" class="stitch-back-link">
+                <span class="material-symbols-outlined">arrow_back</span>
+                Quay lại danh sách
+            </a>
+
+            <div class="stitch-header-actions">
+                <form id="deleteDocumentFormDetails"
+                      asp-controller="Documents"
+                      asp-action="Delete"
+                      asp-route-id="@Model.Id"
+                      method="post">
+                    @Html.AntiForgeryToken()
+
+                    <button type="button" id="btn-delete-document-details" class="stitch-delete-btn">
+                        <span class="material-symbols-outlined">delete</span>
+                        Xóa tài liệu
+                    </button>
+                </form>
+
+                <button type="button" id="btn-ai-summarize"
+                        data-has-summary="@(Model.AiSummary != null ? "true" : "false")"
+                        data-summary="@Model.AiSummary"
+                        data-keypoints="@Model.AiKeyPoints"
+                        data-audience="@Model.AiAudience"
+                        class="px-4 py-2.5 rounded-xl font-semibold text-[14px] bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer border border-transparent dark:border-indigo-500/30">
+                    <span class="material-symbols-outlined text-[20px]">auto_awesome</span>
+                    Tóm tắt AI
+                </button>
+
+                <a asp-controller="Exam"
+                   asp-action="Review"
+                   asp-route-documentId="@Model.Id"
+                   class="stitch-create-quiz-btn flex items-center justify-center">
+                    <span class="material-symbols-outlined">add_circle</span>
+                    Tạo thêm bộ đề
+                </a>
+            </div>
+        </div>
+
+        <div class="stitch-detail-title-row">
+            <div>
+                <h1>@Model.Title</h1>
+
+                @if (!string.IsNullOrWhiteSpace(Model.Description))
+                {
+                    <p class="document-detail-description">
+                        @Model.Description
+                    </p>
+                }
+
+                <div class="stitch-document-meta">
+                    <span class="stitch-file-badge @badgeClass">
+                        <span class="material-symbols-outlined">description</span>
+                        @Model.SourceType
+                    </span>
+
+                    <span>
+                        <span class="material-symbols-outlined">calendar_today</span>
+                        Thêm lúc: @Model.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="stitch-detail-layout">
+        <section class="stitch-preview-card">
+            <div class="stitch-preview-toolbar">
+                <div class="stitch-preview-tools">
+                    <span class="material-symbols-outlined">search</span>
+                    <span>100%</span>
+                    <span class="material-symbols-outlined">zoom_in</span>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.FilePath))
+                {
+                    <a href="@Model.FilePath"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="stitch-download-btn">
+                        <span class="material-symbols-outlined">download</span>
+                    </a>
+                }
+                else if (!string.IsNullOrWhiteSpace(Model.SourceUrl))
+                {
+                    <a href="@Model.SourceUrl"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       class="stitch-download-btn">
+                        <span class="material-symbols-outlined">open_in_new</span>
+                    </a>
+                }
+                else
+                {
+                    <button type="button" class="stitch-download-btn">
+                        <span class="material-symbols-outlined">download</span>
+                    </button>
+                }
+            </div>
+
+            <div class="stitch-document-viewer">
+                @if (Model.SourceType == QuizGenAI.Models.DocumentSourceType.URL && !string.IsNullOrWhiteSpace(Model.SourceUrl))
+                {
+                    <div class="stitch-url-preview-card">
+                        <div class="stitch-url-icon">
+                            <span class="material-symbols-outlined">link</span>
+                        </div>
+
+                        <div class="stitch-url-content">
+                            <p class="stitch-url-label">Nguồn tài liệu URL</p>
+
+                            <h2>@Model.Title</h2>
+
+                            <p class="stitch-url-desc">
+                                Tài liệu này được lưu từ nguồn URL bên ngoài. Bạn có thể mở liên kết để xem nội dung gốc.
+                            </p>
+
+                            <a href="@Model.SourceUrl"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="stitch-url-link">
+                                @Model.SourceUrl
+                            </a>
+
+                            <a href="@Model.SourceUrl"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="btn-open-document">
+                                <span class="material-symbols-outlined">open_in_new</span>
+                                Mở liên kết
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="stitch-document-page stitch-url-extracted-document">
+                        <h3>Nội dung trích xuất từ liên kết</h3>
+
+                        @if (hasExtractedText)
+                        {
+                            <div class="stitch-document-text-wrapper collapsed">
+                                <div class="stitch-url-source-inline">
+                                    <span>URL nguồn</span>
+                                    <a href="@Model.SourceUrl" target="_blank" rel="noopener noreferrer">@Model.SourceUrl</a>
+                                </div>
+
+                                <div class="stitch-document-text stitch-readable-text">
+                                    @RenderReadableDocumentText(extractedText)
+                                </div>
+
+                                <div class="stitch-document-fade"></div>
+                            </div>
+
+                            <button type="button" class="btn-toggle-document-text" id="toggleDocumentTextBtn">
+                                Xem thêm nội dung
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="stitch-url-extraction-warning">
+                                <span class="material-symbols-outlined">info</span>
+                                <p>@urlExtractionWarning</p>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="stitch-document-page">
+                        <h2>@Model.Title</h2>
+
+                        <h3>Nội dung tài liệu</h3>
+
+                        @if (hasExtractedText)
+                        {
+                            <div class="stitch-document-text-wrapper collapsed">
+                                @if (hasImageTextSection)
+                                {
+                                    @if (normalTextIsShort)
+                                    {
+                                        <div class="stitch-image-ai-note">
+                                            <span class="material-symbols-outlined">image_search</span>
+                                            <span>Tài liệu có rất ít văn bản trực tiếp. Nội dung chính đã được AI nhận diện từ hình ảnh bên dưới.</span>
+                                        </div>
+                                    }
+                                    else if (hasReadableImageText)
+                                    {
+                                        <div class="stitch-image-ai-note">
+                                            <span class="material-symbols-outlined">auto_awesome</span>
+                                            <span>Một số nội dung từ hình ảnh đã được AI nhận diện và gộp vào tài liệu.</span>
+                                        </div>
+                                    }
+
+                                    @if (!string.IsNullOrWhiteSpace(cleanNormalText))
+                                    {
+                                    <div class="stitch-document-text-section stitch-source-text-section @(normalTextIsShort ? "is-secondary" : "")">
+                                        <h4>@sourceTextSectionTitle</h4>
+                                        @if (isPdfDocument)
+                                        {
+                                            <div class="stitch-document-text stitch-readable-text">
+                                                @RenderPdfTextWithFormatting(normalExtractedText)
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="stitch-document-text stitch-readable-text">
+                                                @RenderReadableDocumentText(normalExtractedText)
+                                            </div>
+                                        }
+                                    </div>
+
+                                    }
+
+                                    <div class="stitch-document-text-section stitch-image-text-section">
+                                        <h4>@imageTextSectionTitle</h4>
+
+                                        @if (!string.IsNullOrWhiteSpace(cleanImageTextForDisplay))
+                                        {
+                                            @if (isPdfDocument)
+                                            {
+                                                <div class="stitch-document-text stitch-readable-text stitch-image-recognized-text">
+                                                    @RenderPdfTextWithFormatting(cleanImageTextForDisplay)
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="stitch-document-text stitch-readable-text stitch-image-recognized-text">
+                                                    @RenderReadableDocumentText(cleanImageTextForDisplay)
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="stitch-image-unreadable-note">
+                                                @imageUnreadableMessage
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    @if (isPdfDocument)
+                                    {
+                                        <div class="stitch-document-text stitch-readable-text">
+                                            @RenderPdfTextWithFormatting(extractedText)
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="stitch-document-text stitch-readable-text">
+                                            @RenderReadableDocumentText(extractedText)
+                                        </div>
+                                    }
+                                }
+
+                                <div class="stitch-document-fade"></div>
+                            </div>
+
+                            <button type="button" class="btn-toggle-document-text" id="toggleDocumentTextBtn">
+                                Xem thêm nội dung
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="stitch-placeholder-image">
+                                <div>
+                                    <span class="material-symbols-outlined">description</span>
+                                    <p>@emptyDocumentPreviewMessage</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </section>
+
+        <aside class="stitch-side-panel">
+            <div class="stitch-side-card">
+                <div class="stitch-side-title">
+                    <span class="material-symbols-outlined">quiz</span>
+                    <h3>Bộ đề đã tạo</h3>
+                </div>
+
+                @if (Model.QuizSets != null && Model.QuizSets.Any())
+                {
+                    foreach (var quizSet in Model.QuizSets)
+                    {
+                        <div class="stitch-quiz-card">
+                            <h4>@quizSet.Title</h4>
+
+                            <p>
+                                <span class="material-symbols-outlined">format_list_numbered</span>
+                                @quizSet.TotalQuestions câu hỏi
+                            </p>
+
+                            <p>
+                                <span class="material-symbols-outlined">signal_cellular_alt</span>
+                                Mức độ: @(quizSet.Difficulty switch {
+                                    QuizGenAI.Models.DifficultyLevel.Easy => "Dễ",
+                                    QuizGenAI.Models.DifficultyLevel.Hard => "Khó",
+                                    _ => "Trung bình"
+                                })
+                            </p>
+
+                            <p>
+                                <span class="material-symbols-outlined">calendar_today</span>
+                                Tạo lúc: @quizSet.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")
+                            </p>
+
+                            <div class="stitch-quiz-footer">
+                                <button type="button" 
+                                        class="btn-toggle-public @(quizSet.IsPublic ? "public" : "private")" 
+                                        data-quizset-id="@quizSet.Id"
+                                        title="@(quizSet.IsPublic ? "Đang công khai. Nhấn để chuyển sang riêng tư" : "Đang riêng tư. Nhấn để công khai bộ đề")">
+                                    <span class="material-symbols-outlined">
+                                        @(quizSet.IsPublic ? "public" : "lock")
+                                    </span>
+                                    <span>@(quizSet.IsPublic ? "Công khai" : "Riêng tư")</span>
+                                </button>
+
+                                <a href="/Exam/Start/@quizSet.Id">Làm ngay →</a>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="stitch-empty-quiz">
+                        <span class="material-symbols-outlined">quiz</span>
+                        <h4>Chưa có bộ đề nào</h4>
+                        <p>Tạo bộ đề đầu tiên từ tài liệu này để bắt đầu ôn tập.</p>
+                    </div>
+                }
+            </div>
+
+            <div class="stitch-side-card">
+                <div class="stitch-side-title">
+                    <span class="material-symbols-outlined">auto_awesome</span>
+                    <h3>Phân tích nhanh</h3>
+                </div>
+
+                <div class="stitch-analysis-list">
+                    <div>
+                        <span>Số câu hỏi có thể tạo</span>
+                        <strong>@estimatedQuestions</strong>
+                    </div>
+
+                    <div>
+                        <span>Mức độ nội dung</span>
+                        <strong>@contentLevel</strong>
+                    </div>
+
+                    <div>
+                        <span>Chủ đề chính</span>
+                        <strong>@mainTopic</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="stitch-side-card">
+                <div class="stitch-side-title">
+                    <span class="material-symbols-outlined">fact_check</span>
+                    <h3>Đặc điểm tài liệu</h3>
+                </div>
+
+                <div class="stitch-document-traits">
+                    <div>
+                        <span>Loại nội dung</span>
+                        <strong>@contentTypeLabel</strong>
+                    </div>
+
+                    <div>
+                        <span>Số ảnh phát hiện</span>
+                        <strong>@detectedImageCount ảnh</strong>
+                    </div>
+
+                    <div>
+                        <span>AI nhận diện</span>
+                        <strong>@readableImageCount/@detectedImageCount ảnh thành công</strong>
+                    </div>
+
+                    <div>
+                        <span>Nguồn nội dung chính</span>
+                        <strong>@mainContentSource</strong>
+                    </div>
+
+                    <div>
+                        <span>Trạng thái tạo quiz</span>
+                        <strong class="stitch-trait-status @quizStatusClass">@quizContentStatus</strong>
+                    </div>
+                </div>
+
+                <div class="stitch-usage-suggestion @quizStatusClass">
+                    <div class="stitch-usage-suggestion-header">
+                        <span class="material-symbols-outlined">tips_and_updates</span>
+                        <div>
+                            <span>Gợi ý sử dụng</span>
+                            <strong>@usageSuggestionTitle</strong>
+                        </div>
+                    </div>
+
+                    <p>@usageSuggestionText</p>
+
+                    <div class="stitch-usage-suggestion-meta">
+                        <div>
+                            <span>Nên tạo</span>
+                            <strong>@estimatedQuestions</strong>
+                        </div>
+
+                        <div>
+                            <span>Ưu tiên</span>
+                            <strong>@mainContentSource</strong>
+                        </div>
+                    </div>
+
+                    <p class="stitch-usage-suggestion-hint">@usageSuggestionHint</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<!-- AI Summary Modal -->
+<div id="ai-summary-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <!-- Overlay backdrop -->
+    <div id="ai-summary-overlay" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
+    
+    <!-- Modal box -->
+    <div id="ai-summary-box" class="bg-[#faf8ff] dark:bg-[#0d1c2f] border border-slate-200/80 dark:border-outline-variant rounded-2xl max-w-2xl w-full shadow-2xl relative z-10 transform scale-95 opacity-0 transition-all duration-300 flex flex-col max-h-[85vh]">
+        
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between p-5 border-b border-slate-100 dark:border-outline-variant/30 shrink-0">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[22px]">auto_awesome</span>
+                </div>
+                <div>
+                    <h3 class="text-[16px] font-bold text-[#131b2e] dark:text-[#b7c4ff] leading-none">Tóm tắt tài liệu bằng AI</h3>
+                    <p class="text-[12px] text-slate-400 dark:text-slate-500 mt-1 font-medium">Được tạo bởi Gemini AI</p>
+                </div>
+            </div>
+            <button type="button" id="ai-summary-close-btn" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        
+        <!-- Modal Body (with scroll) -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+            
+            <!-- Loading State -->
+            <div id="ai-summary-loading" class="flex flex-col items-center justify-center py-12 gap-4">
+                <div class="relative w-16 h-16">
+                    <div class="absolute inset-0 rounded-full border-4 border-indigo-100 dark:border-indigo-950/30"></div>
+                    <div class="absolute inset-0 rounded-full border-4 border-t-indigo-600 dark:border-t-indigo-400 animate-spin"></div>
+                </div>
+                <p class="text-[14px] font-semibold text-slate-600 dark:text-slate-300 animate-pulse">AI đang phân tích và tóm tắt, vui lòng đợi...</p>
+            </div>
+            
+            <!-- Content State -->
+            <div id="ai-summary-content" class="hidden space-y-6">
+                <!-- Section 1: Summary -->
+                <div class="space-y-2">
+                    <h4 class="flex items-center gap-2 text-[14px] font-bold text-indigo-600 dark:text-indigo-400">
+                        <span class="material-symbols-outlined text-[20px]">subject</span>
+                        Tóm tắt cốt lõi
+                    </h4>
+                    <div id="ai-summary-text" class="text-[14px] leading-relaxed text-slate-600 dark:text-slate-300 space-y-3 font-medium">
+                        <!-- Tóm tắt chính sẽ được điền vào đây -->
+                    </div>
+                </div>
+                
+                <hr class="border-slate-100 dark:border-outline-variant/20" />
+                
+                <!-- Section 2: Key Points -->
+                <div class="space-y-3">
+                    <h4 class="flex items-center gap-2 text-[14px] font-bold text-indigo-600 dark:text-indigo-400">
+                        <span class="material-symbols-outlined text-[20px]">star_rate</span>
+                        Khái niệm cốt lõi & Điểm nổi bật
+                    </h4>
+                    <ul id="ai-summary-keypoints" class="space-y-2.5">
+                        <!-- Các điểm nổi bật sẽ được điền vào đây -->
+                    </ul>
+                </div>
+                
+                <hr class="border-slate-100 dark:border-outline-variant/20" />
+                
+                <!-- Section 3: Audience -->
+                <div class="p-4 bg-indigo-50/50 dark:bg-indigo-950/15 rounded-xl border border-indigo-100/50 dark:border-indigo-900/30 flex gap-3.5 items-start">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[20px]">school</span>
+                    </div>
+                    <div>
+                        <h5 class="text-[13px] font-bold text-indigo-900 dark:text-indigo-300">Đối tượng đề khuyên dùng</h5>
+                        <p id="ai-summary-audience" class="text-[13px] text-slate-600 dark:text-slate-400 mt-1 leading-normal font-medium">
+                            <!-- Gợi ý đối tượng học sẽ được điền vào đây -->
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="p-4 bg-slate-50 dark:bg-slate-900/40 border-t border-slate-100 dark:border-outline-variant/20 flex justify-between items-center shrink-0 rounded-b-2xl">
+            <span class="text-[11px] text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider">QuizGen AI</span>
+            <div class="flex gap-2">
+                <button type="button" id="ai-summary-btn-close" class="px-4 py-2 rounded-xl text-[13px] font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all cursor-pointer">
+                    Đóng
+                </button>
+                <a asp-controller="Exam" asp-action="Review" asp-route-documentId="@Model.Id" id="ai-summary-btn-create-quiz" class="hidden px-4 py-2 rounded-xl text-[13px] font-bold bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+                    <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                    Tạo đề ngay
+                </a>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const toggleDocumentTextBtn = document.getElementById("toggleDocumentTextBtn");
+        const documentTextWrapper = document.querySelector(".stitch-document-text-wrapper");
+
+        if (toggleDocumentTextBtn && documentTextWrapper) {
+            toggleDocumentTextBtn.addEventListener("click", function () {
+                const isCollapsed = documentTextWrapper.classList.contains("collapsed");
+
+                documentTextWrapper.classList.toggle("collapsed", !isCollapsed);
+                documentTextWrapper.classList.toggle("expanded", isCollapsed);
+
+                toggleDocumentTextBtn.textContent = isCollapsed
+                    ? "Thu gọn nội dung"
+                    : "Xem thêm nội dung";
+            });
+        }
+
+        // Xử lý sự kiện click nút toggle public/private
+        document.querySelectorAll(".btn-toggle-public").forEach(button => {
+            button.addEventListener("click", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const btn = this;
+                const quizSetId = btn.dataset.quizsetId;
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+                if (!token) {
+                    alert("Không tìm thấy CSRF token.");
+                    return;
+                }
+
+                fetch('/Documents/TogglePublic', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'quizSetId': quizSetId,
+                        '__RequestVerificationToken': token
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.isPublic) {
+                            btn.className = "btn-toggle-public public";
+                            btn.title = "Đang công khai. Nhấn để chuyển sang riêng tư";
+                            btn.querySelector(".material-symbols-outlined").textContent = "public";
+                            btn.querySelector("span:not(.material-symbols-outlined)").textContent = "Công khai";
+                        } else {
+                            btn.className = "btn-toggle-public private";
+                            btn.title = "Đang riêng tư. Nhấn để công khai bộ đề";
+                            btn.querySelector(".material-symbols-outlined").textContent = "lock";
+                            btn.querySelector("span:not(.material-symbols-outlined)").textContent = "Riêng tư";
+                        }
+                    } else {
+                        alert(data.message || "Đã xảy ra lỗi khi cập nhật trạng thái.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("Không thể kết nối tới máy chủ.");
+                });
+            });
+        });
+
+        // Xử lý sự kiện click nút xóa ở trang chi tiết tài liệu
+        const btnDeleteDocDetails = document.getElementById("btn-delete-document-details");
+        if (btnDeleteDocDetails) {
+            btnDeleteDocDetails.addEventListener("click", function (e) {
+                e.preventDefault();
+                
+                window.showConfirmModal({
+                    title: "Xóa tài liệu",
+                    message: "Bạn có chắc chắn muốn xóa tài liệu này không?<br><br><span class='text-red-600 dark:text-red-400 font-semibold'>Lưu ý:</span> Hành động này cũng sẽ xóa toàn bộ các bộ đề thi liên quan và không thể hoàn tác.",
+                    onConfirm: function () {
+                        document.getElementById("deleteDocumentFormDetails").submit();
+                    }
+                });
+            });
+        }
+
+        // -------------------------------------------------------------
+        // XỬ LÝ MODAL TÓM TẮT AI
+        // -------------------------------------------------------------
+        const btnAiSummarize = document.getElementById("btn-ai-summarize");
+        const modalAiSummary = document.getElementById("ai-summary-modal");
+        const overlayAiSummary = document.getElementById("ai-summary-overlay");
+        const boxAiSummary = document.getElementById("ai-summary-box");
+        const btnCloseHeader = document.getElementById("ai-summary-close-btn");
+        const btnCloseFooter = document.getElementById("ai-summary-btn-close");
+        const btnCreateQuiz = document.getElementById("ai-summary-btn-create-quiz");
+
+        const loadingDiv = document.getElementById("ai-summary-loading");
+        const contentDiv = document.getElementById("ai-summary-content");
+        const textSummaryDiv = document.getElementById("ai-summary-text");
+        const listKeypointsUl = document.getElementById("ai-summary-keypoints");
+        const textAudienceP = document.getElementById("ai-summary-audience");
+
+        function showAiSummaryModal() {
+            modalAiSummary.classList.remove("hidden");
+            modalAiSummary.classList.add("flex");
+            setTimeout(() => {
+                overlayAiSummary.classList.remove("opacity-0");
+                overlayAiSummary.classList.add("opacity-100");
+                boxAiSummary.classList.remove("scale-95", "opacity-0");
+                boxAiSummary.classList.add("scale-100", "opacity-100");
+            }, 10);
+        }
+
+        function hideAiSummaryModal() {
+            overlayAiSummary.classList.remove("opacity-100");
+            overlayAiSummary.classList.add("opacity-0");
+            boxAiSummary.classList.remove("scale-100", "opacity-100");
+            boxAiSummary.classList.add("scale-95", "opacity-0");
+            setTimeout(() => {
+                modalAiSummary.classList.remove("flex");
+                modalAiSummary.classList.add("hidden");
+            }, 300);
+        }
+
+        [btnCloseHeader, btnCloseFooter, overlayAiSummary].forEach(el => {
+            if (el) el.addEventListener("click", hideAiSummaryModal);
+        });
+
+        function renderSummaryData(summary, keyPoints, audience) {
+            // Hiển thị tóm tắt chính (chia theo các đoạn)
+            textSummaryDiv.innerHTML = "";
+            const paragraphs = summary.split("\n");
+            paragraphs.forEach(pText => {
+                if (pText.trim()) {
+                    const p = document.createElement("p");
+                    p.className = "mb-3 text-justify leading-relaxed text-[#131b2e] dark:text-slate-300";
+                    p.textContent = pText.trim();
+                    textSummaryDiv.appendChild(p);
+                }
+            });
+
+            // Hiển thị điểm nổi bật
+            listKeypointsUl.innerHTML = "";
+            let points = [];
+            if (Array.isArray(keyPoints)) {
+                points = keyPoints;
+            } else if (typeof keyPoints === 'string') {
+                try {
+                    points = JSON.parse(keyPoints);
+                } catch (e) {
+                    points = keyPoints.split("\n").map(x => x.trim()).filter(x => x);
+                }
+            }
+
+            points.forEach(point => {
+                const li = document.createElement("li");
+                li.className = "flex items-start gap-2.5 text-[13px] text-slate-600 dark:text-slate-300 font-medium";
+                li.innerHTML = `
+                    <span class="material-symbols-outlined text-indigo-500 dark:text-indigo-400 text-[18px] shrink-0 mt-0.5">check_circle</span>
+                    <span class="leading-relaxed">${point}</span>
+                `;
+                listKeypointsUl.appendChild(li);
+            });
+
+            // Hiển thị đối tượng
+            textAudienceP.textContent = audience || "Chưa có thông tin.";
+
+            // Switch views
+            loadingDiv.classList.add("hidden");
+            contentDiv.classList.remove("hidden");
+            btnCreateQuiz.classList.remove("hidden");
+        }
+
+        if (btnAiSummarize) {
+            btnAiSummarize.addEventListener("click", function () {
+                const hasSummary = btnAiSummarize.getAttribute("data-has-summary") === "true";
+                
+                showAiSummaryModal();
+
+                if (hasSummary) {
+                    // Load từ cache đã có sẵn trên giao diện
+                    const summary = btnAiSummarize.getAttribute("data-summary");
+                    const keyPoints = btnAiSummarize.getAttribute("data-keypoints");
+                    const audience = btnAiSummarize.getAttribute("data-audience");
+                    renderSummaryData(summary, keyPoints, audience);
+                } else {
+                    // Mở chế độ loading
+                    loadingDiv.classList.remove("hidden");
+                    contentDiv.classList.add("hidden");
+                    btnCreateQuiz.classList.add("hidden");
+
+                    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                    const docId = "@Model.Id";
+
+                    fetch("/Documents/Summarize", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded",
+                        },
+                        body: new URLSearchParams({
+                            "id": docId,
+                            "__RequestVerificationToken": token
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Cập nhật thuộc tính của nút bấm để dùng làm cache cho lần click tiếp theo
+                            btnAiSummarize.setAttribute("data-has-summary", "true");
+                            btnAiSummarize.setAttribute("data-summary", data.summary);
+                            btnAiSummarize.setAttribute("data-keypoints", JSON.stringify(data.keyPoints));
+                            btnAiSummarize.setAttribute("data-audience", data.audience);
+
+                            renderSummaryData(data.summary, data.keyPoints, data.audience);
+                        } else {
+                            hideAiSummaryModal();
+                            alert(data.message || "Không thể tải tóm tắt AI.");
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error summarize:", error);
+                        hideAiSummaryModal();
+                        alert("Không thể kết nối tới máy chủ.");
+                    });
+                }
+            });
+        }
+    </script>
+}

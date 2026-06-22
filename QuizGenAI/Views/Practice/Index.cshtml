@@ -1,0 +1,216 @@
+@model List<QuizGenAI.Models.WeakTopic>
+@{
+    ViewData["Title"] = "Luyện tập chủ đề yếu - QuizGen AI";
+    var weakestTopic = Model?.OrderBy(wt => wt.AccuracyRate).FirstOrDefault();
+}
+
+<div class="flex flex-col gap-8">
+    <!-- Header Title & Action with Decorative Glow -->
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-50 to-slate-100/60 dark:from-on-secondary-fixed/50 dark:to-on-secondary-fixed border border-slate-200/50 dark:border-outline-variant p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-sm">
+        <!-- Background light effect -->
+        <div class="absolute -right-24 -top-24 w-60 h-60 rounded-full bg-primary/5 blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-20 -bottom-20 w-60 h-60 rounded-full bg-warning/5 blur-3xl pointer-events-none"></div>
+
+        <div class="flex items-start gap-4 z-10">
+            <div class="w-14 h-14 rounded-2xl bg-primary/10 text-primary dark:text-primary-fixed-dim flex items-center justify-center shrink-0 shadow-inner">
+                <span class="material-symbols-outlined text-[36px] animate-pulse">model_training</span>
+            </div>
+            <div>
+                <div class="flex items-center gap-2.5 flex-wrap">
+                    <h1 class="text-h2 font-h2 text-on-surface dark:text-on-primary-container leading-none">
+                        Luyện tập chủ đề còn yếu
+                    </h1>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-bold rounded-full bg-success-light text-success border border-success/20 dark:bg-success/10 dark:text-success">
+                        <span class="w-1.5 h-1.5 rounded-full bg-success animate-ping"></span>
+                        Hỗ trợ AI
+                    </span>
+                </div>
+                <p class="text-body text-secondary dark:text-secondary-fixed-dim mt-2.5 max-w-xl font-body">
+                    Rèn luyện tập trung dựa trên thang đo nhận thức Bloom. Hệ thống tự động chọn lọc câu hỏi từ các bài thi trước để giúp bạn bù đắp phần kiến thức còn thiếu sót.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    @if (Model == null || !Model.Any())
+    {
+        <!-- Empty State with Beautiful CSS Illustration -->
+        <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200/60 dark:border-outline-variant rounded-3xl p-12 sm:p-16 text-center shadow-sm flex flex-col items-center justify-center gap-6 max-w-2xl mx-auto mt-6">
+            <!-- Geometric Perfect Circle Illustration -->
+            <div class="relative w-32 h-32 flex items-center justify-center">
+                <div class="absolute inset-0 rounded-full border-4 border-dashed border-success/30 animate-spin" style="animation-duration: 20s;"></div>
+                <div class="absolute inset-2 rounded-full border-2 border-primary/20 animate-spin" style="animation-duration: 10s; animation-direction: reverse;"></div>
+                <div class="w-20 h-20 rounded-full bg-success-light dark:bg-success/10 text-success flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[44px]">verified</span>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="text-h2 font-h2 text-on-surface dark:text-on-primary-container">Tuyệt vời! Kiến thức của bạn rất đồng đều</h3>
+                <p class="text-body text-secondary dark:text-secondary-fixed-dim max-w-md mx-auto mt-2 leading-relaxed font-body">
+                    Hiện tại hệ thống không phát hiện bất kỳ Bloom level nào có độ chính xác dưới 80%. Hãy tiếp tục làm thêm các đề thi trắc nghiệm để cập nhật dữ liệu.
+                </p>
+            </div>
+            
+            <a asp-controller="Exam" asp-action="Review" class="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-primary text-white font-button text-button shadow-md hover:bg-primary/95 transition-all active:scale-95 duration-200 cursor-pointer">
+                <span class="material-symbols-outlined text-[20px]">assignment</span>
+                Làm đề ôn tập ngay
+            </a>
+        </div>
+    }
+    else
+    {
+        <!-- Main Layout with List & Quick Start -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            
+            <!-- Left: Grid of Weak Topics Card (Col span 2) -->
+            <div class="lg:col-span-2 flex flex-col gap-6">
+                <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200/60 dark:border-outline-variant rounded-3xl p-6 sm:p-8 shadow-sm">
+                    <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container mb-6">
+                        Danh sách kỹ năng cần cải thiện
+                    </h3>
+                    <div class="flex flex-col gap-5">
+                        @foreach (var topic in Model)
+                        {
+                            var levelColor = topic.BloomLevel == QuizGenAI.Models.BloomLevel.Apply ? "bg-bloom-apply/10 text-bloom-apply border-bloom-apply/20" :
+                                             topic.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "bg-bloom-understand/10 text-bloom-understand border-bloom-understand/20" :
+                                             "bg-bloom-remember/10 text-bloom-remember border-bloom-remember/20";
+
+                            var progressColor = topic.AccuracyRate < 50 ? "bg-danger" :
+                                                topic.AccuracyRate < 70 ? "bg-warning" : "bg-success";
+
+                            var rec = topic.BloomLevel == QuizGenAI.Models.BloomLevel.Apply ? "Luyện các câu hỏi bài tập tự luận/thực hành" :
+                                      topic.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "Giải thích lý do lựa chọn đáp án và xem lại bản chất" :
+                                      "Học thuộc lòng các định nghĩa và khái niệm cốt lõi";
+
+                            <div class="group relative p-5 rounded-2xl border border-slate-100 dark:border-outline-variant bg-slate-50/50 dark:bg-secondary-container/5 flex flex-col sm:flex-row sm:items-center justify-between gap-6 hover:shadow-md hover:border-primary/25 dark:hover:border-primary-fixed-dim/20 hover:-translate-y-1 transition-all duration-300">
+                                
+                                <div class="flex-1 flex items-start gap-4">
+                                    <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border @levelColor shadow-sm">
+                                        <span class="material-symbols-outlined text-[24px]">
+                                            @(topic.BloomLevel == QuizGenAI.Models.BloomLevel.Apply ? "construction" :
+                                              topic.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "psychology" : "menu_book")
+                                        </span>
+                                    </div>
+                                    <div class="flex-1">
+                                        <span class="font-semibold text-body text-on-surface dark:text-on-primary-container block text-[16px] group-hover:text-primary dark:group-hover:text-primary-fixed-dim transition-colors">
+                                            @topic.TopicName
+                                        </span>
+                                        <span class="text-caption text-secondary dark:text-secondary-fixed-dim mt-1.5 block font-body leading-relaxed">
+                                            @rec
+                                        </span>
+                                        <span class="text-[11px] text-slate-400 mt-2.5 block font-body">Cập nhật: @topic.LastUpdated.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-col sm:items-end gap-3.5 shrink-0 w-full sm:w-auto">
+                                    <div class="flex items-center gap-3 w-full sm:w-[160px]">
+                                        <div class="flex-1 h-2 bg-slate-200 dark:bg-outline-variant rounded-full overflow-hidden">
+                                            <!-- Animated fill bar on load -->
+                                            <div class="h-full rounded-full transition-all duration-1000 @progressColor" style="width: @topic.AccuracyRate%"></div>
+                                        </div>
+                                        <span class="font-bold text-caption shrink-0 w-12 text-right @(topic.AccuracyRate < 50 ? "text-danger" : topic.AccuracyRate < 70 ? "text-warning" : "text-success")">
+                                            @(Math.Round(topic.AccuracyRate))%
+                                        </span>
+                                    </div>
+                                    
+                                    <button onclick="startPractice('@topic.BloomLevel', @((int)(topic.BloomLevel ?? QuizGenAI.Models.BloomLevel.Remember)))" class="w-full sm:w-auto px-4 py-2.5 bg-primary hover:bg-primary/95 text-white rounded-xl font-button text-button text-xs shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer">
+                                        <span>Luyện ngay</span>
+                                        <span class="material-symbols-outlined text-[16px] transition-transform group-hover:translate-x-1">arrow_forward</span>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Quick Start Control Panel (Glassmorphic design) -->
+            <div class="flex flex-col gap-6">
+                <div class="relative overflow-hidden bg-white/70 dark:bg-on-secondary-fixed/70 backdrop-blur-md border border-slate-200/80 dark:border-outline-variant rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col gap-5">
+                    
+                    <!-- Decorative background ring -->
+                    <div class="absolute -right-16 -bottom-16 w-36 h-36 rounded-full border border-primary/5 dark:border-primary-fixed-dim/5 pointer-events-none"></div>
+                    
+                    <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container">
+                        Thiết lập luyện tập
+                    </h3>
+                    
+                    @if (weakestTopic != null)
+                    {
+                        var levelNameVi = weakestTopic.BloomLevel == QuizGenAI.Models.BloomLevel.Apply ? "Vận dụng (Applying)" :
+                                          weakestTopic.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "Thông hiểu (Understanding)" :
+                                          "Nhận biết (Remembering)";
+
+                        <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-warning dark:text-warning-light flex items-start gap-3 z-10">
+                            <span class="material-symbols-outlined text-[20px] shrink-0" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                            <div>
+                                <span class="block text-caption font-semibold text-amber-800 dark:text-amber-400">Yếu nhất cần ưu tiên:</span>
+                                <span class="block text-body font-bold mt-0.5 text-amber-900 dark:text-amber-200">@levelNameVi (@(Math.Round(weakestTopic.AccuracyRate))%)</span>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Question Count Selection -->
+                    <div class="flex flex-col gap-2 z-10">
+                        <label for="question-count-select" class="text-caption font-semibold text-secondary dark:text-secondary-fixed-dim flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[16px]">format_list_numbered</span>
+                            Số lượng câu hỏi
+                        </label>
+                        <select id="question-count-select" class="form-select w-full p-3 rounded-xl border border-slate-200 dark:border-outline-variant bg-surface dark:bg-on-secondary-fixed text-on-surface dark:text-on-primary-container text-body outline-none focus:border-primary transition-all cursor-pointer">
+                            <option value="10">10 câu hỏi (Nhanh gọn - khuyên dùng)</option>
+                            <option value="15">15 câu hỏi (Trung bình)</option>
+                            <option value="20">20 câu hỏi (Chuyên sâu)</option>
+                        </select>
+                    </div>
+
+                    <!-- Bloom Level Selection -->
+                    <div class="flex flex-col gap-2 z-10">
+                        <label for="bloom-level-select" class="text-caption font-semibold text-secondary dark:text-secondary-fixed-dim flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[16px]">psychology</span>
+                            Cấp độ Bloom cần luyện
+                        </label>
+                        <select id="bloom-level-select" class="form-select w-full p-3 rounded-xl border border-slate-200 dark:border-outline-variant bg-surface dark:bg-on-secondary-fixed text-on-surface dark:text-on-primary-container text-body outline-none focus:border-primary transition-all cursor-pointer">
+                            @foreach (var topic in Model)
+                            {
+                                var levelNameVi = topic.BloomLevel == QuizGenAI.Models.BloomLevel.Apply ? "Vận dụng (Applying)" :
+                                                  topic.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "Thông hiểu (Understanding)" :
+                                                  "Nhận biết (Remembering)";
+                                
+                                <option value="@((int)(topic.BloomLevel ?? QuizGenAI.Models.BloomLevel.Remember))" selected="@(weakestTopic?.Id == topic.Id ? "selected" : null)">
+                                    @levelNameVi - @(Math.Round(topic.AccuracyRate))%
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <button onclick="startPracticeFromPanel()" class="w-full mt-4 inline-flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-primary to-primary-container hover:from-primary/95 hover:to-primary-container/95 text-white font-button text-button shadow-md hover:shadow-lg hover:shadow-primary/10 active:scale-95 transition-all duration-200 cursor-pointer z-10">
+                        <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">bolt</span>
+                        Bắt đầu luyện tập
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    }
+</div>
+
+<!-- Modal Loading Spinner (Enhanced visually) -->
+<div id="loading-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 transition-opacity duration-300">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
+    <div class="bg-surface dark:bg-on-secondary-fixed border border-slate-200/80 dark:border-outline-variant rounded-3xl p-8 max-w-sm w-full shadow-2xl relative z-10 flex flex-col items-center gap-5 text-center transform scale-100 transition-transform">
+        <!-- Modern Spinner with gradient -->
+        <div class="relative w-16 h-16">
+            <div class="absolute inset-0 rounded-full border-4 border-primary/20"></div>
+            <div class="absolute inset-0 rounded-full border-4 border-t-primary border-l-primary/30 animate-spin"></div>
+        </div>
+        <div>
+            <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container">Đang tạo đề luyện tập</h3>
+            <p class="text-caption text-secondary dark:text-secondary-fixed-dim mt-2 font-body leading-relaxed">AI đang tuyển chọn các câu hỏi phù hợp nhất từ kho lưu trữ của bạn. Vui lòng chờ giây lát...</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/practice.js" asp-append-version="true"></script>
+}

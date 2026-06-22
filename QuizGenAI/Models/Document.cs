@@ -20,6 +20,12 @@ namespace QuizGenAI.Models
         [StringLength(200)]
         public string Title { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Mô tả ngắn về tài liệu, do người dùng nhập khi tạo tài liệu.
+        /// </summary>
+        [StringLength(500)]
+        public string? Description { get; set; }
+
         public DocumentSourceType SourceType { get; set; }
 
         /// <summary>
@@ -58,5 +64,20 @@ namespace QuizGenAI.Models
 
         // Navigation
         public ICollection<QuizSet> QuizSets { get; set; } = new List<QuizSet>();
+
+        /// <summary>
+        /// Bản tóm tắt chính của AI (3-5 đoạn ngắn, khoảng 250-350 từ)
+        /// </summary>
+        public string? AiSummary { get; set; }
+
+        /// <summary>
+        /// Các điểm nổi bật dưới dạng chuỗi JSON của một mảng string (["ý 1", "ý 2", ...])
+        /// </summary>
+        public string? AiKeyPoints { get; set; }
+
+        /// <summary>
+        /// Gợi ý đối tượng học tập phù hợp từ AI
+        /// </summary>
+        public string? AiAudience { get; set; }
     }
 }

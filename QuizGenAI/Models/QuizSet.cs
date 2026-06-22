@@ -13,7 +13,15 @@ namespace QuizGenAI.Models
     {
         Draft = 0,       // Vừa tạo xong, chưa xem trước
         Ready = 1,       // Đã xem trước, sẵn sàng thi
-        Archived = 2     // Đã lưu trữ
+        Archived = 2,    // Đã lưu trữ
+        Practice = 3     // Bộ đề luyện tập chủ đề còn yếu
+    }
+
+    public enum DifficultyLevel
+    {
+        Easy = 0,
+        Medium = 1,
+        Hard = 2
     }
 
     public class QuizSet
@@ -43,7 +51,12 @@ namespace QuizGenAI.Models
 
         public OutputLanguage Language { get; set; } = OutputLanguage.Vietnamese;
 
+        public DifficultyLevel Difficulty { get; set; } = DifficultyLevel.Medium;
+
         public QuizSetStatus Status { get; set; } = QuizSetStatus.Draft;
+
+        /// <summary>Bloom level mục tiêu luyện tập nếu bộ đề này thuộc chế độ luyện tập</summary>
+        public BloomLevel? TargetBloomLevel { get; set; }
 
         /// <summary>Bộ đề có được hiển thị công khai không (trang Khám phá)</summary>
         public bool IsPublic { get; set; } = false;

@@ -1,0 +1,254 @@
+@model IEnumerable<QuizGenAI.Models.Document>
+
+@{
+    ViewData["Title"] = "Tài liệu";
+    var selectedType = ViewData["SelectedType"]?.ToString()?.ToLower();
+
+}
+
+<div class="documents-index-page">
+    <div class="documents-index-header">
+        <h1>Tài liệu</h1>
+    </div>
+
+    <div class="documents-toolbar">
+        <div class="document-search-box">
+            <span class="material-symbols-outlined">search</span>
+            <input id="documentSearchInput" type="text" placeholder="Tìm kiếm tài liệu..." />
+        </div>
+
+        <div class="document-filter-group">
+            <a asp-controller="Documents"
+               asp-action="Index"
+               class="document-filter @(string.IsNullOrEmpty(selectedType) ? "active" : "")">
+                Tất cả
+            </a>
+
+            <a asp-controller="Documents"
+               asp-action="Index"
+               asp-route-type="pdf"
+               class="document-filter @(selectedType == "pdf" ? "active" : "")">
+                <span class="material-symbols-outlined">picture_as_pdf</span>
+                PDF
+            </a>
+
+            <a asp-controller="Documents"
+               asp-action="Index"
+               asp-route-type="word"
+               class="document-filter @(selectedType == "word" || selectedType == "docx" ? "active" : "")">
+                <span class="material-symbols-outlined">description</span>
+                DOCX
+            </a>
+
+            <a asp-controller="Documents"
+               asp-action="Index"
+               asp-route-type="url"
+               class="document-filter @(selectedType == "url" ? "active" : "")">
+                <span class="material-symbols-outlined">link</span>
+                URL
+            </a>
+        </div>
+
+        <a asp-controller="Documents" asp-action="Create" class="btn-add-document">
+            <span class="material-symbols-outlined">add</span>
+            Thêm tài liệu
+        </a>
+    </div>
+
+    <div class="document-card-grid">
+        @if (Model != null && Model.Any())
+        {
+            foreach (var document in Model)
+            {
+
+                var iconClass = "docx";
+                var iconName = "description";
+                var sourceType = document.SourceType.ToString().ToLower();
+
+                if (sourceType.Contains("pdf"))
+                {
+                    iconClass = "pdf";
+                    iconName = "picture_as_pdf";
+                }
+                else if (sourceType.Contains("word") || sourceType.Contains("docx") || sourceType.Contains("pastedtext"))
+                {
+                    iconClass = "docx";
+                    iconName = "description";
+                }
+                else if (sourceType.Contains("url"))
+                {
+                    iconClass = "url";
+                    iconName = "link";
+                }
+
+                <div class="document-card"
+                     data-title="@document.Title.ToLower()"
+                     data-detail-url="@Url.Action("Details", "Documents", new { id = document.Id })">
+                    <div class="document-more-wrapper">
+                        <button type="button" class="document-more-btn">
+                            <span class="material-symbols-outlined">more_vert</span>
+                        </button>
+
+                        <div class="document-more-menu">
+                            <a asp-controller="Documents"
+                               asp-action="Details"
+                               asp-route-id="@document.Id">
+                                <span class="material-symbols-outlined">visibility</span>
+                                Xem chi tiết
+                            </a>
+
+                            <a asp-controller="Exam"
+                               asp-action="Review"
+                               asp-route-documentId="@document.Id">
+                                <span class="material-symbols-outlined">quiz</span>
+                                Tạo đề
+                            </a>
+
+                            <button type="button" class="delete-document-btn" data-id="@document.Id" data-title="@document.Title">
+                                <span class="material-symbols-outlined">delete</span>
+                                Xóa tài liệu
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="document-type-icon @iconClass">
+                        <span class="material-symbols-outlined">@iconName</span>
+                    </div>
+
+                    <h2>@document.Title</h2>
+
+                    @if (!string.IsNullOrWhiteSpace(document.Description))
+                    {
+                        <p class="document-card-description">
+                            @document.Description
+                        </p>
+                    }
+
+                    <div class="document-meta">
+                        <span>
+                            <span class="material-symbols-outlined">calendar_today</span>
+                            @document.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")
+                        </span>
+
+                        <span>
+                            @if (document.SourceType == QuizGenAI.Models.DocumentSourceType.URL)
+                            {
+                                <span class="material-symbols-outlined">public</span>
+                                <text>Nguồn ngoài</text>
+                            }
+                            else
+                            {
+                                <span class="material-symbols-outlined">description</span>
+                                <text>@(document.PageCount > 0 ? document.PageCount : 1) trang</text>
+                            }
+                        </span>
+                    </div>
+
+                    <div class="document-card-actions">
+                        <a asp-controller="Exam" asp-action="Review" asp-route-documentId="@document.Id" class="btn-create-quiz flex items-center justify-center">
+                            Tạo đề
+                        </a>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="documents-empty-state">
+                <span class="material-symbols-outlined">folder_open</span>
+                <h2>Chưa có tài liệu nào</h2>
+                <p>Tải lên hoặc thêm tài liệu học tập đầu tiên để bắt đầu tạo bộ câu hỏi.</p>
+            </div>
+        }
+
+        <!-- Form ẩn dùng chung để gửi request POST xóa tài liệu -->
+        <form id="deleteDocumentForm" asp-controller="Documents" asp-action="Delete" method="post" style="display:none;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="deleteDocumentId" />
+        </form>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Xử lý sự kiện click nút xóa tài liệu
+        document.addEventListener("click", function (event) {
+            const deleteBtn = event.target.closest(".delete-document-btn");
+            if (deleteBtn) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const docId = deleteBtn.dataset.id;
+                const docTitle = deleteBtn.dataset.title;
+
+                window.showConfirmModal({
+                    title: "Xóa tài liệu",
+                    message: "Bạn có chắc chắn muốn xóa tài liệu <strong>\"" + docTitle + "\"</strong>?<br><br><span class='text-red-600 dark:text-red-400 font-semibold'>Lưu ý:</span> Hành động này cũng sẽ xóa toàn bộ các bộ đề thi liên quan và không thể hoàn tác.",
+                    onConfirm: function () {
+                        document.getElementById("deleteDocumentId").value = docId;
+                        document.getElementById("deleteDocumentForm").submit();
+                    }
+                });
+
+                // Đóng menu dropdown sau khi click
+                const wrapper = deleteBtn.closest(".document-more-wrapper");
+                if (wrapper) {
+                    wrapper.classList.remove("is-open");
+                }
+            }
+        });
+
+        document.addEventListener("click", function (event) {
+            const clickedButton = event.target.closest(".document-more-btn");
+
+            document.querySelectorAll(".document-more-wrapper.is-open").forEach(function (menu) {
+                if (!menu.contains(event.target)) {
+                    menu.classList.remove("is-open");
+                }
+            });
+
+            if (clickedButton) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const wrapper = clickedButton.closest(".document-more-wrapper");
+                wrapper.classList.toggle("is-open");
+            }
+        });
+
+        const searchInput = document.getElementById("documentSearchInput");
+
+        if (searchInput) {
+            searchInput.addEventListener("input", function () {
+                const keyword = this.value.trim().toLowerCase();
+                const cards = document.querySelectorAll(".document-card");
+
+                cards.forEach(function (card) {
+                    const title = card.dataset.title || "";
+                    const isMatched = title.includes(keyword);
+
+                    card.style.display = isMatched ? "" : "none";
+                });
+            });
+        }
+
+        document.querySelectorAll(".document-card").forEach(function (card) {
+            card.addEventListener("click", function (event) {
+                const isInteractiveElement = event.target.closest(
+                    ".document-more-wrapper, .btn-create-quiz, button, a"
+                );
+
+                if (isInteractiveElement) {
+                    return;
+                }
+
+                const detailUrl = card.dataset.detailUrl;
+
+                if (detailUrl) {
+                    window.location.href = detailUrl;
+                }
+            });
+        });
+    </script>
+}

@@ -1,0 +1,71 @@
+@page
+@model RegisterModel
+@{
+    Layout = "_AuthLayout";
+    ViewData["Title"] = "Đăng ký";
+}
+
+<main class="auth-shell auth-shell-register">
+    <section class="auth-card auth-card-register" aria-labelledby="register-title">
+        <div class="auth-card-brand">
+            <a asp-area="" asp-controller="Home" asp-action="Index">QuizGen AI</a>
+            <p>Học tập xuất sắc</p>
+        </div>
+
+        <div class="auth-tabs">
+            <a class="auth-tab" asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Đăng nhập</a>
+            <a class="auth-tab active" asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Đăng ký</a>
+        </div>
+
+        <form asp-route-returnUrl="@Model.ReturnUrl" method="post" class="auth-form" novalidate>
+            @Html.AntiForgeryToken()
+            <h1 id="register-title" class="sr-only">Đăng ký QuizGen AI</h1>
+            <div asp-validation-summary="ModelOnly" class="auth-validation-summary"></div>
+
+            <div class="auth-field">
+                <label asp-for="Input.FullName" class="auth-label"></label>
+                <input asp-for="Input.FullName" class="auth-input" autocomplete="name" placeholder="Nhập họ và tên của bạn" />
+                <span asp-validation-for="Input.FullName" class="auth-error"></span>
+            </div>
+
+            <div class="auth-field">
+                <label asp-for="Input.Email" class="auth-label"></label>
+                <input asp-for="Input.Email" class="auth-input" autocomplete="username" placeholder="name@example.com" />
+                <span asp-validation-for="Input.Email" class="auth-error"></span>
+            </div>
+
+            <div class="auth-field">
+                <label asp-for="Input.Password" class="auth-label"></label>
+                <div class="auth-input-wrap">
+                    <input asp-for="Input.Password" id="register-password" class="auth-input has-trailing-icon" autocomplete="new-password" placeholder="Tạo mật khẩu" />
+                    <button class="auth-icon-button" type="button" data-password-toggle="#register-password" aria-label="Hiện hoặc ẩn mật khẩu">
+                        <span class="material-symbols-outlined">visibility</span>
+                    </button>
+                </div>
+                <span asp-validation-for="Input.Password" class="auth-error"></span>
+            </div>
+
+            <div class="auth-field">
+                <label asp-for="Input.ConfirmPassword" class="auth-label"></label>
+                <div class="auth-input-wrap">
+                    <input asp-for="Input.ConfirmPassword" id="register-confirm-password" class="auth-input has-trailing-icon" autocomplete="new-password" placeholder="Nhập lại mật khẩu" />
+                    <button class="auth-icon-button" type="button" data-password-toggle="#register-confirm-password" aria-label="Hiện hoặc ẩn mật khẩu">
+                        <span class="material-symbols-outlined">visibility</span>
+                    </button>
+                </div>
+                <span asp-validation-for="Input.ConfirmPassword" class="auth-error"></span>
+            </div>
+
+            <button type="submit" class="auth-primary-button">Đăng ký ngay</button>
+        </form>
+
+        <footer class="auth-card-footer">
+            Đã có tài khoản?
+            <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Đăng nhập ngay</a>
+        </footer>
+    </section>
+</main>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

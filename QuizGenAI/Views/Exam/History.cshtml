@@ -1,0 +1,402 @@
+@model QuizGenAI.Models.ExamHistoryViewModel
+
+@{
+    ViewData["Title"] = Model.Title;
+    
+    // Tính toán các chỉ số cho biểu đồ SVG tiến trình và stats phụ
+    var avgScore = Model.AverageScorePercent;
+    var radius = 50;
+    var circumference = 2 * Math.PI * radius; // ~314.16
+    var strokeDashoffset = circumference * (1 - (avgScore / 100.0));
+    var maxScore = Model.RecentAssessments.Any() ? Model.RecentAssessments.Max(a => a.ScorePercent) : 0;
+    var totalExams = Model.RecentAssessments.Count;
+
+    // Dữ liệu cho biểu đồ Chart.js (sắp xếp từ cũ nhất đến mới nhất)
+    var chartLabels = Model.RecentAssessments.Select(a => a.TakenAt.ToString("dd/MM")).Reverse().ToList();
+    var chartData = Model.RecentAssessments.Select(a => a.ScorePercent).Reverse().ToList();
+    var chartTitles = Model.RecentAssessments.Select(a => a.Title).Reverse().ToList();
+}
+
+<div class="space-y-8">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-h1 font-h1 text-on-surface mb-2 tracking-tight">Lịch sử thi</h1>
+        <p class="text-body font-body text-secondary">Xem lại hiệu suất thi của bạn và xác định điểm cần cải thiện.</p>
+    </div>
+    <!-- Top Summary Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6 mb-8">
+        <section class="bg-surface dark:bg-[#0d1c2f] rounded-2xl border border-slate-200 dark:border-outline-variant/30 p-6 shadow-sm h-[28rem] flex flex-col">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                    <p class="text-caption font-caption uppercase tracking-[0.18em] text-secondary">Xu hướng điểm</p>
+                    <h2 class="mt-2 text-h3 font-h3 text-on-surface">Điểm trung bình trong 10 bài thi gần nhất</h2>
+                </div>
+                <span class="inline-flex items-center gap-2 rounded-full bg-primary-fixed px-3 py-2 text-caption font-caption text-primary"> 
+                    <span class="material-symbols-outlined text-[18px]">trending_up</span>
+                    +4.2%
+                </span>
+            </div>
+
+            <div class="relative flex-1 w-full h-[18rem] mt-4">
+                <canvas id="performanceChart"></canvas>
+            </div>
+        </section>
+
+        <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1e40af] to-[#6d28d9] p-6 shadow-sm text-on-primary h-[28rem] flex flex-col justify-between">
+            <div class="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+            <div class="absolute -left-8 -bottom-8 h-32 w-32 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+            
+            <div class="relative z-10 flex h-full flex-col justify-between">
+                <div>
+                    <p class="text-caption font-caption text-center uppercase tracking-[0.18em] text-white/80">Điểm trung bình</p>
+                </div>
+                
+                <!-- SVG Progress Circle -->
+                <div class="relative flex items-center justify-center my-2">
+                    <svg class="w-36 h-36 transform -rotate-90">
+                        <circle
+                            cx="72"
+                            cy="72"
+                            r="@radius"
+                            stroke="rgba(255, 255, 255, 0.15)"
+                            stroke-width="10"
+                            fill="transparent"
+                        />
+                        <circle
+                            cx="72"
+                            cy="72"
+                            r="@radius"
+                            stroke="url(#progressGradient)"
+                            stroke-width="10"
+                            fill="transparent"
+                            stroke-dasharray="@circumference"
+                            stroke-dashoffset="@strokeDashoffset"
+                            stroke-linecap="round"
+                        />
+                        <defs>
+                            <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#ffffff" />
+                                <stop offset="100%" stop-color="#e2e8f0" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="absolute flex flex-col items-center justify-center">
+                        <span class="text-4xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]">@Model.AverageScoreLabel</span>
+                        <span class="text-[10px] text-white/70 uppercase tracking-wider font-semibold mt-0.5">Tỉ lệ đúng</span>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-4 my-2 border-t border-b border-white/10 py-3">
+                    <div class="text-center border-r border-white/10">
+                        <span class="block text-2xl font-bold text-white">@maxScore%</span>
+                        <span class="block text-[10px] text-white/75 uppercase tracking-wider font-medium mt-1">Cao nhất</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="block text-2xl font-bold text-white">@totalExams</span>
+                        <span class="block text-[10px] text-white/75 uppercase tracking-wider font-medium mt-1">Số bài thi</span>
+                    </div>
+                </div>
+
+                <!-- Footer Badge -->
+                <div class="rounded-2xl bg-white/10 p-3.5 backdrop-blur-sm">
+                    <p class="font-caption text-caption text-white/95 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">military_tech</span>
+                        @Model.HighlightBadge
+                    </p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Recent Assessments Table -->
+    <div class="bg-surface dark:bg-[#0d1c2f] rounded-2xl border border-slate-200 dark:border-outline-variant/30 shadow-sm overflow-hidden">
+        <div class="p-4 md:p-6 border-b border-slate-200 dark:border-outline-variant/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/80 dark:bg-slate-800/10">
+            <div>
+                <p class="text-caption font-caption uppercase tracking-[0.18em] text-secondary dark:text-secondary-fixed-dim">Bài thi gần đây</p>
+                <h3 class="mt-2 text-h3 font-h3 text-on-surface dark:text-on-primary-container">Bài thi gần đây</h3>
+            </div>
+            <div class="flex gap-2 w-full sm:w-auto">
+                <button class="inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-outline-variant/30 bg-surface dark:bg-[#0d1c2f] px-4 py-2 text-caption font-caption text-secondary dark:text-secondary-fixed-dim hover:border-primary dark:hover:border-primary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim transition-colors">
+                    <span class="material-symbols-outlined">filter_list</span>
+                    Lọc
+                </button>
+                <button class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-caption font-caption text-on-primary hover:bg-[#002f9c] transition-colors">
+                    <span class="material-symbols-outlined">file_download</span>
+                    Xuất CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-[820px] w-full text-left text-sm text-secondary dark:text-secondary-fixed-dim">
+                <thead class="bg-surface dark:bg-[#0d1c2f] border-b border-slate-200 dark:border-outline-variant/30">
+                    <tr>
+                                <th class="px-6 py-4 font-label-sm uppercase tracking-[0.18em] text-on-surface-variant dark:text-secondary-fixed-dim">Tên đề</th>
+                        <th class="px-6 py-4 font-label-sm uppercase tracking-[0.18em] text-on-surface-variant dark:text-secondary-fixed-dim">Ngày thi</th>
+                        <th class="px-6 py-4 font-label-sm uppercase tracking-[0.18em] text-on-surface-variant dark:text-secondary-fixed-dim">Điểm</th>
+                        <th class="px-6 py-4 font-label-sm uppercase tracking-[0.18em] text-on-surface-variant dark:text-secondary-fixed-dim">Câu hỏi</th>
+                        <th class="px-6 py-4 font-label-sm uppercase tracking-[0.18em] text-right text-on-surface-variant dark:text-secondary-fixed-dim">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody id="assessment-table-body" class="divide-y divide-slate-200 dark:divide-outline-variant/20">
+                    @if (Model.RecentAssessments.Any())
+                    {
+                        foreach (var assessment in Model.RecentAssessments)
+                        {
+                            <tr class="assessment-row hover:bg-slate-50 dark:hover:bg-slate-800/10 transition-colors">
+                                <td class="px-6 py-4 align-top">
+                                    <div class="font-semibold text-on-surface dark:text-on-primary-container">@assessment.Title</div>
+                                    <div class="mt-2 inline-flex items-center gap-2 text-caption text-secondary dark:text-secondary-fixed-dim">
+                                        <span class="h-2 w-2 rounded-full bg-primary"></span>
+                                        @assessment.Category
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 align-top">
+                                    <div class="font-body text-body text-on-surface dark:text-on-primary-container">@assessment.TakenAt.ToString("MMM dd, yyyy")</div>
+                                    <div class="text-caption text-secondary dark:text-secondary-fixed-dim mt-1">@assessment.TakenAt.ToString("hh:mm tt")</div>
+                                </td>
+                                <td class="px-6 py-4 align-top">
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex h-9 items-center rounded-full px-3 text-caption font-caption @assessment.ScoreBadgeClass">@assessment.ScorePercent%</span>
+                                        <div class="hidden sm:block h-2 w-16 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                                            <div class="h-full rounded-full bg-primary" style="width:@assessment.ScorePercent%"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 align-top text-on-surface dark:text-on-primary-container">@assessment.QuestionSummary</td>
+                                <td class="px-6 py-4 align-top text-right">
+                                    <a asp-controller="Exam" asp-action="Result" asp-route-sessionId="@assessment.Id" class="inline-flex items-center gap-2 rounded-full border border-slate-200 dark:border-outline-variant/30 bg-slate-50 dark:bg-slate-800/20 px-4 py-2 text-caption font-caption text-primary dark:text-primary-fixed-dim hover:bg-primary hover:text-on-primary dark:hover:bg-primary transition-colors">
+                                        <span class="material-symbols-outlined">visibility</span>
+                                        Xem lại
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="px-6 py-8 text-center text-secondary dark:text-secondary-fixed-dim">Hiện chưa có bài thi nào.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="p-4 border-t border-slate-200 dark:border-outline-variant/30 bg-surface dark:bg-[#0d1c2f] flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <p id="pagination-info" class="font-caption text-secondary dark:text-secondary-fixed-dim">Hiển thị 1 đến @Model.RecentAssessments.Count mục</p>
+            <div id="pagination-container" class="flex items-center gap-1">
+                <!-- Nút phân trang sẽ được sinh tự động bằng JS -->
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let performanceChart = null;
+
+        function initChart() {
+            const chartCanvas = document.getElementById('performanceChart');
+            if (!chartCanvas) return;
+            
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+            const gridColor = isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(226, 232, 240, 0.6)';
+
+            const ctx = chartCanvas.getContext('2d');
+            
+            // Tạo gradient cho Area Fill
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, isDark ? 'rgba(129, 140, 248, 0.25)' : 'rgba(79, 70, 229, 0.25)'); // Indigo với 25% opacity
+            gradient.addColorStop(1, 'rgba(79, 70, 229, 0.0)');
+
+            const chartLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartLabels));
+            const chartData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartData));
+            const chartTitles = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartTitles));
+
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Điểm số',
+                        data: chartData,
+                        borderColor: isDark ? '#818cf8' : '#4f46e5',
+                        borderWidth: 3,
+                        pointBackgroundColor: isDark ? '#0d1c2f' : '#ffffff',
+                        pointBorderColor: isDark ? '#818cf8' : '#4f46e5',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointHoverBackgroundColor: isDark ? '#818cf8' : '#4f46e5',
+                        pointHoverBorderColor: isDark ? '#0d1c2f' : '#ffffff',
+                        pointHoverBorderWidth: 2,
+                        fill: true,
+                        backgroundColor: gradient,
+                        tension: 0.4 // Độ cong mượt của đường
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false // Ẩn chú giải
+                        },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1e293b' : '#0f172a',
+                            titleColor: isDark ? '#f8fafc' : '#ffffff',
+                            bodyColor: isDark ? '#cbd5e1' : '#ffffff',
+                            titleFont: {
+                                size: 12,
+                                weight: 'bold',
+                                family: 'Inter, system-ui, sans-serif'
+                            },
+                            bodyFont: {
+                                size: 12,
+                                family: 'Inter, system-ui, sans-serif'
+                            },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                title: function(context) {
+                                    const index = context[0].dataIndex;
+                                    return chartTitles[index] || 'Bài thi';
+                                },
+                                label: function(context) {
+                                    return ` Điểm: ${context.parsed.y}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false // Ẩn lưới dọc
+                            },
+                            ticks: {
+                                font: {
+                                    size: 11,
+                                    family: 'Inter, system-ui, sans-serif'
+                                },
+                                color: textColor
+                            }
+                        },
+                        y: {
+                            min: 0,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20,
+                                font: {
+                                    size: 11,
+                                    family: 'Inter, system-ui, sans-serif'
+                                },
+                                color: textColor,
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            grid: {
+                                color: gridColor // Đường lưới ngang mờ hơn
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // Khởi tạo biểu đồ lần đầu
+            initChart();
+
+            // Lắng nghe thay đổi theme
+            window.addEventListener('theme-change', initChart);
+
+            // --- Khởi tạo phân trang Client-side ---
+            const pageSize = 5;
+            let currentPage = 1;
+            const rows = Array.from(document.querySelectorAll(".assessment-row"));
+            const totalItems = rows.length;
+            const totalPages = Math.ceil(totalItems / pageSize);
+
+            const infoEl = document.getElementById("pagination-info");
+            const containerEl = document.getElementById("pagination-container");
+
+            function showPage(page) {
+                if (page < 1) page = 1;
+                if (page > totalPages) page = totalPages;
+                currentPage = page;
+
+                // Ẩn/hiện dòng
+                rows.forEach((row, idx) => {
+                    const start = (currentPage - 1) * pageSize;
+                    const end = currentPage * pageSize;
+                    if (idx >= start && idx < end) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+
+                // Cập nhật text thông tin
+                if (totalItems === 0) {
+                    if (infoEl) infoEl.textContent = "Hiển thị 0 mục";
+                } else {
+                    const startIdx = (currentPage - 1) * pageSize + 1;
+                    const endIdx = Math.min(currentPage * pageSize, totalItems);
+                    if (infoEl) infoEl.textContent = `Hiển thị ${startIdx} đến ${endIdx} trong số ${totalItems} mục`;
+                }
+
+                // Vẽ lại các nút phân trang
+                renderPagination();
+            }
+
+            function renderPagination() {
+                if (!containerEl) return;
+                containerEl.innerHTML = "";
+
+                if (totalPages <= 1) {
+                    return; // Không cần hiện phân trang nếu chỉ có 1 trang hoặc không có dữ liệu
+                }
+
+                // Nút Previous
+                const prevBtn = document.createElement("button");
+                prevBtn.className = `h-10 w-10 rounded-full flex items-center justify-center transition-colors ${currentPage === 1 ? "text-slate-300 dark:text-slate-700 pointer-events-none" : "text-on-surface dark:text-on-primary-container hover:bg-slate-100 dark:hover:bg-slate-800"}`;
+                prevBtn.innerHTML = '<span class="material-symbols-outlined">chevron_left</span>';
+                prevBtn.addEventListener("click", () => showPage(currentPage - 1));
+                containerEl.appendChild(prevBtn);
+
+                // Các nút số trang
+                for (let i = 1; i <= totalPages; i++) {
+                    const pageBtn = document.createElement("button");
+                    if (i === currentPage) {
+                        pageBtn.className = "h-10 w-10 rounded-full bg-primary text-on-primary font-semibold shadow-sm";
+                    } else {
+                        pageBtn.className = "h-10 w-10 rounded-full text-on-surface dark:text-on-primary-container hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors";
+                    }
+                    pageBtn.textContent = i;
+                    pageBtn.addEventListener("click", () => showPage(i));
+                    containerEl.appendChild(pageBtn);
+                }
+
+                // Nút Next
+                const nextBtn = document.createElement("button");
+                nextBtn.className = `h-10 w-10 rounded-full flex items-center justify-center transition-colors ${currentPage === totalPages ? "text-slate-300 dark:text-slate-700 pointer-events-none" : "text-on-surface dark:text-on-primary-container hover:bg-slate-100 dark:hover:bg-slate-800"}`;
+                nextBtn.innerHTML = '<span class="material-symbols-outlined">chevron_right</span>';
+                nextBtn.addEventListener("click", () => showPage(currentPage + 1));
+                containerEl.appendChild(nextBtn);
+            }
+
+            // Khởi tạo trang đầu tiên
+            showPage(1);
+        });
+    </script>
+}

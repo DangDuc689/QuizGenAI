@@ -1,0 +1,674 @@
+@model QuizGenAI.Models.AdminSettingViewModel
+
+<!-- Font & Icons from FontAwesome or Bootstrap Icons (if user prefers them, we import Bootstrap Icons) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div>
+        <h2 class="font-h1 text-h1 text-on-background dark:text-on-primary-container">Cài đặt hệ thống</h2>
+        <p class="font-body text-body text-secondary">Quản lý cấu hình chung, bảo mật và thiết lập thông báo cho QuizGen AI.</p>
+    </div>
+    <div>
+        <button type="button" onclick="submitSettingsForm()" class="flex items-center gap-2 px-5 py-3 bg-primary hover:bg-primary-container text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-button text-button cursor-pointer">
+            <i class="bi bi-floppy text-base"></i>
+            Lưu thay đổi
+        </button>
+    </div>
+</div>
+
+<!-- Main Settings Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+    
+    <!-- Left Navigation Column (Sidebar) -->
+    <div class="lg:col-span-1">
+        <div class="bg-surface dark:bg-on-secondary-fixed border border-slate-200/80 dark:border-outline-variant rounded-2xl p-4 shadow-sm flex flex-col gap-2">
+            <p class="text-[11px] font-bold text-slate-400 dark:text-secondary-fixed-dim uppercase tracking-wider px-3 mb-2">Danh mục cài đặt</p>
+            
+            <!-- Tab: General (Active by default) -->
+            <button type="button" onclick="switchSettingsTab('general')" id="tab-general" 
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-button text-button text-left w-full cursor-pointer bg-primary-fixed text-primary font-semibold border-l-4 border-primary">
+                <i class="bi bi-gear-fill text-lg"></i>
+                <span>Cấu hình chung</span>
+            </button>
+            
+            <!-- Tab: Security -->
+            <button type="button" onclick="switchSettingsTab('security')" id="tab-security" 
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-button text-button text-left w-full cursor-pointer text-secondary hover:bg-slate-100/60 dark:hover:bg-on-secondary-fixed-variant">
+                <i class="bi bi-shield-lock-fill text-lg"></i>
+                <span>Bảo mật & Tài khoản</span>
+            </button>
+            
+            <!-- Tab: Notifications -->
+            <button type="button" onclick="switchSettingsTab('notifications')" id="tab-notifications" 
+               class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-button text-button text-left w-full cursor-pointer text-secondary hover:bg-slate-100/60 dark:hover:bg-on-secondary-fixed-variant">
+                <i class="bi bi-bell-fill text-lg"></i>
+                <span>Cấu hình thông báo</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Right Content Column (Cards) -->
+    <div class="lg:col-span-3">
+        <form id="settingsForm" class="space-y-6">
+            @Html.AntiForgeryToken()
+
+            <!-- 1. Section: Cấu hình chung -->
+            <div id="section-general" class="bg-surface dark:bg-on-secondary-fixed border border-slate-200/80 dark:border-outline-variant rounded-2xl p-6 shadow-sm space-y-6 transition-all duration-300">
+                <div class="border-b border-slate-100 dark:border-outline-variant pb-3 mb-4">
+                    <h3 class="text-h3 font-h3 text-on-surface dark:text-primary-fixed-dim flex items-center gap-2">
+                        <i class="bi bi-gear text-primary text-xl"></i>
+                        Cấu hình chung hệ thống
+                    </h3>
+                    <p class="text-xs text-secondary mt-1">Cài đặt các thông tin cơ bản về giao diện và ngôn ngữ của ứng dụng.</p>
+                </div>
+
+                <!-- Tên ứng dụng & Slogan -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="AppName" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Tên ứng dụng</label>
+                        <input type="text" id="AppName" name="AppName" value="@Model.AppName" required 
+                               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" />
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label for="DefaultLanguage" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Ngôn ngữ mặc định</label>
+                        <select id="DefaultLanguage" name="DefaultLanguage" required 
+                                class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm cursor-pointer">
+                            <!option value="vi" @(Model.DefaultLanguage == "vi" ? "selected" : "")>Tiếng Việt (vi)</!option>
+                            <!option value="en" @(Model.DefaultLanguage == "en" ? "selected" : "")>Tiếng Anh (en)</!option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <label for="Slogan" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Slogan / Mô tả ngắn</label>
+                    <input type="text" id="Slogan" name="Slogan" value="@Model.Slogan" 
+                           class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" />
+                </div>
+
+                <!-- Logo Path & Upload Area -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Logo ứng dụng</label>
+                    <input type="hidden" id="LogoPath" name="LogoPath" value="@Model.LogoPath" />
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                        <!-- Preview Logo Area -->
+                        <div class="md:col-span-1 flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-[#132337] border border-slate-200 dark:border-outline-variant rounded-xl min-h-[140px]">
+                            <p class="text-[11px] font-bold text-slate-400 dark:text-secondary-fixed-dim uppercase tracking-wider mb-2">Xem trước logo</p>
+                            <div class="w-20 h-20 bg-white rounded-xl shadow-sm border border-slate-100 flex items-center justify-center overflow-hidden p-2">
+                                <img id="logo-preview-img" src="@Model.LogoPath" alt="Logo Preview" onerror="this.src='https://placehold.co/100x100?text=QuizGen';" class="max-w-full max-h-full object-contain" />
+                            </div>
+                        </div>
+
+                        <!-- Drag and Drop Upload Box -->
+                        <div class="md:col-span-2">
+                            <div class="border-2 border-dashed border-slate-300 dark:border-outline hover:border-primary dark:hover:border-primary-fixed-dim rounded-xl p-6 text-center cursor-pointer transition-all duration-200 bg-white dark:bg-[#132337]/50" onclick="document.getElementById('logo-file-input').click()">
+                                <i class="bi bi-cloud-arrow-up text-primary text-3xl mb-2 block"></i>
+                                <span class="text-sm font-semibold text-on-surface dark:text-on-primary-container block">Nhấp để tải logo lên hoặc kéo thả vào đây</span>
+                                <span class="text-xs text-secondary block mt-1">Định dạng JPG, PNG hoặc SVG. Dung lượng tối đa 2MB.</span>
+                                <input type="file" id="logo-file-input" class="hidden" accept="image/*" onchange="previewLogoFile(this)" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Section: Bảo mật & Tài khoản (Initially Hidden) -->
+            <div id="section-security" class="hidden bg-surface dark:bg-on-secondary-fixed border border-slate-200/80 dark:border-outline-variant rounded-2xl p-6 shadow-sm space-y-6 transition-all duration-300">
+                <div class="border-b border-slate-100 dark:border-outline-variant pb-3 mb-4">
+                    <h3 class="text-h3 font-h3 text-on-surface dark:text-primary-fixed-dim flex items-center gap-2">
+                        <i class="bi bi-shield-lock text-primary text-xl"></i>
+                        Bảo mật & Tài khoản quản trị
+                    </h3>
+                    <p class="text-xs text-secondary mt-1">Quản lý mật khẩu bảo mật và các phiên đăng nhập hoạt động.</p>
+                </div>
+
+                <!-- Tác vụ bảo mật (Đổi mật khẩu, Quản lý phiên) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button type="button" onclick="openChangePasswordModal()" class="flex items-center justify-center gap-2.5 px-4 py-3 bg-slate-100 hover:bg-slate-200/80 dark:bg-[#132337] dark:hover:bg-slate-800 text-on-surface dark:text-on-primary-container rounded-xl font-button text-button shadow-sm transition-all cursor-pointer">
+                        <i class="bi bi-key-fill text-lg text-primary"></i>
+                        Đổi mật khẩu quản trị
+                    </button>
+                    <button type="button" onclick="openSessionsModal()" class="flex items-center justify-center gap-2.5 px-4 py-3 bg-slate-100 hover:bg-slate-200/80 dark:bg-[#132337] dark:hover:bg-slate-800 text-on-surface dark:text-on-primary-container rounded-xl font-button text-button shadow-sm transition-all cursor-pointer">
+                        <i class="bi bi-phone-vibrate text-lg text-primary"></i>
+                        Quản lý phiên đăng nhập
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Section: Cấu hình thông báo (Initially Hidden) -->
+            <div id="section-notifications" class="hidden bg-surface dark:bg-on-secondary-fixed border border-slate-200/80 dark:border-outline-variant rounded-2xl p-6 shadow-sm space-y-6 transition-all duration-300">
+                <div class="border-b border-slate-100 dark:border-outline-variant pb-3 mb-4">
+                    <h3 class="text-h3 font-h3 text-on-surface dark:text-primary-fixed-dim flex items-center gap-2">
+                        <i class="bi bi-bell text-primary text-xl"></i>
+                        Cấu hình thông báo hệ thống
+                    </h3>
+                    <p class="text-xs text-secondary mt-1">Tùy chọn nhận thông báo qua email hoặc kênh cảnh báo của quản trị viên.</p>
+                </div>
+
+                <!-- Notification Toggles List -->
+                <div class="divide-y divide-slate-100 dark:divide-outline-variant">
+                    <!-- Toggle 1: System Alert -->
+                    <div class="flex items-center justify-between py-4 first:pt-0">
+                        <div class="pr-6">
+                            <span class="text-sm font-bold text-on-surface dark:text-on-primary-container block">Cảnh báo hệ thống</span>
+                            <span class="text-xs text-secondary block mt-0.5">Lỗi bảo mật, hoạt động đăng nhập đáng ngờ hoặc sự cố hệ thống.</span>
+                        </div>
+                        <div>
+                            <label class="relative inline-flex items-center cursor-pointer select-none">
+                                <input type="checkbox" id="EnableSystemAlert" name="EnableSystemAlert" value="true" class="sr-only peer" @(Model.EnableSystemAlert ? "checked" : "") onchange="saveNotificationToggle()">
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Toggle 2: User Report -->
+                    <div class="flex items-center justify-between py-4">
+                        <div class="pr-6">
+                            <span class="text-sm font-bold text-on-surface dark:text-on-primary-container block">Báo cáo từ người dùng</span>
+                            <span class="text-xs text-secondary block mt-0.5">Thông báo khi học sinh gửi báo cáo lỗi câu hỏi hoặc đề thi.</span>
+                        </div>
+                        <div>
+                            <label class="relative inline-flex items-center cursor-pointer select-none">
+                                <input type="checkbox" id="EnableUserReport" name="EnableUserReport" value="true" class="sr-only peer" @(Model.EnableUserReport ? "checked" : "") onchange="saveNotificationToggle()">
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Toggle 3: AI Update -->
+                    <div class="flex items-center justify-between py-4 last:pb-0">
+                        <div class="pr-6">
+                            <span class="text-sm font-bold text-on-surface dark:text-on-primary-container block">Bản cập nhật AI</span>
+                            <span class="text-xs text-secondary block mt-0.5">Nhận tin tức khi có mô hình AI tạo đề thi mới được cập nhật.</span>
+                        </div>
+                        <div>
+                            <label class="relative inline-flex items-center cursor-pointer select-none">
+                                <input type="checkbox" id="EnableAIUpdate" name="EnableAIUpdate" value="true" class="sr-only peer" @(Model.EnableAIUpdate ? "checked" : "") onchange="saveNotificationToggle()">
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-slate-600 peer-checked:bg-primary"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ==========================================
+     TOAST THÔNG BÁO PHẢN HỒI (POPUP TIN NHẮN)
+     ========================================== -->
+<div id="settings-toast" class="fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 transition-all duration-300 flex items-center gap-3 bg-white dark:bg-[#132337] border border-slate-200 dark:border-outline-variant rounded-xl p-4 shadow-lg max-w-sm pointer-events-none">
+    <div id="settings-toast-icon-container" class="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm">
+        <span id="settings-toast-icon" class="material-symbols-outlined text-[18px]">check</span>
+    </div>
+    <p id="settings-toast-message" class="text-xs font-semibold text-on-surface dark:text-on-primary-container leading-normal"></p>
+</div>
+
+<!-- ==========================================
+     MODAL: ĐỔI MẬT KHẨU QUẢN TRỊ VIÊN
+     ========================================== -->
+<div id="modal-change-password" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 backdrop-blur-sm" onclick="closeModalOnBackdrop(event, 'modal-change-password')">
+    <div class="bg-white dark:bg-[#1a2d42] rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                    <i class="bi bi-key-fill text-primary text-xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-on-surface dark:text-on-primary-container">Đổi mật khẩu quản trị</h3>
+            </div>
+            <button type="button" onclick="closeModal('modal-change-password')" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center cursor-pointer transition-colors">
+                <i class="bi bi-x-lg text-secondary"></i>
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            <div class="flex flex-col gap-1.5">
+                <label for="cp-current" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Mật khẩu hiện tại</label>
+                <div class="relative">
+                    <input type="password" id="cp-current" placeholder="Nhập mật khẩu hiện tại..."
+                           class="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" />
+                    <button type="button" onclick="togglePasswordVisibility('cp-current', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-on-surface cursor-pointer">
+                        <i class="bi bi-eye text-base"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label for="cp-new" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Mật khẩu mới</label>
+                <div class="relative">
+                    <input type="password" id="cp-new" placeholder="Tối thiểu 6 ký tự..."
+                           class="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" />
+                    <button type="button" onclick="togglePasswordVisibility('cp-new', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-on-surface cursor-pointer">
+                        <i class="bi bi-eye text-base"></i>
+                    </button>
+                </div>
+                <!-- Thanh độ mạnh mật khẩu -->
+                <div class="flex gap-1 mt-1" id="cp-strength-bar">
+                    <div class="h-1 flex-1 rounded-full bg-slate-200 dark:bg-slate-700" id="cp-str-1"></div>
+                    <div class="h-1 flex-1 rounded-full bg-slate-200 dark:bg-slate-700" id="cp-str-2"></div>
+                    <div class="h-1 flex-1 rounded-full bg-slate-200 dark:bg-slate-700" id="cp-str-3"></div>
+                    <div class="h-1 flex-1 rounded-full bg-slate-200 dark:bg-slate-700" id="cp-str-4"></div>
+                </div>
+                <p id="cp-strength-label" class="text-[10px] text-secondary"></p>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+                <label for="cp-confirm" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Xác nhận mật khẩu mới</label>
+                <div class="relative">
+                    <input type="password" id="cp-confirm" placeholder="Nhập lại mật khẩu mới..."
+                           class="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" />
+                    <button type="button" onclick="togglePasswordVisibility('cp-confirm', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-on-surface cursor-pointer">
+                        <i class="bi bi-eye text-base"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3 mt-6">
+            <button type="button" onclick="closeModal('modal-change-password')" class="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-on-surface dark:text-on-primary-container rounded-xl font-button text-button cursor-pointer transition-colors">Hủy</button>
+            <button type="button" id="btn-change-password" onclick="submitChangePassword()" class="flex-1 px-4 py-2.5 bg-primary hover:bg-primary/80 text-white rounded-xl font-button text-button cursor-pointer transition-colors flex items-center justify-center gap-2">
+                <i class="bi bi-check-lg"></i> Xác nhận đổi
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     MODAL: QUẢN LÝ PHIÊN ĐĂNG NHẬP
+     ========================================== -->
+<div id="modal-sessions" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 backdrop-blur-sm" onclick="closeModalOnBackdrop(event, 'modal-sessions')">
+    <div class="bg-white dark:bg-[#1a2d42] rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                    <i class="bi bi-shield-check text-primary text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-on-surface dark:text-on-primary-container">Quản lý phiên đăng nhập</h3>
+                    <p class="text-xs text-secondary">Tài khoản quản trị viên đang hoạt động trong hệ thống</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeModal('modal-sessions')" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center cursor-pointer transition-colors">
+                <i class="bi bi-x-lg text-secondary"></i>
+            </button>
+        </div>
+
+        <!-- Danh sách phiên -->
+        <div id="sessions-list" class="space-y-3 max-h-72 overflow-y-auto pr-1">
+            <div class="flex items-center justify-center py-8">
+                <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <span class="ml-3 text-sm text-secondary">Đang tải...</span>
+            </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-slate-100 dark:border-outline-variant">
+            <p class="text-[11px] text-secondary">
+                <i class="bi bi-info-circle mr-1"></i>
+                "Thu hồi phiên" sẽ đăng xuất tài khoản đó khỏi tất cả thiết bị ngay lập tức bằng cách vô hiệu hóa token bảo mật.
+            </p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ==========================================
+        // CHUYỂN TAB CÀI ĐẶT
+        // ==========================================
+        function switchSettingsTab(tabId) {
+            const tabs = ['general', 'security', 'notifications'];
+            tabs.forEach(t => {
+                const tabEl = document.getElementById('tab-' + t);
+                const sectionEl = document.getElementById('section-' + t);
+                if (t === tabId) {
+                    tabEl.className = "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-button text-button text-left w-full cursor-pointer bg-primary-fixed text-primary font-semibold border-l-4 border-primary";
+                    sectionEl.classList.remove('hidden');
+                } else {
+                    tabEl.className = "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-button text-button text-left w-full cursor-pointer text-secondary hover:bg-slate-100/60 dark:hover:bg-on-secondary-fixed-variant";
+                    sectionEl.classList.add('hidden');
+                }
+            });
+        }
+
+        // ==========================================
+        // XỬ LÝ PREVIEW LOGO KHI TẢI LÊN
+        // ==========================================
+        function previewLogoFile(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                if (file.size > 2 * 1024 * 1024) {
+                    showToast("Dung lượng tệp tin quá lớn! Tệp tối đa là 2MB.", false);
+                    input.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('logo-preview-img').src = e.target.result;
+                    document.getElementById('LogoPath').value = e.target.result;
+                };
+                reader.readAsDataURL(file);
+                showToast("Đã tải tệp ảnh lên tạm thời!", true);
+            }
+        }
+
+        // ==========================================
+        // QUẢN LÝ TOAST THÔNG BÁO
+        // ==========================================
+        function showToast(message, isSuccess = true) {
+            const toast = document.getElementById('settings-toast');
+            const toastIconContainer = document.getElementById('settings-toast-icon-container');
+            const toastIcon = document.getElementById('settings-toast-icon');
+            const toastMsg = document.getElementById('settings-toast-message');
+
+            toastMsg.innerText = message;
+
+            if (isSuccess) {
+                toastIconContainer.className = "w-8 h-8 rounded-lg bg-success text-white flex items-center justify-center shrink-0 shadow-sm";
+                toastIcon.className = "bi bi-check-lg text-lg";
+            } else {
+                toastIconContainer.className = "w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0 shadow-sm";
+                toastIcon.className = "bi bi-exclamation-triangle text-lg";
+            }
+
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0');
+            }, 3500);
+        }
+
+        // ==========================================
+        // SUBMIT FORM CHÍNH (LƯU CẤU HÌNH CHUNG + BẢO MẬT)
+        // ==========================================
+        function submitSettingsForm() {
+            const token = $('input[name="__RequestVerificationToken"]').val();
+            const data = {
+                AppName: document.getElementById('AppName').value,
+                Slogan: document.getElementById('Slogan').value,
+                LogoPath: document.getElementById('LogoPath').value,
+                DefaultLanguage: document.getElementById('DefaultLanguage').value,
+                EnableSystemAlert: document.getElementById('EnableSystemAlert').checked,
+                EnableUserReport: document.getElementById('EnableUserReport').checked,
+                EnableAIUpdate: document.getElementById('EnableAIUpdate').checked
+            };
+
+            if (!data.AppName.trim()) {
+                showToast("Tên ứng dụng không được để trống!", false);
+                return;
+            }
+
+            $.ajax({
+                url: '@Url.Action("SaveSettings", "AdminSetting", new { area = "Admin" })',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: { "RequestVerificationToken": token },
+                data: JSON.stringify(data),
+                success: function (response) {
+                    showToast(response.message, response.success);
+                },
+                error: function () {
+                    showToast("Lỗi hệ thống khi lưu cài đặt!", false);
+                }
+            });
+        }
+
+        // ==========================================
+        // LƯU CẤU HÌNH THÔNG BÁO (TỰ ĐỘNG KHI BẬT/TẮT TOGGLE)
+        // ==========================================
+        let notificationSaveTimer = null;
+        function saveNotificationToggle() {
+            // Debounce 400ms để tránh gửi quá nhiều request khi toggle nhanh
+            clearTimeout(notificationSaveTimer);
+            notificationSaveTimer = setTimeout(() => {
+                const token = $('input[name="__RequestVerificationToken"]').val();
+                const data = {
+                    EnableSystemAlert: document.getElementById('EnableSystemAlert').checked,
+                    EnableUserReport: document.getElementById('EnableUserReport').checked,
+                    EnableAIUpdate: document.getElementById('EnableAIUpdate').checked
+                };
+
+                $.ajax({
+                    url: '@Url.Action("SaveNotificationSettings", "AdminSetting", new { area = "Admin" })',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    headers: { "RequestVerificationToken": token },
+                    data: JSON.stringify(data),
+                    success: function (response) {
+                        showToast(response.message, response.success);
+                    },
+                    error: function () {
+                        showToast("Lỗi khi lưu cấu hình thông báo!", false);
+                    }
+                });
+            }, 400);
+        }
+
+        // ==========================================
+        // MODAL: MỞ / ĐÓNG
+        // ==========================================
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+        }
+
+        function closeModalOnBackdrop(event, modalId) {
+            if (event.target === document.getElementById(modalId)) {
+                closeModal(modalId);
+            }
+        }
+
+        // Đóng modal bằng ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                ['modal-change-password', 'modal-sessions'].forEach(id => closeModal(id));
+            }
+        });
+
+        // ==========================================
+        // MODAL ĐỔI MẬT KHẨU
+        // ==========================================
+        function openChangePasswordModal() {
+            // Reset form
+            document.getElementById('cp-current').value = '';
+            document.getElementById('cp-new').value = '';
+            document.getElementById('cp-confirm').value = '';
+            updatePasswordStrength('');
+            openModal('modal-change-password');
+        }
+
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'bi bi-eye-slash text-base';
+            } else {
+                input.type = 'password';
+                icon.className = 'bi bi-eye text-base';
+            }
+        }
+
+        // Thêm listener theo dõi độ mạnh mật khẩu
+        document.getElementById('cp-new').addEventListener('input', function() {
+            updatePasswordStrength(this.value);
+        });
+
+        function updatePasswordStrength(password) {
+            const bars = [1, 2, 3, 4].map(i => document.getElementById('cp-str-' + i));
+            const label = document.getElementById('cp-strength-label');
+            let score = 0;
+            if (password.length >= 6) score++;
+            if (password.length >= 10) score++;
+            if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++;
+            if (/[0-9]/.test(password) && /[^a-zA-Z0-9]/.test(password)) score++;
+
+            const levels = [
+                { color: 'bg-red-500', text: 'Yếu' },
+                { color: 'bg-orange-400', text: 'Trung bình' },
+                { color: 'bg-yellow-400', text: 'Khá' },
+                { color: 'bg-green-500', text: 'Mạnh' }
+            ];
+
+            bars.forEach((bar, i) => {
+                if (i < score && score > 0) {
+                    bar.className = `h-1 flex-1 rounded-full ${levels[score - 1].color} transition-colors duration-300`;
+                } else {
+                    bar.className = 'h-1 flex-1 rounded-full bg-slate-200 dark:bg-slate-700 transition-colors duration-300';
+                }
+            });
+
+            label.textContent = score > 0 ? `Độ mạnh: ${levels[score - 1].text}` : '';
+        }
+
+        function submitChangePassword() {
+            const currentPwd = document.getElementById('cp-current').value.trim();
+            const newPwd = document.getElementById('cp-new').value.trim();
+            const confirmPwd = document.getElementById('cp-confirm').value.trim();
+
+            if (!currentPwd || !newPwd || !confirmPwd) {
+                showToast('Vui lòng điền đầy đủ tất cả các trường mật khẩu.', false);
+                return;
+            }
+            if (newPwd !== confirmPwd) {
+                showToast('Mật khẩu mới và xác nhận không khớp!', false);
+                return;
+            }
+            if (newPwd.length < 6) {
+                showToast('Mật khẩu mới phải có ít nhất 6 ký tự.', false);
+                return;
+            }
+
+            const btn = document.getElementById('btn-change-password');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Đang xử lý...';
+
+            const token = $('input[name="__RequestVerificationToken"]').val();
+            $.ajax({
+                url: '@Url.Action("ChangePassword", "AdminSetting", new { area = "Admin" })',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: { "RequestVerificationToken": token },
+                data: JSON.stringify({
+                    CurrentPassword: currentPwd,
+                    NewPassword: newPwd,
+                    ConfirmPassword: confirmPwd
+                }),
+                success: function (response) {
+                    if (response.success) {
+                        closeModal('modal-change-password');
+                        showToast(response.message, true);
+                    } else {
+                        showToast(response.message, false);
+                    }
+                },
+                error: function () {
+                    showToast('Lỗi hệ thống khi đổi mật khẩu!', false);
+                },
+                complete: function () {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check-lg"></i> Xác nhận đổi';
+                }
+            });
+        }
+
+        // ==========================================
+        // MODAL QUẢN LÝ PHIÊN ĐĂNG NHẬP
+        // ==========================================
+        function openSessionsModal() {
+            openModal('modal-sessions');
+            loadActiveSessions();
+        }
+
+        function loadActiveSessions() {
+            const list = document.getElementById('sessions-list');
+            list.innerHTML = `
+                <div class="flex items-center justify-center py-8">
+                    <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <span class="ml-3 text-sm text-secondary">Đang tải...</span>
+                </div>`;
+
+            $.get('@Url.Action("GetActiveSessions", "AdminSetting", new { area = "Admin" })', function(response) {
+                if (!response.success || !response.sessions || response.sessions.length === 0) {
+                    list.innerHTML = '<p class="text-sm text-secondary text-center py-6">Không có phiên nào đang hoạt động.</p>';
+                    return;
+                }
+
+                list.innerHTML = response.sessions.map(s => `
+                    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-[#132337] border ${
+                        s.isCurrent ? 'border-primary/40' : 'border-slate-200/60 dark:border-outline-variant'
+                    }">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                <i class="bi bi-person-fill text-primary"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-on-surface dark:text-on-primary-container truncate">
+                                    ${s.fullName}
+                                    ${s.isCurrent ? '<span class="ml-1 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-bold">Bạn</span>' : ''}
+                                </p>
+                                <p class="text-xs text-secondary truncate">${s.email}</p>
+                            </div>
+                        </div>
+                        <button type="button"
+                            onclick="revokeSession('${s.userId}', '${s.fullName}', this)"
+                            class="ml-3 shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg ${
+                                s.isCurrent
+                                    ? 'bg-orange-50 text-orange-600 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400'
+                                    : 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400'
+                            } transition-colors cursor-pointer">
+                            <i class="bi bi-slash-circle"></i>
+                            ${s.isCurrent ? 'Đặt lại token' : 'Thu hồi'}
+                        </button>
+                    </div>
+                `).join('');
+            }).fail(function() {
+                list.innerHTML = '<p class="text-sm text-red-500 text-center py-6">Lỗi khi tải danh sách phiên.</p>';
+            });
+        }
+
+        function revokeSession(userId, fullName, btn) {
+            if (!confirm(`Bạn có chắc muốn thu hồi tất cả phiên đăng nhập của "${fullName}"?`)) return;
+
+            btn.disabled = true;
+            const origContent = btn.innerHTML;
+            btn.innerHTML = '<div class="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>';
+
+            const token = $('input[name="__RequestVerificationToken"]').val();
+            $.ajax({
+                url: '@Url.Action("RevokeUserSessions", "AdminSetting", new { area = "Admin" })',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: { "RequestVerificationToken": token },
+                data: JSON.stringify({ UserId: userId }),
+                success: function (response) {
+                    if (response.success) {
+                        showToast(response.message, true);
+                        loadActiveSessions(); // Tải lại danh sách
+                    } else {
+                        showToast(response.message, false);
+                        btn.disabled = false;
+                        btn.innerHTML = origContent;
+                    }
+                },
+                error: function () {
+                    showToast('Lỗi hệ thống khi thu hồi phiên!', false);
+                    btn.disabled = false;
+                    btn.innerHTML = origContent;
+                }
+            });
+        }
+    </script>
+}

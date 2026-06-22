@@ -1,6 +1,6 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using QuizGenAI.Models;
-using System.Diagnostics;
 
 namespace QuizGenAI.Controllers
 {
@@ -16,12 +16,6 @@ namespace QuizGenAI.Controllers
             return View();
         }
 
-        public IActionResult Review()
-        {
-            ViewData["ActivePage"] = "Review";
-            return View();
-        }
-
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
@@ -29,3 +23,4 @@ namespace QuizGenAI.Controllers
         }
     }
 }
+

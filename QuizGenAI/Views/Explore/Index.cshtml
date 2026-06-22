@@ -1,0 +1,189 @@
+@{
+    ViewData["Title"] = "Khám phá";
+    ViewData["ActivePage"] = "Explore";
+}
+
+@Html.AntiForgeryToken()
+
+<!-- Page Title & Search/Filter Section -->
+<div class="mb-8">
+    <h1 class="text-h1 font-h1 text-on-surface dark:text-on-primary-container mb-2">Khám phá</h1>
+    <p class="font-body text-body text-secondary dark:text-secondary-fixed-dim mb-6">Tìm kiếm hàng ngàn bộ đề được tạo bởi cộng đồng QuizGen AI.</p>
+    <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <form method="get" action="/Explore" class="relative flex-1 max-w-md w-full">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 transform -translate-y-1/2 text-outline">search</span>
+            <input name="search" value="@ViewBag.SearchTerm" class="w-full pl-10 pr-4 py-2 bg-surface dark:bg-on-secondary-fixed border border-slate-200 dark:border-outline-variant rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body text-body text-on-surface dark:text-on-primary-container placeholder-outline transition-shadow" placeholder="Tìm kiếm bộ đề..." type="text">
+        </form>
+        <div class="flex space-x-2 overflow-x-auto no-scrollbar pb-2 md:pb-0">
+            <a href="/Explore" class="px-4 py-2 @(string.IsNullOrEmpty(ViewBag.SearchTerm) ? "bg-primary text-on-primary" : "bg-surface dark:bg-on-secondary-fixed text-secondary border border-slate-200 dark:border-outline-variant") rounded-lg font-button text-button whitespace-nowrap shadow-sm hover:bg-primary/90 transition-colors">Tất cả</a>
+        </div>
+    </div>
+</div>
+
+<!-- Bộ đề nổi bật (Horizontal Scroll) -->
+<div class="mb-12">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-h2 font-h2 text-on-surface dark:text-on-primary-container">Bộ đề nổi bật</h2>
+    </div>
+    <div class="flex space-x-6 overflow-x-auto no-scrollbar pb-4 -mx-6 px-6 md:mx-0 md:px-0">
+        @if (ViewBag.FeaturedQuizSets != null && ((List<QuizGenAI.Models.QuizSet>)ViewBag.FeaturedQuizSets).Any())
+        {
+            var featuredList = (List<QuizGenAI.Models.QuizSet>)ViewBag.FeaturedQuizSets;
+            int idx = 0;
+            @foreach (var quizSet in featuredList)
+            {
+                var badgeText = "Nổi bật";
+                var badgeClass = "bg-success-light dark:bg-success/20 text-success";
+                var badgeIcon = "verified";
+                var gradientClass = "from-primary-fixed-dim/30";
+
+                if (idx == 0)
+                {
+                    badgeText = "Thịnh hành";
+                    badgeClass = "bg-warning-light dark:bg-warning/20 text-warning";
+                    badgeIcon = "local_fire_department";
+                    gradientClass = "from-primary-fixed-dim/30";
+                }
+                else if (idx == 1)
+                {
+                    badgeText = "Đề xuất";
+                    badgeClass = "bg-success-light dark:bg-success/20 text-success";
+                    badgeIcon = "verified";
+                    gradientClass = "from-success-light/50";
+                }
+                else
+                {
+                    badgeText = "Mới nhất";
+                    badgeClass = "bg-tertiary-fixed dark:bg-tertiary/20 text-tertiary dark:text-tertiary-fixed-dim";
+                    badgeIcon = "star";
+                    gradientClass = "from-tertiary-fixed-dim/30";
+                }
+                idx++;
+
+                var authorName = quizSet.User?.FullName ?? quizSet.User?.Email ?? "Ẩn danh";
+                var totalQ = quizSet.TotalQuestions;
+                var description = quizSet.Document?.Description ?? "Đề ôn tập trắc nghiệm được tạo tự động từ tài liệu học tập.";
+
+                <div class="flex-none w-[300px] bg-surface dark:bg-on-secondary-fixed rounded-[20px] p-6 shadow-sm border border-slate-200 dark:border-outline-variant relative overflow-hidden group hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] transition-shadow">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl @gradientClass to-transparent rounded-bl-full pointer-events-none"></div>
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="@badgeClass px-2 py-1 rounded-full font-label-sm text-label-sm flex items-center">
+                            <span class="material-symbols-outlined text-[14px] mr-1">@badgeIcon</span> @badgeText
+                        </div>
+                        <span class="font-caption text-caption text-secondary dark:text-secondary-fixed-dim">@totalQ câu</span>
+                    </div>
+                    <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container mb-2 line-clamp-2" title="@quizSet.Title">@quizSet.Title</h3>
+                    <p class="font-body text-body text-secondary dark:text-secondary-fixed-dim mb-4 line-clamp-2">@description</p>
+                    <div class="flex items-center justify-between mt-auto pt-4 border-t border-slate-100 dark:border-outline-variant">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-6 h-6 rounded-full bg-primary text-on-primary text-[10px] font-bold flex items-center justify-center">
+                                @(string.IsNullOrEmpty(authorName) ? "A" : authorName.Trim()[0].ToString().ToUpper())
+                            </div>
+                            <span class="font-caption text-caption text-secondary dark:text-secondary-fixed-dim truncate max-w-[120px]" title="@authorName">@authorName</span>
+                        </div>
+                        <button class="bg-slate-100 dark:bg-on-secondary-fixed-variant text-secondary dark:text-secondary-fixed-dim hover:bg-primary-fixed hover:text-primary dark:hover:bg-primary-fixed-dim dark:hover:text-on-primary-fixed-variant px-3 py-1.5 rounded-lg font-button text-button transition-colors btn-do-exam" data-quizset-id="@quizSet.Id">Làm thử</button>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="w-full py-8 text-center text-secondary dark:text-secondary-fixed-dim font-body">
+                <span class="material-symbols-outlined text-[48px] block mb-2 text-outline">quiz</span>
+                Chưa có bộ đề nổi bật nào
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Danh sách bộ đề công khai (3-column grid) -->
+<div>
+    <h2 class="text-h2 font-h2 text-on-surface dark:text-on-primary-container mb-6">Danh sách bộ đề công khai</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        @if (ViewBag.AllPublicQuizSets != null && ((List<QuizGenAI.Models.QuizSet>)ViewBag.AllPublicQuizSets).Any())
+        {
+            var publicList = (List<QuizGenAI.Models.QuizSet>)ViewBag.AllPublicQuizSets;
+            @foreach (var quizSet in publicList)
+            {
+                var authorName = quizSet.User?.FullName ?? quizSet.User?.Email ?? "Ẩn danh";
+                var totalQ = quizSet.TotalQuestions;
+                var description = quizSet.Document?.Description ?? "Đề ôn tập trắc nghiệm được tạo tự động từ tài liệu học tập.";
+
+                <div class="bg-surface dark:bg-on-secondary-fixed rounded-[20px] p-5 shadow-sm border border-slate-200 dark:border-outline-variant flex flex-col hover:border-primary-fixed-dim dark:hover:border-primary-fixed transition-colors group">
+                    <div class="flex justify-between items-start mb-3">
+                        <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container group-hover:text-primary dark:group-hover:text-primary-fixed-dim transition-colors line-clamp-2" title="@quizSet.Title">@quizSet.Title</h3>
+                        <span class="text-outline flex items-center gap-1" title="Lượt xem: @quizSet.ViewCount">
+                            <span class="material-symbols-outlined text-[18px]">visibility</span>
+                            <span class="text-[12px]">@quizSet.ViewCount</span>
+                        </span>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        @if (quizSet.BloomRememberPercent > 0)
+                        {
+                            <span class="bg-blue-100 dark:bg-bloom-remember/20 text-bloom-remember dark:text-primary-fixed-dim px-2 py-1 rounded-full font-label-sm text-label-sm">NHẬN BIẾT (@quizSet.BloomRememberPercent%)</span>
+                        }
+                        @if (quizSet.BloomUnderstandPercent > 0)
+                        {
+                            <span class="bg-purple-100 dark:bg-bloom-understand/20 text-bloom-understand dark:text-tertiary-fixed-dim px-2 py-1 rounded-full font-label-sm text-label-sm">THÔNG HIỂU (@quizSet.BloomUnderstandPercent%)</span>
+                        }
+                        @if (quizSet.BloomApplyPercent > 0)
+                        {
+                            <span class="bg-orange-100 dark:bg-bloom-apply/20 text-bloom-apply dark:text-bloom-apply px-2 py-1 rounded-full font-label-sm text-label-sm">VẬN DỤNG (@quizSet.BloomApplyPercent%)</span>
+                        }
+                    </div>
+                    <p class="font-body text-body text-secondary dark:text-secondary-fixed-dim mb-6 flex-1 line-clamp-3">@description</p>
+                    <div class="flex items-center justify-between mt-auto pt-4 border-t border-slate-100 dark:border-outline-variant">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 rounded-full border border-slate-200 dark:border-outline-variant bg-primary text-on-primary font-bold flex items-center justify-center">
+                                @(string.IsNullOrEmpty(authorName) ? "A" : authorName.Trim()[0].ToString().ToUpper())
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="font-caption text-caption text-on-surface dark:text-on-primary-container font-semibold truncate max-w-[120px]" title="@authorName">@authorName</span>
+                                <span class="font-label-sm text-label-sm text-outline">@totalQ CÂU</span>
+                            </div>
+                        </div>
+                        <button class="bg-primary text-on-primary hover:bg-primary/90 px-4 py-2 rounded-lg font-button text-button transition-colors btn-do-exam" data-quizset-id="@quizSet.Id">Làm thử</button>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-span-full py-16 text-center text-secondary dark:text-secondary-fixed-dim font-body flex flex-col items-center justify-center">
+                <span class="material-symbols-outlined text-[64px] block mb-4 text-outline">folder_open</span>
+                <h3 class="text-h3 font-semibold mb-2">Chưa có bộ đề công khai nào</h3>
+                <p class="text-sm">Hãy thử tìm kiếm với từ khóa khác hoặc tạo bộ đề của riêng bạn và chia sẻ nhé.</p>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Xử lý sự kiện click nút "Làm thử" để tăng lượt xem rồi chuyển trang
+        document.querySelectorAll(".btn-do-exam").forEach(button => {
+            button.addEventListener("click", function(e) {
+                e.preventDefault();
+                const quizSetId = this.dataset.quizsetId;
+                
+                // Lấy token CSRF
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+                // Gửi request POST tăng ViewCount
+                fetch('/Explore/IncrementView', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        'quizSetId': quizSetId,
+                        '__RequestVerificationToken': token
+                    })
+                }).finally(() => {
+                    // Chuyển hướng tới Exam Start
+                    window.location.href = `/Exam/Start/${quizSetId}?returnUrl=Explore`;
+                });
+            });
+        });
+    </script>
+}

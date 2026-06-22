@@ -1,0 +1,417 @@
+@model QuizGenAI.Models.AdvancedAnalysisViewModel
+@using System.Text.Encodings.Web
+
+@{
+    string GetInitials(string fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName)) return "HS";
+        var parts = fullName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpper();
+        return (parts[0][0].ToString() + parts[parts.Length - 1][0].ToString()).ToUpper();
+    }
+
+    string GetAvatarColorClass(string initials)
+    {
+        int sum = 0;
+        foreach (char c in initials) sum += (int)c;
+        string[] classes = {
+            "bg-blue-100 text-blue-700",
+            "bg-purple-100 text-purple-700",
+            "bg-amber-100 text-amber-700",
+            "bg-emerald-100 text-emerald-700",
+            "bg-rose-100 text-rose-700",
+            "bg-indigo-100 text-indigo-700"
+        };
+        return classes[sum % classes.Length];
+    }
+}
+
+<!-- Tiêu đề trang & Nút xuất báo cáo -->
+<div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+        <h2 class="font-h1 text-h1 text-on-background">Phân tích Nâng cao</h2>
+        <p class="font-body text-body text-secondary">Giám sát hoạt động hệ thống và hiệu suất học tập của người dùng.</p>
+    </div>
+    <div>
+        <a href="@Url.Action("ExportReport", "AdvancedAnalysis", new { area = "Admin", timeframe = Model.SelectedTimeframe })" 
+           class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-[#002f9c] text-white rounded-xl transition-all duration-200 font-button text-button shadow-sm cursor-pointer hover:scale-[1.01]">
+            <span class="material-symbols-outlined text-[18px]">download</span>
+            Xuất báo cáo
+        </a>
+    </div>
+</div>
+
+<!-- Lưới 3 Thẻ thống kê (Stats Cards Grid) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Card 1: Tổng số lượt thi trên hệ thống -->
+    <div class="bg-surface dark:bg-[#0d1c2f] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant/30 flex flex-col justify-between gap-4 hover:shadow-md transition-all duration-200">
+        <div class="flex items-start justify-between">
+            <div>
+                <p class="text-on-surface-variant dark:text-secondary-fixed-dim font-body text-body mb-1">TỔNG SỐ LƯỢT THI TRÊN HỆ THỐNG</p>
+                <h3 class="font-h1 text-h1 text-on-surface dark:text-on-primary-container">@Model.TotalExams.ToString("N0")</h3>
+            </div>
+            <div class="bg-blue-50 dark:bg-blue-950/20 p-2 rounded-lg text-primary dark:text-blue-400 flex items-center gap-0.5 text-xs font-bold shadow-inner">
+                <span>@Model.TotalExamsChangeText</span>
+            </div>
+        </div>
+        <div>
+            <!-- Progress Line -->
+            <div class="w-full bg-slate-100 dark:bg-slate-800/50 rounded-full h-1.5 overflow-hidden mb-1">
+                <div class="bg-primary h-full rounded-full transition-all duration-500" style="width: 75%"></div>
+            </div>
+            <div class="flex justify-end text-[11px] text-outline dark:text-secondary-fixed-dim font-semibold">
+                <span>@Model.TotalExamsChangeText so với tuần trước</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Điểm trung bình của tất cả người dùng -->
+    <div class="bg-surface dark:bg-[#0d1c2f] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant/30 flex flex-col justify-between gap-4 hover:shadow-md transition-all duration-200">
+        <div class="flex items-start justify-between">
+            <div>
+                <p class="text-on-surface-variant dark:text-secondary-fixed-dim font-body text-body mb-1">ĐIỂM TRUNG BÌNH CỦA TẤT CẢ NGƯỜI DÙNG</p>
+                <h3 class="font-h1 text-h1 text-on-surface dark:text-on-primary-container">@Model.AverageScore.ToString("0.0")/10</h3>
+            </div>
+            <div class="bg-purple-50 dark:bg-purple-950/20 p-2 rounded-lg text-purple-600 dark:text-purple-400 flex items-center gap-0.5 text-xs font-bold shadow-inner">
+                <span>@Model.AverageScoreText</span>
+            </div>
+        </div>
+        <div>
+            <!-- Progress Line -->
+            <div class="w-full bg-slate-100 dark:bg-slate-800/50 rounded-full h-1.5 overflow-hidden mb-1">
+                <div class="bg-purple-600 h-full rounded-full transition-all duration-500" style="width: @(Model.AverageScore * 10)%"></div>
+            </div>
+            <div class="flex justify-between text-[11px] text-outline dark:text-secondary-fixed-dim font-semibold">
+                <span>Tiến trình điểm chuẩn</span>
+                <span>@((Model.AverageScore * 10).ToString("0"))% / 100%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Tỷ lệ hoàn thành bài thi -->
+    <div class="bg-surface dark:bg-[#0d1c2f] rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant/30 flex flex-col justify-between gap-4 hover:shadow-md transition-all duration-200">
+        <div class="flex items-start justify-between">
+            <div>
+                <p class="text-on-surface-variant dark:text-secondary-fixed-dim font-body text-body mb-1">TỶ LỆ HOÀN THÀNH BÀI THI</p>
+                <h3 class="font-h1 text-h1 text-on-surface dark:text-on-primary-container">@Model.CompletionRate%</h3>
+            </div>
+            <div class="bg-emerald-50 dark:bg-emerald-950/20 p-2 rounded-lg text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 text-xs font-bold shadow-inner">
+                <span>@Model.CompletionStatusText</span>
+            </div>
+        </div>
+        <div>
+            <!-- Progress Line -->
+            <div class="w-full bg-slate-100 dark:bg-slate-800/50 rounded-full h-1.5 overflow-hidden mb-1">
+                <div class="bg-emerald-600 h-full rounded-full transition-all duration-500" style="width: @Model.CompletionRate%"></div>
+            </div>
+            <div class="flex justify-between text-[11px] text-outline dark:text-secondary-fixed-dim font-semibold">
+                <span>Trạng thái hoạt động</span>
+                <span>@Model.CompletionRate% / 100%</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Đồ thị Xu hướng Hiệu suất -->
+<div class="bg-surface dark:bg-[#0d1c2f] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant/30 p-6 mb-8">
+    <div class="flex items-center justify-between border-b border-outline-variant dark:border-outline-variant/20 pb-4 mb-4">
+        <div>
+            <h4 class="font-h3 text-h3 text-on-surface dark:text-on-primary-container">Số lượt thi tăng trưởng theo từng ngày trong tuần</h4>
+            <p class="text-xs text-outline dark:text-secondary-fixed-dim font-body">Phân tích tần suất làm bài thi của người dùng trong 7 ngày gần nhất.</p>
+        </div>
+        <!-- Bộ lọc thời gian -->
+        <div>
+            <select id="timeframeSelect" onchange="changeTimeframe(this.value)" class="px-3 py-1.5 border border-slate-200 dark:border-outline-variant rounded-lg text-xs font-semibold text-secondary dark:text-secondary-fixed-dim bg-white dark:bg-[#0d1c2f] outline-none cursor-pointer">
+                @if (Model.SelectedTimeframe == "lastweek")
+                {
+                    <option value="thisweek">Tuần này</option>
+                    <option value="lastweek" selected>Tuần trước</option>
+                }
+                else
+                {
+                    <option value="thisweek" selected>Tuần này</option>
+                    <option value="lastweek">Tuần trước</option>
+                }
+            </select>
+        </div>
+    </div>
+    
+    <!-- Canvas vẽ biểu đồ -->
+    <div class="relative w-full" style="height: 280px;">
+        <canvas id="performanceTrendChart"></canvas>
+    </div>
+</div>
+
+<!-- Giám sát lượt làm bài gần đây -->
+<div class="bg-surface dark:bg-[#0d1c2f] rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant/30 overflow-hidden mb-6">
+    <!-- Header của bảng -->
+    <div class="p-6 border-b border-outline-variant dark:border-outline-variant/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h4 class="font-h3 text-h3 text-on-surface dark:text-on-primary-container">Giám sát lượt làm bài gần đây</h4>
+            <p class="text-xs text-outline dark:text-secondary-fixed-dim font-body">Cập nhật thời gian thực các phiên làm bài của người dùng trên hệ thống.</p>
+        </div>
+    </div>
+
+    <!-- Bộ lọc & Tìm kiếm -->
+    <form method="get" action="@Url.Action("Index", "AdvancedAnalysis", new { area = "Admin" })" id="analysisFilterForm" class="p-6 border-b border-outline-variant dark:border-outline-variant/20 bg-slate-50/50 dark:bg-slate-800/10 flex flex-col md:flex-row md:items-center gap-4">
+        <input type="hidden" name="timeframe" value="@Model.SelectedTimeframe" />
+        
+        <!-- Ô tìm kiếm -->
+        <div class="relative flex-1">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+            <input type="text" name="search" value="@Model.SearchQuery" placeholder="Tìm kiếm theo tên người dùng, email hoặc tên bộ đề..." 
+                   class="w-full pl-10 pr-4 py-2 bg-white dark:bg-[#0d1c2f] border border-slate-200 dark:border-outline-variant rounded-lg text-body text-on-surface dark:text-on-primary-container focus:ring-2 focus:ring-primary-container outline-none transition-all" />
+        </div>
+
+        <!-- Nút lọc -->
+        <div class="flex items-center gap-2">
+            <a href="@Url.Action("Index", "AdvancedAnalysis", new { area = "Admin", timeframe = Model.SelectedTimeframe })" 
+               class="px-4 py-2 border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#0d1c2f] rounded-lg text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors font-button text-button text-center">
+                Đặt lại
+            </a>
+            <button type="submit" class="flex items-center gap-2 px-5 py-2 bg-primary hover:bg-[#002f9c] text-white rounded-lg transition-colors font-button text-button cursor-pointer">
+                <span class="material-symbols-outlined text-lg">filter_list</span>
+                Lọc dữ liệu
+            </button>
+        </div>
+    </form>
+
+    <!-- Nội dung bảng -->
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="bg-slate-50 dark:bg-slate-800/10 border-b border-outline-variant dark:border-outline-variant/20 text-on-surface-variant dark:text-secondary-fixed-dim font-label-sm text-label-sm">
+                    <th class="px-6 py-4 uppercase tracking-wider">Tên người dùng</th>
+                    <th class="px-6 py-4 uppercase tracking-wider">Bộ đề đã thi</th>
+                    <th class="px-6 py-4 uppercase tracking-wider">Điểm số</th>
+                    <th class="px-6 py-4 uppercase tracking-wider">Thời gian làm bài</th>
+                    <th class="px-6 py-4 uppercase tracking-wider">Trạng thái</th>
+                    <th class="px-6 py-4 uppercase tracking-wider text-right">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-outline-variant/20">
+                @if (Model.RecentSessions.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-secondary dark:text-secondary-fixed-dim">
+                            Không tìm thấy lượt làm bài thi nào phù hợp.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var s in Model.RecentSessions)
+                    {
+                        var initials = GetInitials(s.UserFullName);
+                        var avatarBg = GetAvatarColorClass(initials);
+                        
+                        <tr class="hover:bg-slate-50/30 dark:hover:bg-slate-800/10 transition-colors">
+                            <!-- Tên người dùng & Email -->
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm @avatarBg shadow-sm">
+                                        @initials
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-on-surface dark:text-on-primary-container leading-tight text-sm">@s.UserFullName</p>
+                                        <p class="text-xs text-outline dark:text-secondary-fixed-dim leading-tight mt-0.5">@s.UserEmail</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <!-- Bộ đề thi -->
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-semibold text-on-surface dark:text-on-primary-container max-w-xs truncate" title="@s.QuizSetTitle">@s.QuizSetTitle</p>
+                            </td>
+                            <!-- Điểm số -->
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center justify-center font-bold text-sm @(s.Score >= 8.0 ? "text-success" : s.Score < 5.0 ? "text-error" : "text-amber-500")">
+                                    @s.Score.ToString("0.0") / 10
+                                </span>
+                            </td>
+                            <!-- Thời gian làm bài -->
+                            <td class="px-6 py-4">
+                                <span class="text-sm text-on-surface-variant dark:text-secondary-fixed-dim font-medium">@s.DurationText</span>
+                            </td>
+                            <!-- Trạng thái -->
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider @s.StatusCssClass">
+                                    @s.StatusText
+                                </span>
+                            </td>
+                            <!-- Thao tác -->
+                            <td class="px-6 py-4 text-right">
+                                <a href="@Url.Action("Details", "AdvancedAnalysis", new { area = "Admin", id = s.SessionId })" 
+                                   class="text-primary hover:text-[#002f9c] dark:text-primary-fixed-dim dark:hover:text-[#b7c4ff] font-semibold text-sm transition-all hover:underline whitespace-nowrap">
+                                    Xem chi tiết
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Phân trang (Pagination) -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/10 border-t border-outline-variant dark:border-outline-variant/20 flex items-center justify-between flex-wrap gap-4">
+            <p class="font-caption text-caption text-on-surface-variant dark:text-secondary-fixed-dim">
+                Hiển thị @((Model.CurrentPage - 1) * Model.PageSize + 1) - @Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalSessionsCount) trên @Model.TotalSessionsCount lượt thi gần đây
+            </p>
+            <div class="flex items-center gap-1">
+                <!-- Nút Trước -->
+                @if (Model.CurrentPage > 1)
+                {
+                    <a href="@Url.Action("Index", new { search = Model.SearchQuery, timeframe = Model.SelectedTimeframe, page = Model.CurrentPage - 1 })" 
+                       class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-outline-variant text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-white dark:hover:bg-slate-800 transition-all shadow-sm">
+                        <span class="material-symbols-outlined text-sm">chevron_left</span>
+                    </a>
+                }
+                else
+                {
+                    <button disabled class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-outline-variant text-on-surface-variant dark:text-secondary-fixed-dim opacity-50 cursor-not-allowed shadow-sm">
+                        <span class="material-symbols-outlined text-sm">chevron_left</span>
+                    </button>
+                }
+
+                <!-- Các trang -->
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    if (i == Model.CurrentPage)
+                    {
+                        <button class="w-8 h-8 flex items-center justify-center rounded-lg text-white font-button text-button shadow-sm bg-primary">@i</button>
+                    }
+                    else
+                    {
+                        <a href="@Url.Action("Index", new { search = Model.SearchQuery, timeframe = Model.SelectedTimeframe, page = i })" 
+                           class="w-8 h-8 flex items-center justify-center rounded-lg border border-transparent text-on-surface-variant dark:text-secondary-fixed-dim hover:border-slate-200 dark:hover:border-outline-variant hover:bg-white dark:hover:bg-slate-800 transition-all font-button text-button">
+                            @i
+                        </a>
+                    }
+                }
+
+                <!-- Nút Sau -->
+                @if (Model.CurrentPage < Model.TotalPages)
+                {
+                    <a href="@Url.Action("Index", new { search = Model.SearchQuery, timeframe = Model.SelectedTimeframe, page = Model.CurrentPage + 1 })" 
+                       class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-outline-variant text-on-surface-variant dark:text-secondary-fixed-dim hover:bg-white dark:hover:bg-slate-800 transition-all shadow-sm">
+                        <span class="material-symbols-outlined text-sm">chevron_right</span>
+                    </a>
+                }
+                else
+                {
+                    <button disabled class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-outline-variant text-on-surface-variant dark:text-secondary-fixed-dim opacity-50 cursor-not-allowed shadow-sm">
+                        <span class="material-symbols-outlined text-sm">chevron_right</span>
+                    </button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Tích hợp Chart.js từ CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+@section Scripts {
+    <script>
+        // Thiết lập bộ lọc thời gian và tải lại trang
+        function changeTimeframe(value) {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('timeframe', value);
+            currentUrl.searchParams.set('page', '1'); // Quay lại trang 1
+            window.location.href = currentUrl.toString();
+        }
+
+        // ==========================================
+        // KHỞI TẠO BIỂU ĐỒ DIỆN TÍCH (CHART.JS)
+        // ==========================================
+        let trendChart = null;
+
+        function initTrendChart() {
+            const chartCanvas = document.getElementById('performanceTrendChart');
+            if (!chartCanvas) return;
+
+            if (trendChart) {
+                trendChart.destroy();
+            }
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(226, 232, 240, 0.5)';
+            const textColor = isDark ? '#cbd5e1' : '#94a3b8';
+            const primaryColor = isDark ? '#3b82f6' : '#0037b0';
+            const bgColor = isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(0, 55, 176, 0.06)';
+
+            const ctx = chartCanvas.getContext('2d');
+            
+            // Nhận dữ liệu động từ model
+            const chartLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartLabels));
+            const examsTakenData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ExamsTakenData));
+
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: 'Lượt làm bài',
+                            data: examsTakenData,
+                            borderColor: primaryColor,
+                            backgroundColor: bgColor,
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 2,
+                            pointBackgroundColor: primaryColor,
+                            pointHoverRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false // Ẩn legend như trong hình mẫu
+                        },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1e293b' : '#0f172a',
+                            titleColor: isDark ? '#f8fafc' : '#ffffff',
+                            bodyColor: isDark ? '#cbd5e1' : '#ffffff',
+                            mode: 'index',
+                            intersect: false,
+                            padding: 10,
+                            bodyFont: { family: 'Inter' },
+                            titleFont: { family: 'Inter', weight: 'bold' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: textColor,
+                                font: { family: 'Inter', size: 11 }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: textColor,
+                                font: { family: 'Inter', size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Khởi tạo
+        initTrendChart();
+
+        // Lắng nghe thay đổi theme
+        window.addEventListener('theme-change', initTrendChart);
+    </script>
+}

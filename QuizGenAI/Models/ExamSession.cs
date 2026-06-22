@@ -16,6 +16,9 @@ namespace QuizGenAI.Models
 
         public ExamSessionStatus Status { get; set; } = ExamSessionStatus.InProgress;
 
+        /// <summary>Đánh dấu session này thuộc chế độ luyện tập chủ đề còn yếu</summary>
+        public bool IsPracticeMode { get; set; } = false;
+
         public DateTime StartedAt { get; set; } = DateTime.UtcNow;
         public DateTime? FinishedAt { get; set; }
 

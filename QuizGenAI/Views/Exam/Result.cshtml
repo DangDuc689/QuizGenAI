@@ -1,0 +1,592 @@
+@model QuizGenAI.Models.ExamSession
+@{
+    Layout = null;
+    ViewData["Title"] = "Kết quả bài thi - QuizGen AI";
+
+    var returnUrl = ViewBag.ReturnUrl as string;
+    var backUrl = "/Dashboard";
+    if (returnUrl == "Dashboard")
+    {
+        backUrl = "/Dashboard";
+    }
+    else if (returnUrl == "Explore")
+    {
+        backUrl = "/Explore";
+    }
+    else if (returnUrl == "Review")
+    {
+        backUrl = "/Exam/Review";
+    }
+    else if (returnUrl == "AdvancedAnalysis")
+    {
+        backUrl = "/Admin/AdvancedAnalysis";
+    }
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+
+    <!-- Inline Theme Detection to prevent FOUC -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "slate-200": "#E2E8F0",
+                      "primary-fixed-dim": "#b7c4ff",
+                      "on-secondary-fixed": "#0d1c2f",
+                      "surface-bright": "#faf8ff",
+                      "on-secondary": "#ffffff",
+                      "surface-container-high": "#e2e7ff",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-low": "#f2f3ff",
+                      "slate-100": "#F1F5F9",
+                      "slate-300": "#CBD5E1",
+                      "outline": "#747686",
+                      "on-primary": "#ffffff",
+                      "warning": "#D97706",
+                      "danger": "#DC2626",
+                      "success": "#16A34A",
+                      "danger-light": "#FEE2E2",
+                      "success-light": "#DCFCE7",
+                      "primary-fixed": "#dce1ff",
+                      "surface-container-lowest": "#ffffff",
+                      "slate-50": "#F8FAFC",
+                      "secondary": "#515f74",
+                      "warning-light": "#FEF3C7",
+                      "secondary-fixed-dim": "#b9c7e0",
+                      "slate-400": "#94A3B8",
+                      "primary-container": "#1d4ed8",
+                      "on-primary-fixed": "#001551",
+                      "surface": "#faf8ff",
+                      "on-error": "#ffffff",
+                      "surface-dim": "#d2d9f4",
+                      "on-background": "#131b2e",
+                      "bloom-remember": "#1D4ED8",
+                      "on-surface-variant": "#434655",
+                      "bloom-understand": "#7C3AED",
+                      "bloom-apply": "#EA580C",
+                      "error": "#ba1a1a",
+                      "surface-container": "#eaedff",
+                      "outline-variant": "#c4c5d7",
+                      "background": "#faf8ff",
+                      "on-primary-container": "#cad3ff",
+                      "on-surface": "#131b2e",
+                      "secondary-container": "#d5e3fd",
+                      "on-secondary-fixed-variant": "#3a485c",
+                      "on-primary-fixed-variant": "#0039b5",
+                      "primary": "#0037b0",
+              },
+              "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px" },
+              "fontFamily": { "sans": ["Inter"], "label-sm": ["Inter"], "body": ["Inter"], "button": ["Inter"], "h3": ["Inter"], "h1": ["Inter"], "h2": ["Inter"], "caption": ["Inter"] },
+              "fontSize": {
+                      "label-sm": ["11px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                      "body": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                      "button": ["14px", { "lineHeight": "1", "fontWeight": "600" }],
+                      "h3": ["18px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                      "h1": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                      "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                      "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }]
+              }
+            },
+          },
+        }
+    </script>
+
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <style>
+        /* Circular ring animation */
+        #score-ring {
+            transition: stroke-dashoffset 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Progress bar animation */
+        .level-bar-fill {
+            transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Fade-in animation for review cards */
+        @@keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .review-card {
+            animation: slideUp 0.5s ease both;
+        }
+        .review-card:nth-child(1) { animation-delay: 0.05s; }
+        .review-card:nth-child(2) { animation-delay: 0.12s; }
+        .review-card:nth-child(3) { animation-delay: 0.19s; }
+        .review-card:nth-child(4) { animation-delay: 0.26s; }
+        .review-card:nth-child(5) { animation-delay: 0.33s; }
+        .review-card:nth-child(n+6) { animation-delay: 0.4s; }
+
+        /* Score hero animation */
+        @@keyframes popIn {
+            0%   { opacity: 0; transform: scale(0.7); }
+            70%  { transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .score-hero { animation: popIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both; }
+
+        /* Sparkle icon spin on hover */
+        #practice-btn:hover .sparkle-icon { animation: spin 0.6s linear; }
+        @@keyframes spin { to { transform: rotate(360deg); } }
+
+        /* AI explanation gradient bg */
+        .ai-explanation-box {
+            background: linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%);
+            border: 1px solid #dde1ff;
+        }
+        .dark .ai-explanation-box {
+            background: linear-gradient(135deg, rgba(87, 149, 255, 0.05) 0%, rgba(113, 42, 226, 0.05) 100%);
+            border: 1px solid rgba(221, 225, 255, 0.15);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-on-background min-h-screen font-sans text-on-surface dark:text-on-primary-container antialiased transition-colors duration-300">
+
+    <!-- MAIN SCROLL AREA -->
+    <main class="max-w-3xl mx-auto px-4 sm:px-6 py-10 pb-32 flex flex-col gap-10">
+
+        <!-- HERO SCORE SECTION -->
+        <section class="flex flex-col items-center gap-4 text-center score-hero">
+            <div>
+                <h1 class="text-[28px] font-bold text-primary dark:text-primary-fixed-dim tracking-tight">Hoàn thành bài thi! 🎉</h1>
+                <p id="quiz-title" class="text-body font-body text-secondary dark:text-secondary-fixed-dim mt-1">
+                    Xem kết quả bài làm chi tiết bên dưới
+                </p>
+            </div>
+
+            <!-- Circular Score Ring -->
+            <div class="relative w-44 h-44 flex items-center justify-center my-2">
+                <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 176 176">
+                    <!-- Track -->
+                    <circle cx="88" cy="88" r="74" class="stroke-slate-200 dark:stroke-outline-variant" stroke-width="10" fill="transparent"/>
+                    <!-- Fill ring -->
+                    <circle id="score-ring" cx="88" cy="88" r="74"
+                            class="stroke-success" stroke-width="10" fill="transparent"
+                            stroke-dasharray="464.96" stroke-dashoffset="464.96"
+                            stroke-linecap="round"/>
+                </svg>
+                <div class="text-center z-10">
+                    <div class="flex items-baseline justify-center gap-1">
+                        <span id="score-num" class="text-[38px] font-bold text-on-surface dark:text-on-primary-container leading-none">0</span>
+                        <span id="score-denom" class="text-[20px] font-semibold text-secondary dark:text-secondary-fixed-dim">/25</span>
+                    </div>
+                    <span id="score-pct" class="text-[13px] font-semibold text-success mt-1 block">0% chính xác</span>
+                </div>
+            </div>
+
+            <!-- Quick Stats Row -->
+            <div class="flex items-center gap-3 flex-wrap justify-center">
+                <div class="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-on-secondary-fixed rounded-full border border-slate-200 dark:border-outline-variant shadow-sm">
+                    <span class="material-symbols-outlined text-[16px] text-secondary dark:text-secondary-fixed-dim">timer</span>
+                    <span class="text-caption font-semibold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider" id="time-taken-label">THỜI GIAN LÀM BÀI:</span>
+                    <span class="text-caption font-bold text-on-surface dark:text-on-primary-container tabular-nums" id="time-taken-value">--</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- PERFORMANCE BY COGNITIVE LEVEL -->
+        <section>
+            <div class="mb-4">
+                <h2 class="text-[17px] font-semibold text-on-surface dark:text-on-primary-container">Hiệu suất theo cấp độ nhận thức</h2>
+                <p class="text-caption text-secondary dark:text-secondary-fixed-dim mt-0.5">Phân tích theo 3 cấp độ nhận thức của Thang đo Bloom (Nhận biết, Thông hiểu, Vận dụng).</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="cognitive-grid">
+                <!-- Cards injected by JS -->
+            </div>
+        </section>
+
+        <!-- DETAILED REVIEW -->
+        <section>
+            <h2 class="text-[17px] font-semibold text-on-surface dark:text-on-primary-container mb-4">Xem lại chi tiết câu hỏi</h2>
+            <div id="review-list" class="flex flex-col gap-4">
+                <!-- Cards injected by JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- STICKY BOTTOM ACTION BAR -->
+    <div class="fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-on-secondary-fixed/95 backdrop-blur-md border-t border-slate-200/70 dark:border-outline-variant px-6 py-4 flex items-center justify-between shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
+        <a href="@backUrl" class="flex items-center gap-2 text-secondary dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim font-semibold text-[14px] transition-colors group">
+            <span class="material-symbols-outlined text-[18px] transition-transform group-hover:-translate-x-0.5">arrow_back</span>
+            Quay lại
+        </a>
+        @if (!User.IsInRole(SD.Role_Admin))
+        {
+            @if (Model.IsPracticeMode)
+            {
+                <a asp-controller="Practice" asp-action="Index"
+                   class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary-container text-white font-semibold text-[14px] shadow-md hover:shadow-lg active:scale-95 transition-all duration-200 focus:ring-4 focus:ring-primary/20 cursor-pointer">
+                    <span class="material-symbols-outlined text-[18px] animate-spin" style="animation-duration: 4s;">loop</span>
+                    Xem danh sách chủ đề yếu
+                </a>
+            }
+            else
+            {
+                <button id="practice-btn"
+                        class="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-[14px] shadow-md hover:bg-primary/90 active:scale-95 transition-all duration-200 focus:ring-4 focus:ring-primary/20">
+                    <span class="material-symbols-outlined text-[18px] sparkle-icon" style="font-variation-settings:'FILL' 1;">auto_awesome</span>
+                    Luyện tập chủ đề còn yếu
+                </button>
+            }
+        }
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+    const RESULT = {
+        quizTitle:          `@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(Model.QuizSet?.Title ?? "Đề ôn tập"))`,
+        totalQuestions:     @Model.TotalQuestions,
+        correctAnswers:     @Model.CorrectAnswers,
+        timeTakenSeconds:   @(Model.ActualDurationSeconds ?? 0),
+        vsAveragePercent:   0,
+
+        // Phân rã theo cấp độ nhận thức
+        remember:  { correct: @Model.RememberCorrect,  total: @Model.RememberTotal },
+        understand:{ correct: @Model.UnderstandCorrect,  total: @Model.UnderstandTotal },
+        apply:     { correct: @Model.ApplyCorrect,  total: @Model.ApplyTotal },
+
+        // Danh sách câu hỏi xem lại chi tiết
+        questions: [
+            @foreach (var ans in Model.ExamAnswers)
+            {
+                var q = ans.Question;
+                if (q == null) continue;
+                var correctOpt = q.AnswerOptions.FirstOrDefault(ao => ao.IsCorrect);
+                var userOpt = q.AnswerOptions.FirstOrDefault(ao => ao.Id == ans.SelectedAnswerOptionId);
+                
+                <text>
+                {
+                    index: @q.OrderIndex,
+                    level: "@Html.Raw(q.BloomLevel == QuizGenAI.Models.BloomLevel.Remember ? "Nhận biết" : q.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "Thông hiểu" : "Vận dụng")",
+                    stem: `@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(q.Content))`,
+                    options: [
+                        @foreach (var opt in q.AnswerOptions)
+                        {
+                            <text>
+                            { key: "@opt.Label", text: `@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(opt.Content))` },
+                            </text>
+                        }
+                    ],
+                    userAnswer: "@(userOpt?.Label ?? "")",
+                    correctAnswer: "@(correctOpt?.Label ?? "A")",
+                    explanation: `@Html.Raw(q.Explanation != null ? System.Web.HttpUtility.JavaScriptStringEncode(q.Explanation) : "")`
+                },
+                </text>
+            }
+        ]
+    };
+
+    // HELPERS
+    function formatTime(sec) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${m}M ${s.toString().padStart(2,'0')}S`;
+    }
+
+    function bloomBadgeClass(level) {
+        if (level === "Nhận biết")  return "bg-blue-100 text-bloom-remember border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/30";
+        if (level === "Thông hiểu") return "bg-purple-100 text-bloom-understand border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900/30";
+        return "bg-orange-100 text-bloom-apply border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900/30";
+    }
+
+    function barColor(level) {
+        if (level === "Nhận biết")  return "bg-bloom-remember";
+        if (level === "Thông hiểu") return "bg-bloom-understand";
+        return "bg-bloom-apply";
+    }
+
+    function displayLevelName(level) {
+        return level;
+    }
+
+    // RENDER HERO SCORE
+    function renderScore() {
+        const { correctAnswers, totalQuestions, timeTakenSeconds, quizTitle } = RESULT;
+        const pct = Math.round((correctAnswers / totalQuestions) * 100);
+
+        document.getElementById("quiz-title").textContent = quizTitle;
+        document.getElementById("score-denom").textContent = "/" + totalQuestions;
+        document.getElementById("time-taken-value").textContent = formatTime(timeTakenSeconds);
+
+        // Animate counter
+        let current = 0;
+        const step = Math.ceil(correctAnswers / 30) || 1;
+        const counter = setInterval(() => {
+            current = Math.min(current + step, correctAnswers);
+            document.getElementById("score-num").textContent = current;
+            document.getElementById("score-pct").textContent = Math.round((current/totalQuestions)*100) + "% chính xác";
+            if (current >= correctAnswers) clearInterval(counter);
+        }, 35);
+
+        // Animate ring (circumference for r=74: 464.96)
+        const circumference = 464.96;
+        const offset = circumference - (pct / 100) * circumference;
+        setTimeout(() => {
+            document.getElementById("score-ring").style.strokeDashoffset = offset;
+        }, 300);
+    }
+
+    // RENDER COGNITIVE LEVEL CARDS
+    function renderCognitiveLevels() {
+        const levels = [
+            { name: "NHẬN BIẾT",   sub: "Ghi nhớ sự kiện cơ bản",       data: RESULT.remember,   color: "bg-bloom-remember",   badge: "bg-blue-50 text-bloom-remember border border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900/30" },
+            { name: "THÔNG HIỂU", sub: "Giải thích ý tưởng hoặc khái niệm", data: RESULT.understand,  color: "bg-bloom-understand",  badge: "bg-purple-50 text-bloom-understand border border-purple-200 dark:bg-purple-950/30 dark:text-purple-400 dark:border-purple-900/30" },
+            { name: "VẬN DỤNG",    sub: "Áp dụng kiến thức vào tình huống mới", data: RESULT.apply,       color: "bg-bloom-apply",       badge: "bg-orange-50 text-bloom-apply border border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-900/30" },
+        ];
+
+        const grid = document.getElementById("cognitive-grid");
+
+        levels.forEach((lv, i) => {
+            const pct = lv.data.total > 0 ? Math.round((lv.data.correct / lv.data.total) * 100) : 0;
+            const card = document.createElement("div");
+            card.className = "bg-white dark:bg-on-secondary-fixed rounded-2xl border border-slate-200/80 dark:border-outline-variant p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow";
+            card.innerHTML = `
+                <div class="flex items-center justify-between gap-2">
+                    <span class="inline-block px-2.5 py-1 rounded-full font-label-sm text-label-sm uppercase tracking-wider ${lv.badge}">${lv.name}</span>
+                    <span class="text-[22px] font-bold text-on-surface dark:text-on-primary-container tabular-nums">${lv.data.correct}/${lv.data.total}</span>
+                </div>
+                <p class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">${lv.sub}</p>
+                <div class="w-full h-2 bg-slate-100 dark:bg-outline-variant/50 rounded-full overflow-hidden">
+                    <div class="h-full ${lv.color} rounded-full level-bar-fill" style="width:0%" data-target="${pct}%"></div>
+                </div>
+            `;
+            grid.appendChild(card);
+
+            // Animate bar with stagger
+            setTimeout(() => {
+                card.querySelector(".level-bar-fill").style.width = pct + "%";
+            }, 400 + i * 150);
+        });
+    }
+
+    // RENDER DETAILED REVIEW CARDS
+    function renderReview() {
+        const list = document.getElementById("review-list");
+
+        RESULT.questions.forEach(q => {
+            const isCorrect = q.userAnswer === q.correctAnswer;
+            const correctOption = q.options.find(o => o.key === q.correctAnswer);
+            const userOption    = q.options.find(o => o.key === q.userAnswer);
+            const badge = bloomBadgeClass(q.level);
+
+            const card = document.createElement("div");
+            card.className = "review-card rounded-2xl border overflow-hidden shadow-sm " +
+                (isCorrect
+                    ? "border-success/30 bg-success-light/20 dark:bg-success/5 dark:border-success/20"
+                    : "border-danger/30 bg-danger-light/20 dark:bg-danger/5 dark:border-danger/20");
+
+            // Build options HTML (only show user's answer if wrong, plus correct)
+            let answerHTML = "";
+            if (isCorrect) {
+                answerHTML = `
+                    <div class="flex items-center gap-3 px-4 py-3 rounded-xl border border-success/30 bg-success-light/30 dark:bg-success/10">
+                        <span class="material-symbols-outlined text-success text-[20px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
+                        <span class="text-body font-body text-success font-semibold">${correctOption ? correctOption.text : ""}</span>
+                    </div>
+                `;
+            } else {
+                answerHTML = `
+                    <!-- Wrong answer (user's choice) -->
+                    <div class="flex items-center gap-3 px-4 py-3 rounded-xl border border-danger/30 bg-danger-light/30 dark:bg-danger/10">
+                        <span class="material-symbols-outlined text-danger text-[20px]">cancel</span>
+                        <span class="text-body font-body text-danger line-through opacity-80">${userOption ? userOption.text : "Bỏ trống"}</span>
+                        <span class="ml-auto material-symbols-outlined text-danger text-[18px]">close</span>
+                    </div>
+                    <!-- Correct answer -->
+                    <div class="flex items-center gap-3 px-4 py-3 rounded-xl border border-success/30 bg-success-light/30 dark:bg-success/10">
+                        <span class="material-symbols-outlined text-success text-[20px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
+                        <span class="text-body font-body text-success font-semibold">${correctOption ? correctOption.text : ""}</span>
+                        <span class="ml-auto material-symbols-outlined text-success text-[18px]" style="font-variation-settings:'FILL' 1;">check</span>
+                    </div>
+                    <!-- AI Explanation -->
+                    <div class="ai-explanation-box rounded-xl p-4 flex flex-col gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-primary dark:text-primary-fixed-dim" style="font-variation-settings:'FILL' 1;">psychology</span>
+                            <span class="text-caption font-semibold text-primary dark:text-primary-fixed-dim uppercase tracking-wider">Giải thích từ AI</span>
+                        </div>
+                        <p class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim leading-relaxed">${q.explanation}</p>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="p-5 flex flex-col gap-4">
+                    <!-- Header row -->
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${isCorrect ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}">
+                            <span class="material-symbols-outlined text-[18px]" style="font-variation-settings:'FILL' 1;">${isCorrect ? "check_circle" : "cancel"}</span>
+                        </div>
+                        <span class="text-caption font-semibold text-secondary dark:text-secondary-fixed-dim">Câu ${q.index}</span>
+                        <span class="inline-block px-2.5 py-1 rounded-full font-label-sm text-label-sm uppercase tracking-wider border ${badge}">${displayLevelName(q.level)}</span>
+                    </div>
+
+                    <!-- Question stem -->
+                    <p class="text-body font-body text-on-surface dark:text-on-primary-container leading-relaxed">${q.stem}</p>
+
+                    <!-- Answer area -->
+                    <div class="flex flex-col gap-2.5">
+                        ${answerHTML}
+                    </div>
+                </div>
+            `;
+
+            list.appendChild(card);
+        });
+    }
+
+    // HELPERS
+    function showLoading(show) {
+        const $modal = $('#loading-modal');
+        if (show) {
+            $modal.removeClass('hidden').addClass('flex opacity-0');
+            setTimeout(() => {
+                $modal.addClass('opacity-100');
+            }, 20);
+        } else {
+            $modal.removeClass('opacity-100').addClass('opacity-0');
+            setTimeout(() => {
+                $modal.addClass('hidden').removeClass('flex opacity-0');
+            }, 300);
+        }
+    }
+
+    // INIT
+    document.addEventListener("DOMContentLoaded", () => {
+        renderScore();
+        renderCognitiveLevels();
+        renderReview();
+
+        const practiceBtn = document.getElementById("practice-btn");
+        if (practiceBtn) {
+            practiceBtn.addEventListener("click", () => {
+            const remTotal = RESULT.remember.total;
+            const undTotal = RESULT.understand.total;
+            const appTotal = RESULT.apply.total;
+
+            const remAcc = remTotal > 0 ? (RESULT.remember.correct / remTotal) : 1.0;
+            const undAcc = undTotal > 0 ? (RESULT.understand.correct / undTotal) : 1.0;
+            const appAcc = appTotal > 0 ? (RESULT.apply.correct / appTotal) : 1.0;
+
+            // Xác định Bloom level yếu nhất dựa trên độ chính xác thấp nhất và số lượng câu hỏi nhiều nhất làm tiêu chí phụ
+            let targetLevel = 0; // 0: Remember, 1: Understand, 2: Apply
+            let levelName = "Nhận biết";
+            let levelSlug = "remember";
+
+            let candidates = [];
+            if (remTotal > 0) candidates.push({ level: 0, acc: remAcc, name: "Nhận biết", slug: "remember", total: remTotal });
+            if (undTotal > 0) candidates.push({ level: 1, acc: undAcc, name: "Thông hiểu", slug: "understand", total: undTotal });
+            if (appTotal > 0) candidates.push({ level: 2, acc: appAcc, name: "Vận dụng", slug: "apply", total: appTotal });
+
+            if (candidates.length > 0) {
+                // Sắp xếp tăng dần theo độ chính xác, nếu bằng nhau thì ưu tiên phần có nhiều câu hỏi hơn
+                candidates.sort((a, b) => {
+                    if (a.acc !== b.acc) {
+                        return a.acc - b.acc;
+                    }
+                    return b.total - a.total;
+                });
+                targetLevel = candidates[0].level;
+                levelName = candidates[0].name;
+                levelSlug = candidates[0].slug;
+            } else {
+                targetLevel = 0;
+                levelName = "Nhận biết";
+                levelSlug = "remember";
+            }
+
+            // Gọi AJAX để bắt đầu quy trình tạo đề luyện tập cho cấp độ nhận thức yếu nhất
+            showLoading(true);
+            $.ajax({
+                url: '/Practice/CreatePracticeQuiz',
+                type: 'POST',
+                data: {
+                    targetLevel: targetLevel,
+                    questionCount: 10
+                },
+                success: function (res) {
+                    if (res.success) {
+                        // Tạo phiên làm bài luyện tập
+                        $.ajax({
+                            url: '/Practice/StartPracticeSession',
+                            type: 'POST',
+                            data: {
+                                quizSetId: res.quizSetId
+                            },
+                            success: function (sessionRes) {
+                                if (sessionRes.success) {
+                                    // Chuyển hướng sang trang thi thử với chế độ luyện tập
+                                    window.location.href = `/Exam/Index?quizSetId=${res.quizSetId}&id=${sessionRes.sessionId}&returnUrl=Practice`;
+                                } else {
+                                    showLoading(false);
+                                    alert(sessionRes.message || "Không thể khởi tạo phiên làm bài luyện tập.");
+                                }
+                            },
+                            error: function () {
+                                showLoading(false);
+                                alert("Có lỗi xảy ra khi bắt đầu làm bài luyện tập.");
+                            }
+                        });
+                    } else {
+                        showLoading(false);
+                        // Khi thiếu câu hỏi trong lịch sử, gợi ý chuyển hướng sang trang quản lý luyện tập chung
+                        if (confirm(`${res.message}\n\nBạn có muốn chuyển sang trang Luyện tập để chọn cấp độ nhận thức khác hoặc xem danh sách chủ đề yếu không?`)) {
+                            window.location.href = `/Practice?level=${levelSlug}`;
+                        }
+                    }
+                },
+                error: function () {
+                    showLoading(false);
+                    alert("Có lỗi kết nối xảy ra khi yêu cầu tạo đề luyện tập.");
+                }
+            });
+        });
+        }
+    });
+    </script>
+
+    <!-- Modal Loading Spinner (Giao diện hiện đại đồng bộ) -->
+    <div id="loading-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
+        <div class="bg-surface dark:bg-on-secondary-fixed border border-slate-200/80 dark:border-outline-variant rounded-3xl p-8 max-w-sm w-full shadow-2xl relative z-10 flex flex-col items-center gap-5 text-center transform scale-100 transition-transform">
+            <!-- Modern Spinner with gradient -->
+            <div class="relative w-16 h-16">
+                <div class="absolute inset-0 rounded-full border-4 border-primary/20"></div>
+                <div class="absolute inset-0 rounded-full border-4 border-t-primary border-l-primary/30 animate-spin"></div>
+            </div>
+            <div>
+                <h3 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container">Đang tạo đề luyện tập</h3>
+                <p class="text-caption text-secondary dark:text-secondary-fixed-dim mt-2 font-body leading-relaxed">AI đang tuyển chọn các câu hỏi phù hợp nhất từ kho lưu trữ của bạn. Vui lòng chờ giây lát...</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

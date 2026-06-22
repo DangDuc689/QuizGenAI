@@ -197,6 +197,10 @@ namespace QuizGenAI.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("AvatarPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -218,6 +222,9 @@ namespace QuizGenAI.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LockedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -273,8 +280,21 @@ namespace QuizGenAI.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AiAudience")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AiKeyPoints")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AiSummary")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("ExtractedText")
                         .HasColumnType("nvarchar(max)");
@@ -365,6 +385,9 @@ namespace QuizGenAI.Migrations
 
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsPracticeMode")
+                        .HasColumnType("bit");
 
                     b.Property<int>("QuizSetId")
                         .HasColumnType("int");
@@ -460,6 +483,9 @@ namespace QuizGenAI.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("Difficulty")
+                        .HasColumnType("int");
+
                     b.Property<int?>("DocumentId")
                         .HasColumnType("int");
 
@@ -470,6 +496,9 @@ namespace QuizGenAI.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("TargetBloomLevel")
                         .HasColumnType("int");
 
                     b.Property<int>("TimeLimitMinutes")

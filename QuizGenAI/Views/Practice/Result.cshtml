@@ -1,0 +1,219 @@
+@model QuizGenAI.Models.ExamSession
+@{
+    ViewData["Title"] = "Kết quả luyện tập - QuizGen AI";
+    var pct = Model.TotalQuestions > 0 ? (int)Math.Round(Model.CorrectAnswers * 100.0 / Model.TotalQuestions) : 0;
+    var targetLevel = Model.QuizSet?.TargetBloomLevel;
+    var targetLevelName = targetLevel == QuizGenAI.Models.BloomLevel.Remember ? "Nhận biết (Remembering)" :
+                          targetLevel == QuizGenAI.Models.BloomLevel.Understand ? "Thông hiểu (Understanding)" :
+                          "Vận dụng (Applying)";
+    
+    // AI Feedback template generator
+    string aiFeedback = "";
+    if (pct >= 80)
+    {
+        aiFeedback = $"Tuyệt vời! Bạn đã đạt {pct}% chính xác trong bài luyện tập cấp độ {targetLevelName}. Kỹ năng này của bạn đã được cải thiện rõ rệt và điểm yếu này đã được loại bỏ khỏi danh sách cảnh báo.";
+    }
+    else if (pct >= 50)
+    {
+        aiFeedback = $"Khá tốt! Bạn đạt {pct}% chính xác. Bạn đã có tiến bộ ở cấp độ {targetLevelName}, tuy nhiên vẫn cần làm thêm một vài đề luyện tập nữa để nâng cao độ chính xác lên trên 80%.";
+    }
+    else
+    {
+        aiFeedback = $"Cố gắng lên! Kết quả {pct}% cho thấy bạn còn gặp nhiều lúng túng ở cấp độ {targetLevelName}. Hãy đọc kỹ phần giải thích chi tiết của AI bên dưới đối với các câu trả lời sai và thử luyện tập lại.";
+    }
+}
+
+<style>
+    /* Continuous slow rotate animation for AI star icon */
+    @@keyframes ai-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .ai-spin-icon {
+        animation: ai-spin 8s linear infinite;
+    }
+
+    /* Glow effect based on score */
+    .score-glow-success {
+        box-shadow: 0 0 20px rgba(22, 163, 74, 0.15);
+    }
+    .score-glow-warning {
+        box-shadow: 0 0 20px rgba(217, 119, 6, 0.15);
+    }
+    .score-glow-danger {
+        box-shadow: 0 0 20px rgba(220, 38, 38, 0.15);
+    }
+
+    /* Score circle progress animation */
+    #result-ring-circle {
+        transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+</style>
+
+<div class="flex flex-col gap-8 max-w-4xl mx-auto">
+    <!-- Header Title with Navigation Back Button -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 dark:border-outline-variant pb-6">
+        <div>
+            <h1 class="text-h1 font-h1 text-on-background dark:text-on-primary-container flex items-center gap-2">
+                <span class="material-symbols-outlined text-[36px] text-success">verified</span>
+                Kết quả luyện tập
+            </h1>
+            <p class="text-body text-secondary dark:text-secondary-fixed-dim font-body mt-1">
+                Phân tích kết quả luyện tập Bloom level chuyên sâu.
+            </p>
+        </div>
+        <a asp-controller="Practice" asp-action="Index" class="inline-flex items-center gap-1.5 px-4 py-2 border border-slate-200 dark:border-outline-variant hover:bg-slate-50 dark:hover:bg-on-secondary-fixed rounded-xl text-caption font-semibold text-secondary dark:text-secondary-fixed-dim transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+            Danh sách luyện tập
+        </a>
+    </div>
+
+    <!-- Stats Summary Cards with Layered Design -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Score Circle Card (Layered depth) -->
+        @{
+            var glowClass = pct >= 80 ? "score-glow-success border-success/35" :
+                            pct >= 50 ? "score-glow-warning border-warning/35" :
+                            "score-glow-danger border-danger/35";
+
+            var ringColor = pct >= 80 ? "stroke-success" :
+                            pct >= 50 ? "stroke-warning" :
+                            "stroke-danger";
+        }
+        <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border rounded-3xl p-6 flex flex-col items-center justify-center text-center gap-4 transition-all duration-300 @glowClass">
+            <span class="block text-caption text-secondary dark:text-secondary-fixed-dim uppercase font-bold tracking-wider">Độ chính xác</span>
+            <div class="relative w-36 h-36 flex items-center justify-center">
+                <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="50" class="stroke-slate-100 dark:stroke-outline-variant/30" stroke-width="8" fill="transparent"/>
+                    <circle id="result-ring-circle" cx="60" cy="60" r="50" class="@ringColor" stroke-width="8" fill="transparent"
+                            stroke-dasharray="314.16" stroke-dashoffset="@(314.16 - (pct / 100.0) * 314.16)"
+                            stroke-linecap="round"/>
+                </svg>
+                <div class="text-center z-10">
+                    <div class="flex items-baseline justify-center gap-0.5">
+                        <span class="text-[32px] font-bold text-on-surface dark:text-on-primary-container leading-none">@Model.CorrectAnswers</span>
+                        <span class="text-[18px] font-semibold text-secondary dark:text-secondary-fixed-dim">/@Model.TotalQuestions</span>
+                    </div>
+                    <span class="text-[13px] font-bold mt-1 block @(pct >= 80 ? "text-success" : pct >= 50 ? "text-warning" : "text-danger")">@pct%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Advisor Card with warm gradient -->
+        <div class="md:col-span-2 relative overflow-hidden bg-gradient-to-br from-amber-500/10 to-orange-500/5 border border-amber-500/20 rounded-3xl p-6 shadow-sm flex flex-col justify-between gap-6">
+            <!-- Decorative circle -->
+            <div class="absolute -right-16 -top-16 w-32 h-32 rounded-full bg-amber-500/5 blur-xl pointer-events-none"></div>
+            
+            <div>
+                <div class="flex items-center gap-2 text-amber-800 dark:text-amber-400 mb-3.5 font-semibold">
+                    <span class="material-symbols-outlined text-[24px] ai-spin-icon" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+                    <span class="text-[16px] tracking-wide font-bold">AI Nhận Xét & Phân Tích</span>
+                </div>
+                <p class="text-body text-amber-950/90 dark:text-amber-200 leading-relaxed font-body text-[15px]">
+                    @aiFeedback
+                </p>
+            </div>
+            
+            <div class="flex flex-wrap gap-3 z-10">
+                <div class="px-3 py-1.5 rounded-xl bg-white/70 dark:bg-on-secondary-fixed border border-amber-500/15 dark:border-outline-variant text-caption text-secondary dark:text-secondary-fixed-dim flex items-center gap-1.5 shadow-sm font-medium">
+                    <span class="material-symbols-outlined text-[16px] text-primary">psychology</span>
+                    <span>Cấp độ: <strong class="text-on-surface dark:text-on-primary-container">@targetLevelName</strong></span>
+                </div>
+                <div class="px-3 py-1.5 rounded-xl bg-white/70 dark:bg-on-secondary-fixed border border-amber-500/15 dark:border-outline-variant text-caption text-secondary dark:text-secondary-fixed-dim flex items-center gap-1.5 shadow-sm font-medium">
+                    <span class="material-symbols-outlined text-[16px] text-primary">timer</span>
+                    <span>Thời gian: <strong class="text-on-surface dark:text-on-primary-container">@(Model.ActualDurationSeconds.HasValue ? $"{Model.ActualDurationSeconds.Value / 60}m {Model.ActualDurationSeconds.Value % 60}s" : "--")</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review Questions Section -->
+    <div class="flex flex-col gap-5">
+        <h2 class="text-h3 font-h3 text-on-surface dark:text-on-primary-container flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-primary">rate_review</span>
+            Xem lại chi tiết câu hỏi luyện tập
+        </h2>
+
+        <div class="flex flex-col gap-5">
+            @foreach (var ans in Model.ExamAnswers.OrderBy(ea => ea.Question?.OrderIndex ?? 0))
+            {
+                var q = ans.Question;
+                if (q == null) continue;
+                var isCorrect = ans.IsCorrect == true;
+                var correctOption = q.AnswerOptions.FirstOrDefault(ao => ao.IsCorrect);
+                var userOption = q.AnswerOptions.FirstOrDefault(ao => ao.Id == ans.SelectedAnswerOptionId);
+
+                <div class="rounded-3xl border overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 @(isCorrect ? "border-success/30 bg-success-light/5 dark:bg-success/5" : "border-danger/30 bg-danger-light/5 dark:bg-danger/5")">
+                    <div class="p-6 flex flex-col gap-4">
+                        <!-- Card Header -->
+                        <div class="flex items-center justify-between gap-3 flex-wrap">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 @(isCorrect ? "bg-success/10 text-success" : "bg-danger/10 text-danger") shadow-inner">
+                                    <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">
+                                        @(isCorrect ? "check" : "close")
+                                    </span>
+                                </div>
+                                <span class="text-caption font-bold text-secondary dark:text-secondary-fixed-dim uppercase tracking-wider">Câu hỏi @q.OrderIndex</span>
+                            </div>
+                            <span class="px-3 py-1 rounded-full font-label-sm text-label-sm bg-primary/10 text-primary border border-primary/20 dark:bg-primary-fixed-dim/10 dark:text-primary-fixed-dim">
+                                @targetLevelName
+                            </span>
+                        </div>
+
+                        <!-- Stem -->
+                        <p class="text-body font-body text-on-surface dark:text-on-primary-container leading-relaxed text-[15px] font-medium">
+                            @q.Content
+                        </p>
+
+                        <!-- Answer Options -->
+                        <div class="flex flex-col gap-3 mt-1">
+                            @if (isCorrect)
+                            {
+                                <div class="flex items-start gap-3.5 px-4 py-3.5 rounded-2xl border border-success/30 bg-success-light/25 dark:bg-success/10 text-success font-semibold shadow-inner">
+                                    <span class="material-symbols-outlined text-[20px] pt-0.5 shrink-0" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                    <span class="font-body text-body">@correctOption?.Label. @correctOption?.Content</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="flex items-start gap-3.5 px-4 py-3.5 rounded-2xl border border-danger/25 bg-danger-light/20 dark:bg-danger/10 text-danger opacity-85 line-through">
+                                    <span class="material-symbols-outlined text-[20px] pt-0.5 shrink-0">cancel</span>
+                                    <span class="font-body text-body">@(userOption != null ? $"{userOption.Label}. {userOption.Content}" : "Không chọn đáp án / Bỏ trống")</span>
+                                </div>
+                                <div class="flex items-start gap-3.5 px-4 py-3.5 rounded-2xl border border-success/30 bg-success-light/25 dark:bg-success/10 text-success font-semibold shadow-inner">
+                                    <span class="material-symbols-outlined text-[20px] pt-0.5 shrink-0" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                                    <span class="font-body text-body">@correctOption?.Label. @correctOption?.Content</span>
+                                </div>
+
+                                <!-- Explanation from AI (Elegant box) -->
+                                @if (!string.IsNullOrEmpty(q.Explanation))
+                                {
+                                    <div class="mt-2 rounded-2xl p-4 bg-slate-50 dark:bg-secondary-container/5 border border-slate-200/50 dark:border-outline-variant flex flex-col gap-2.5">
+                                        <div class="flex items-center gap-1.5 text-primary dark:text-primary-fixed-dim font-bold">
+                                            <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">psychology</span>
+                                            <span class="text-[12px] uppercase tracking-wider">Giải thích chi tiết</span>
+                                        </div>
+                                        <p class="text-caption text-secondary dark:text-secondary-fixed-dim leading-relaxed font-body text-[13px]">@q.Explanation</p>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Actions Footer -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-slate-200 dark:border-outline-variant">
+        <a asp-controller="Dashboard" asp-action="Index" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-slate-200 dark:border-outline-variant hover:bg-slate-50 dark:hover:bg-on-secondary-fixed text-secondary dark:text-secondary-fixed-dim font-button text-button shadow-sm transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+            Về Dashboard
+        </a>
+        <a asp-controller="Practice" asp-action="Index" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-gradient-to-r from-primary to-primary-container hover:from-primary/95 hover:to-primary-container/95 text-white font-button text-button shadow-md hover:shadow-lg hover:shadow-primary/10 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[18px] animate-spin" style="animation-duration: 4s;">loop</span>
+            Luyện tập tiếp
+        </a>
+    </div>
+</div>

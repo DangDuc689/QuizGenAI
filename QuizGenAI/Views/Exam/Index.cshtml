@@ -1,0 +1,914 @@
+@model QuizGenAI.Models.QuizSet
+@{
+    Layout = null;
+    ViewData["Title"] = "Thi thử - QuizGen AI";
+
+    var returnUrl = ViewBag.ReturnUrl as string;
+    var backUrl = "/Dashboard";
+    if (returnUrl == "Explore")
+    {
+        backUrl = "/Explore";
+    }
+    else if (returnUrl == "Review")
+    {
+        backUrl = "/Exam/Review";
+    }
+    else if (returnUrl == "Practice")
+    {
+        backUrl = "/Practice";
+    }
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    
+    <!-- Inline Theme Detection to prevent FOUC -->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        })();
+    </script>
+    
+    <!-- Fonts & Icons from design -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS with custom configuration -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "slate-200": "#E2E8F0",
+                      "primary-fixed-dim": "#b7c4ff",
+                      "on-secondary-fixed": "#0d1c2f",
+                      "on-tertiary-fixed-variant": "#5a00c6",
+                      "surface-bright": "#faf8ff",
+                      "on-tertiary-container": "#dfccff",
+                      "tertiary": "#5700c0",
+                      "tertiary-fixed": "#eaddff",
+                      "on-secondary": "#ffffff",
+                      "surface-container-high": "#e2e7ff",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-low": "#f2f3ff",
+                      "slate-100": "#F1F5F9",
+                      "inverse-surface": "#283044",
+                      "slate-300": "#CBD5E1",
+                      "outline": "#747686",
+                      "on-primary": "#ffffff",
+                      "warning": "#D97706",
+                      "surface-variant": "#dae2fd",
+                      "inverse-primary": "#b7c4ff",
+                      "danger": "#DC2626",
+                      "success": "#16A34A",
+                      "on-secondary-container": "#57657b",
+                      "danger-light": "#FEE2E2",
+                      "primary-fixed": "#dce1ff",
+                      "surface-container-lowest": "#ffffff",
+                      "slate-50": "#F8FAFC",
+                      "secondary": "#515f74",
+                      "tertiary-container": "#712ae2",
+                      "success-light": "#DCFCE7",
+                      "on-error-container": "#93000a",
+                      "on-primary-fixed-variant": "#0039b5",
+                      "on-tertiary-fixed": "#25005a",
+                      "bloom-apply": "#EA580C",
+                      "error": "#ba1a1a",
+                      "surface-container": "#eaedff",
+                      "surface-container-highest": "#dae2fd",
+                      "surface-tint": "#2151da",
+                      "warning-light": "#FEF3C7",
+                      "secondary-fixed-dim": "#b9c7e0",
+                      "tertiary-fixed-dim": "#d2bbff",
+                      "slate-400": "#94A3B8",
+                      "primary-container": "#1d4ed8",
+                      "on-primary-fixed": "#001551",
+                      "surface": "#faf8ff",
+                      "on-error": "#ffffff",
+                      "surface-dim": "#d2d9f4",
+                      "on-background": "#131b2e",
+                      "bloom-remember": "#1D4ED8",
+                      "on-surface-variant": "#434655",
+                      "bloom-understand": "#7C3AED",
+                      "secondary-fixed": "#d5e3fd",
+                      "error-container": "#ffdad6",
+                      "primary": "#0037b0",
+                      "on-secondary-fixed-variant": "#3a485c",
+                      "inverse-on-surface": "#eef0ff",
+                      "outline-variant": "#c4c5d7",
+                      "background": "#faf8ff",
+                      "on-primary-container": "#cad3ff",
+                      "on-surface": "#131b2e",
+                      "secondary-container": "#d5e3fd"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sidebar-width": "240px",
+                      "gutter": "24px",
+                      "base": "4px",
+                      "margin-desktop": "120px",
+                      "max-width": "1200px"
+              },
+              "fontFamily": {
+                      "label-sm": ["Inter"],
+                      "body": ["Inter"],
+                      "button": ["Inter"],
+                      "h3": ["Inter"],
+                      "h1": ["Inter"],
+                      "h2": ["Inter"],
+                      "caption": ["Inter"]
+              },
+              "fontSize": {
+                      "label-sm": ["11px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "700" }],
+                      "body": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                      "button": ["14px", { "lineHeight": "1", "fontWeight": "600" }],
+                      "h3": ["18px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                      "h1": ["32px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                      "h2": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                      "caption": ["12px", { "lineHeight": "1.4", "fontWeight": "400" }]
+              }
+            },
+          },
+        }
+    </script>
+    
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="bg-slate-50 dark:bg-on-background min-h-screen flex flex-col font-body text-on-surface dark:text-on-primary-container antialiased transition-colors duration-300">
+
+    <!-- Top Header -->
+    <partial name="_ExamHeader" model="Model" />
+
+    <!-- Main Workspace -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Question Area -->
+        <main class="flex-1 overflow-y-auto flex justify-center bg-slate-50 dark:bg-on-background transition-colors duration-300">
+            <div class="w-full max-w-3xl px-6 py-8 md:py-12 flex flex-col gap-6">
+                
+                <!-- Progress Header -->
+                <div class="flex flex-col gap-3">
+                    <div class="flex justify-between items-end">
+                        <span class="font-h3 text-h3 text-on-surface dark:text-on-primary-container" id="current-question-title">Câu hỏi 1</span>
+                        <span class="font-body text-body text-secondary dark:text-secondary-fixed-dim" id="current-question-ratio">1/25</span>
+                    </div>
+                    <!-- Linear Progress Bar -->
+                    <div class="w-full h-2 bg-slate-200 dark:bg-outline-variant rounded-full overflow-hidden">
+                        <div id="progress-bar-fill" class="h-full bg-primary dark:bg-primary-fixed-dim rounded-full transition-all duration-500 ease-out" style="width: 4%;"></div>
+                    </div>
+                </div>
+                
+                <!-- Question Card -->
+                <div id="question-card" class="bg-surface-container-lowest dark:bg-on-secondary-fixed rounded-[20px] shadow-sm border border-slate-200/60 dark:border-outline-variant p-6 md:p-10 flex flex-col gap-8 mt-2 transition-all duration-300">
+                    <!-- Meta Row: Bloom's Taxonomy Badge -->
+                    <div class="flex items-center justify-between">
+                        <span id="taxonomy-badge" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-label-sm text-label-sm uppercase tracking-wide">
+                            <span class="material-symbols-outlined text-[14px]">psychology</span>
+                            <span id="taxonomy-text">Đang tải...</span>
+                        </span>
+                    </div>
+                    
+                    <!-- Question Stem -->
+                    <h2 id="question-stem" class="font-h2 text-h2 text-on-surface dark:text-on-primary-container leading-tight">
+                        Đang tải câu hỏi...
+                    </h2>
+                    
+                    <!-- Answer Options -->
+                    <div id="options-container" class="flex flex-col gap-4">
+                        <!-- Options injected dynamically by JS -->
+                    </div>
+                </div>
+                
+                <!-- Spacer for scrolling clearance -->
+                <div class="h-12 w-full"></div>
+            </div>
+        </main>
+        
+        <!-- Question Map Sidebar -->
+        <partial name="_QuestionMap" />
+    </div>
+
+    <!-- Exam Footer (Navigation & Submit) -->
+    <footer class="bg-surface-container-lowest dark:bg-on-secondary-fixed border-t border-slate-200 dark:border-outline-variant px-6 py-4 flex items-center justify-between shrink-0 sticky bottom-0 z-50 shadow-[0_-4px_16px_rgba(0,0,0,0.02)] transition-colors duration-300">
+        <!-- Left Action -->
+        <button id="prev-btn" class="flex items-center gap-2 px-5 py-2.5 rounded-lg text-primary dark:text-primary-fixed-dim hover:bg-slate-100 dark:hover:bg-secondary-container font-button text-button transition-colors cursor-pointer">
+            <span class="material-symbols-outlined">arrow_back</span>
+            Câu trước
+        </button>
+        
+        <!-- Right Actions -->
+        <div class="flex items-center gap-3">
+            <button id="submit-btn" class="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-success-light text-success hover:bg-success-light/80 border border-success/20 font-button text-button shadow-sm transition-colors focus:ring-4 focus:ring-success/20 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">gavel</span>
+                Nộp bài
+            </button>
+            <button id="next-btn" class="flex items-center gap-2 px-8 py-2.5 rounded-lg bg-primary text-white font-button text-button shadow-sm hover:bg-primary/90 transition-colors focus:ring-4 focus:ring-primary/20 cursor-pointer">
+                Câu sau
+                <span class="material-symbols-outlined">arrow_forward</span>
+            </button>
+        </div>
+    </footer>
+
+    <!-- Submission Confirmation Modal -->
+    <div id="submit-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all duration-300 opacity-0 pointer-events-none">
+        <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200 dark:border-outline-variant rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-95 transition-all duration-300 p-6 flex flex-col gap-6">
+            <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-full bg-warning/10 dark:bg-warning/20 text-warning flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-[28px]">gavel</span>
+                </div>
+                <div>
+                    <h3 class="font-h2 text-h3 text-on-surface dark:text-on-primary-container">Nộp bài thi</h3>
+                    <p class="text-body font-body text-secondary dark:text-secondary-fixed-dim mt-1">Bạn có chắc chắn muốn nộp bài thi hiện tại không? Hành động này không thể hoàn tác.</p>
+                </div>
+            </div>
+            
+            <!-- Summary Stats -->
+            <div class="bg-slate-50 dark:bg-surface-dim/20 rounded-xl p-4 grid grid-cols-2 gap-2 text-center border border-slate-200/50 dark:border-outline-variant">
+                <div>
+                    <span class="block text-h2 font-h2 text-primary dark:text-primary-fixed-dim" id="modal-answered-count">0</span>
+                    <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Đã làm</span>
+                </div>
+                <div>
+                    <span class="block text-h2 font-h2 text-danger" id="modal-unanswered-count">25</span>
+                    <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Bỏ trống</span>
+                </div>
+            </div>
+            
+            <!-- Alert if there are unanswered questions -->
+            <div id="unanswered-alert" class="hidden flex items-center gap-2 p-3 bg-danger-light dark:bg-error-container/20 text-danger dark:text-error border border-danger/20 dark:border-error/30 rounded-lg text-caption font-caption">
+                <span class="material-symbols-outlined text-lg">warning</span>
+                <span>Bạn vẫn còn câu hỏi chưa hoàn thành!</span>
+            </div>
+
+            <div class="flex gap-3 justify-end">
+                <button id="cancel-submit-btn" class="px-5 py-2.5 rounded-lg border border-slate-200 dark:border-outline-variant text-secondary dark:text-secondary-fixed-dim hover:bg-slate-100 dark:hover:bg-secondary-container font-button text-button transition-colors cursor-pointer">
+                    Quay lại
+                </button>
+                <button id="confirm-submit-btn" class="px-6 py-2.5 rounded-lg bg-primary text-white font-button text-button shadow-sm hover:bg-primary/90 transition-colors cursor-pointer">
+                    Xác nhận nộp
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Modal -->
+    <div id="result-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 transition-all duration-300 opacity-0 pointer-events-none">
+        <div class="bg-surface-container-lowest dark:bg-on-secondary-fixed border border-slate-200 dark:border-outline-variant rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform scale-95 transition-all duration-300 p-6 flex flex-col gap-6 items-center text-center">
+            <div class="w-20 h-20 rounded-full bg-success/10 dark:bg-success/20 text-success flex items-center justify-center">
+                <span class="material-symbols-outlined text-[48px]">emoji_events</span>
+            </div>
+            
+            <div>
+                <h2 class="font-h1 text-h2 text-on-surface dark:text-on-primary-container">Hoàn thành bài thi!</h2>
+                <p class="text-body font-body text-secondary dark:text-secondary-fixed-dim mt-1">Kết quả kiểm tra của bạn đã được tính toán.</p>
+            </div>
+
+            <!-- Score circle -->
+            <div class="relative w-32 h-32 flex items-center justify-center my-2">
+                <svg class="absolute inset-0 w-full h-full transform -rotate-90">
+                    <circle cx="64" cy="64" r="54" class="stroke-slate-200 dark:stroke-outline-variant" stroke-width="8" fill="transparent"/>
+                    <circle cx="64" cy="64" r="54" id="result-score-ring" class="stroke-primary dark:stroke-primary-fixed-dim" stroke-width="8" fill="transparent" stroke-dasharray="339.292" stroke-dashoffset="339.292" stroke-linecap="round"/>
+                </svg>
+                <div class="text-center">
+                    <span class="block text-[32px] font-bold text-on-surface dark:text-on-primary-container" id="result-score-text">0/25</span>
+                    <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim" id="result-percent-text">0%</span>
+                </div>
+            </div>
+
+            <div class="w-full bg-slate-50 dark:bg-surface-dim/20 rounded-xl p-4 grid grid-cols-2 gap-4 border border-slate-200/50 dark:border-outline-variant">
+                <div class="text-center">
+                    <span class="block text-h3 font-h3 text-success" id="result-correct-count">0</span>
+                    <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Đúng</span>
+                </div>
+                <div class="text-center">
+                    <span class="block text-h3 font-h3 text-danger" id="result-incorrect-count">0</span>
+                    <span class="text-caption font-caption text-secondary dark:text-secondary-fixed-dim">Sai / Bỏ trống</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3 w-full">
+                <a href="@backUrl" id="result-review-btn" class="flex-1 px-5 py-2.5 rounded-lg border border-slate-200 dark:border-outline-variant text-secondary dark:text-secondary-fixed-dim hover:bg-slate-100 dark:hover:bg-secondary-container font-button text-button transition-colors flex items-center justify-center cursor-pointer">
+                    Quay lại
+                </a>
+                <a href="" id="result-modal-detail-link" class="flex-1 px-6 py-2.5 rounded-lg bg-primary text-white font-button text-button shadow-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1;">auto_awesome</span>
+                    Kết quả chi tiết
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    
+    <script>
+    $(document).ready(function () {
+        // 1. REAL QUESTIONS DATABASE FROM SERVER DB
+        const questions = [
+            @foreach (var q in Model.Questions)
+            {
+                var savedAnswers = ViewBag.SavedAnswers as Dictionary<int, int?>;
+                var savedOptionId = savedAnswers != null && savedAnswers.TryGetValue(q.Id, out var optId) ? optId : null;
+                var savedOptionLabel = savedOptionId.HasValue ? q.AnswerOptions.FirstOrDefault(ao => ao.Id == savedOptionId.Value)?.Label : null;
+                <text>
+                {
+                    id: @q.OrderIndex,
+                    dbId: @q.Id,
+                    taxonomy: "@Html.Raw(q.BloomLevel == QuizGenAI.Models.BloomLevel.Remember ? "Nhận biết" : q.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "Thông hiểu" : "Vận dụng")",
+                    taxonomyClass: "@(q.BloomLevel == QuizGenAI.Models.BloomLevel.Remember ? "bg-bloom-remember/10 text-bloom-remember dark:text-primary-fixed-dim border border-bloom-remember/20" : q.BloomLevel == QuizGenAI.Models.BloomLevel.Understand ? "bg-bloom-understand/10 text-bloom-understand dark:text-tertiary-fixed-dim border border-bloom-understand/20" : "bg-warning-light text-bloom-apply dark:text-secondary-fixed-dim border border-warning/20")",
+                    stem: `@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(q.Content))`,
+                    explanation: `@Html.Raw(q.Explanation != null ? System.Web.HttpUtility.JavaScriptStringEncode(q.Explanation) : "")`,
+                    options: [
+                        @foreach (var opt in q.AnswerOptions)
+                        {
+                            <text>
+                            { 
+                                id: @opt.Id, 
+                                key: "@opt.Label", 
+                                text: `@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(opt.Content))` 
+                            },
+                            </text>
+                        }
+                    ],
+                    correct: "@(q.AnswerOptions.FirstOrDefault(ao => ao.IsCorrect)?.Label ?? "A")",
+                    userAnswer: @(savedOptionLabel != null ? $"'{savedOptionLabel}'" : "null"),
+                    userAnswerId: @(savedOptionId.HasValue ? savedOptionId.Value.ToString() : "null")
+                },
+                </text>
+            }
+        ];
+
+        // 2. STATE VARIABLES
+        let currentQuestionIndex = 0; // Bắt đầu từ câu 1 (index 0)
+        let totalQuestions = questions.length;
+        let isExamSubmitted = false;
+        let sessionId = @(ViewBag.SessionId ?? 0);
+        const isNoLimit = @(Model.TimeLimitMinutes <= 0 ? "true" : "false");
+        const isPracticeMode = @(ViewBag.IsPracticeMode == true ? "true" : "false");
+        let actualDurationSeconds = @(ViewBag.ActualDurationSeconds ?? 0);
+        let timeRemainingSeconds = isNoLimit ? 999999 : (@(Model.TimeLimitMinutes * 60) - actualDurationSeconds);
+
+        // 3. START SESSION IN DB
+        function startSessionInDb() {
+            if (sessionId > 0) {
+                // Đang tiếp tục phiên thi cũ
+                startTimer();
+                return;
+            }
+
+            $.ajax({
+                url: '/Exam/StartSession',
+                type: 'POST',
+                data: { quizSetId: @Model.Id },
+                success: function (response) {
+                    if (response.success) {
+                        sessionId = response.sessionId;
+                        startTimer();
+                    } else {
+                        alert("Không thể khởi tạo phiên thi: " + response.message);
+                    }
+                },
+                error: function () {
+                    alert("Lỗi kết nối mạng khi khởi tạo phiên thi thử.");
+                }
+            });
+        }
+
+        // 4. UI RENDERING FUNCTIONS
+        function renderQuestion(index) {
+            if (totalQuestions === 0) return;
+            const q = questions[index];
+            
+            // Update Title & progress
+            $("#current-question-title").text(`Câu hỏi ${q.id}`);
+            $("#current-question-ratio").text(`${q.id} trên ${totalQuestions}`);
+            
+            // Update progress bar
+            const progressPercent = Math.min(100, Math.max(0, (q.id / totalQuestions) * 100));
+            $("#progress-bar-fill").css("width", `${progressPercent}%`);
+            
+            // Update Taxonomy Badge
+            const $badge = $("#taxonomy-badge");
+            $badge.attr("class", `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-label-sm text-label-sm uppercase tracking-wide ${q.taxonomyClass}`);
+            $("#taxonomy-text").text(q.taxonomy);
+
+            // Render Stem
+            $("#question-stem").text(q.stem);
+            
+            // Render Options
+            const $container = $("#options-container");
+            $container.empty();
+            
+            q.options.forEach(opt => {
+                const isSelected = q.userAnswer === opt.key;
+                
+                let btnClass = "";
+                let numClass = "";
+                let textClass = "";
+                let indicatorHtml = "";
+                
+                if (isExamSubmitted) {
+                    // Showing result state
+                    const isCorrectAnswer = opt.key === q.correct;
+                    const isUserChoice = q.userAnswer === opt.key;
+                    
+                    if (isCorrectAnswer) {
+                        btnClass = "border-success bg-success-light/20 dark:bg-success-light/10 pointer-events-none";
+                        numClass = "bg-success text-white";
+                        textClass = "text-success font-medium";
+                        indicatorHtml = `<div class="ml-auto shrink-0 text-success flex items-center h-8"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span></div>`;
+                    } else if (isUserChoice && !isCorrectAnswer) {
+                        btnClass = "border-danger bg-danger-light/20 dark:bg-error-container/10 pointer-events-none";
+                        numClass = "bg-danger text-white";
+                        textClass = "text-danger font-medium";
+                        indicatorHtml = `<div class="ml-auto shrink-0 text-danger flex items-center h-8"><span class="material-symbols-outlined">cancel</span></div>`;
+                    } else {
+                        btnClass = "border-slate-200 dark:border-outline-variant bg-surface-container-lowest dark:bg-on-secondary-fixed opacity-60 pointer-events-none";
+                        numClass = "bg-slate-100 dark:bg-secondary-container text-secondary dark:text-secondary-fixed-dim";
+                        textClass = "text-secondary dark:text-secondary-fixed-dim";
+                    }
+                } else {
+                    // Exam is active
+                    if (isSelected) {
+                        btnClass = "border-primary dark:border-primary-fixed-dim bg-primary-fixed dark:bg-primary/20 shadow-sm";
+                        numClass = "bg-primary text-white";
+                        textClass = "text-on-primary-fixed-variant dark:text-on-primary-container font-medium";
+                        indicatorHtml = `<div class="ml-auto shrink-0 text-primary dark:text-primary-fixed-dim flex items-center h-8"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span></div>`;
+                    } else {
+                        btnClass = "border-slate-200 dark:border-outline-variant bg-surface-container-lowest dark:bg-on-secondary-fixed hover:border-primary-fixed dark:hover:border-primary-fixed-dim hover:bg-slate-50 dark:hover:bg-on-secondary-fixed-variant";
+                        numClass = "bg-slate-100 dark:bg-secondary-container/10 text-secondary dark:text-secondary-fixed-dim group-hover:bg-white dark:group-hover:bg-on-secondary-fixed transition-colors";
+                        textClass = "text-on-surface dark:text-on-primary-container";
+                    }
+                }
+                
+                const optionHtml = `
+                    <button data-key="${opt.key}" class="option-card group w-full text-left flex items-start gap-4 p-5 rounded-xl border-2 focus:outline-none focus:ring-4 focus:ring-primary/20 relative overflow-hidden transition-all duration-200 ${btnClass}">
+                        <div class="w-8 h-8 shrink-0 rounded-full flex items-center justify-center font-button text-button shadow-sm transition-colors ${numClass}">
+                            ${opt.key}
+                        </div>
+                        <div class="pt-1 font-body text-body ${textClass}">
+                            ${opt.text}
+                        </div>
+                        ${indicatorHtml}
+                    </button>
+                `;
+                $container.append(optionHtml);
+            });
+            
+            // Add Explanation block if submitted
+            if (isExamSubmitted && q.explanation) {
+                const explHtml = `
+                    <div class="mt-6 p-5 bg-slate-50 dark:bg-surface-dim/15 border border-slate-200 dark:border-outline-variant rounded-xl flex flex-col gap-2 transition-all duration-300">
+                        <span class="font-button text-button text-primary dark:text-primary-fixed-dim flex items-center gap-1">
+                            <span class="material-symbols-outlined text-lg">lightbulb</span> Giải thích từ AI
+                        </span>
+                        <p class="font-body text-body text-secondary dark:text-on-primary-container leading-relaxed">${q.explanation}</p>
+                    </div>
+                `;
+                $container.append(explHtml);
+            }
+
+            // Disable option clicks if exam submitted
+            if (!isExamSubmitted) {
+                $(".option-card").on("click", function () {
+                    const key = $(this).attr("data-key");
+                    selectOption(key);
+                });
+            }
+            
+            // Update Footer Buttons Disable states
+            $("#prev-btn").prop("disabled", index === 0).toggleClass("opacity-40 pointer-events-none", index === 0);
+
+            // Cập nhật trạng thái hiển thị của các nút Câu sau / Nộp bài
+            const isLastQuestion = index === totalQuestions - 1;
+            const $nextBtn = $("#next-btn");
+            const $submitBtn = $("#submit-btn");
+            
+            if (isExamSubmitted) {
+                // Đã nộp bài (chế độ xem lại bài)
+                $submitBtn.addClass("hidden");
+                
+                if (isLastQuestion) {
+                    $nextBtn.html(`
+                        Xem kết quả
+                        <span class="material-symbols-outlined text-[18px]">analytics</span>
+                    `);
+                    $nextBtn.removeClass("bg-primary hover:bg-primary/90 focus:ring-primary/20 opacity-40 pointer-events-none")
+                            .addClass("bg-success text-white hover:bg-success/90 focus:ring-4 focus:ring-success/20")
+                            .prop("disabled", false);
+                } else {
+                    $nextBtn.html(`
+                        Câu sau
+                        <span class="material-symbols-outlined">arrow_forward</span>
+                    `);
+                    $nextBtn.removeClass("bg-success hover:bg-success/90 focus:ring-success/20 opacity-40 pointer-events-none")
+                            .addClass("bg-primary text-white hover:bg-primary/90 focus:ring-4 focus:ring-primary/20")
+                            .prop("disabled", false);
+                }
+            } else {
+                // Chưa nộp bài (chế độ đang làm bài)
+                $submitBtn.removeClass("hidden");
+                
+                $nextBtn.html(`
+                    Câu sau
+                    <span class="material-symbols-outlined">arrow_forward</span>
+                `);
+                
+                if (isLastQuestion) {
+                    $nextBtn.removeClass("bg-success hover:bg-success/90 focus:ring-success/20")
+                            .addClass("bg-primary text-white opacity-40 pointer-events-none")
+                            .prop("disabled", true);
+                } else {
+                    $nextBtn.removeClass("bg-success hover:bg-success/90 focus:ring-success/20 opacity-40 pointer-events-none")
+                            .addClass("bg-primary text-white hover:bg-primary/90 focus:ring-4 focus:ring-primary/20")
+                            .prop("disabled", false);
+                }
+            }
+            
+            // Update Question Map
+            renderQuestionMapGrid();
+        }
+
+        function renderQuestionMapGrid() {
+            const $grid = $("#question-map-grid");
+            $grid.empty();
+            
+            questions.forEach((q, idx) => {
+                const isCurrent = idx === currentQuestionIndex;
+                const isAnswered = q.userAnswer !== null;
+
+                let btnClass = "";
+                let badgeHtml = "";
+
+                if (isCurrent) {
+                    btnClass = "border-2 border-primary dark:border-primary-fixed-dim text-primary dark:text-primary-fixed-dim shadow-sm relative";
+                    badgeHtml = `<div class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-primary dark:bg-primary-fixed-dim rounded-full animate-pulse"></div>`;
+                } else if (isAnswered) {
+                    btnClass = "bg-primary text-white shadow-sm border border-primary hover:opacity-90";
+                } else {
+                    btnClass = "border border-slate-200 dark:border-outline-variant text-secondary dark:text-secondary-fixed-dim hover:border-slate-400 dark:hover:border-slate-500 bg-white dark:bg-transparent";
+                }
+
+                if (isExamSubmitted) {
+                    const isCorrect = q.userAnswer === q.correct;
+                    if (isCorrect) {
+                        btnClass = "bg-success text-white border border-success hover:opacity-90";
+                    } else {
+                        btnClass = "bg-danger text-white border border-danger hover:opacity-90";
+                    }
+                }
+                
+                const btnHtml = `
+                    <button data-index="${idx}" class="w-10 h-10 rounded-lg font-button text-button flex items-center justify-center relative transition-all duration-200 cursor-pointer ${btnClass}">
+                        ${q.id}
+                        ${badgeHtml}
+                    </button>
+                `;
+                $grid.append(btnHtml);
+            });
+            
+            // Bind click events to map buttons
+            $("#question-map-grid button").on("click", function () {
+                const idx = parseInt($(this).attr("data-index"));
+                navigateToQuestion(idx);
+            });
+        }
+
+        // 5. ACTION HANDLERS
+        function selectOption(key) {
+            const q = questions[currentQuestionIndex];
+            const opt = q.options.find(o => o.key === key);
+            
+            if (q.userAnswer === key) {
+                q.userAnswer = null;
+                q.userAnswerId = null;
+            } else {
+                q.userAnswer = key;
+                q.userAnswerId = opt ? opt.id : null;
+            }
+            
+            saveAnswersToLocalStorage();
+            renderQuestion(currentQuestionIndex);
+
+            // Lưu tạm thời câu trả lời lên server để đồng bộ tiến độ thời gian thực
+            if (sessionId > 0) {
+                $.ajax({
+                    url: '/Exam/SaveAnswer',
+                    type: 'POST',
+                    data: {
+                        sessionId: sessionId,
+                        questionId: q.dbId,
+                        selectedOptionId: q.userAnswerId
+                    }
+                });
+            }
+        }
+        
+        function navigateToQuestion(idx) {
+            if (idx >= 0 && idx < totalQuestions) {
+                currentQuestionIndex = idx;
+                renderQuestion(currentQuestionIndex);
+            }
+        }
+
+        // 5.5 LOCALSTORAGE HELPER FUNCTIONS
+        function saveAnswersToLocalStorage() {
+            const answers = questions.map(q => ({
+                id: q.id,
+                userAnswer: q.userAnswer,
+                userAnswerId: q.userAnswerId
+            }));
+            localStorage.setItem(`quiz_set_answers_${@Model.Id}`, JSON.stringify(answers));
+        }
+
+        function loadAnswersFromLocalStorage() {
+            const saved = localStorage.getItem(`quiz_set_answers_${@Model.Id}`);
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    parsed.forEach(savedQ => {
+                        const q = questions.find(item => item.id === savedQ.id);
+                        if (q) {
+                            q.userAnswer = savedQ.userAnswer;
+                            q.userAnswerId = savedQ.userAnswerId;
+                        }
+                    });
+                } catch (e) {
+                    console.error("Lỗi khi khôi phục đáp án tạm thời:", e);
+                }
+            }
+        }
+
+        // 6. TIMER CONTROLLERS
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        function startTimer() {
+            // Thiết lập giao diện ban đầu cho chế độ không giới hạn thời gian
+            if (isNoLimit) {
+                $("#exam-timer-container").removeClass("bg-success-light dark:bg-success-light/10 text-success border-success/20")
+                                          .addClass("bg-slate-100 dark:bg-secondary-container/30 text-secondary dark:text-secondary-fixed-dim border-slate-200 dark:border-outline-variant");
+                $("#exam-timer").text(formatTime(actualDurationSeconds));
+            }
+
+            // Khởi chạy đồng bộ thời gian làm bài thực tế lên server mỗi 10 giây
+            const durationInterval = setInterval(function () {
+                if (isExamSubmitted || sessionId === 0) {
+                    clearInterval(durationInterval);
+                    return;
+                }
+                const currentDuration = isNoLimit ? actualDurationSeconds : (@(Model.TimeLimitMinutes * 60) - timeRemainingSeconds);
+                $.ajax({
+                    url: '/Exam/UpdateSessionDuration',
+                    type: 'POST',
+                    data: { sessionId: sessionId, durationSeconds: currentDuration }
+                });
+            }, 10000);
+
+            const timerInterval = setInterval(function () {
+                if (isExamSubmitted) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                
+                if (isNoLimit) {
+                    actualDurationSeconds++;
+                    $("#exam-timer").text(formatTime(actualDurationSeconds));
+                } else {
+                    timeRemainingSeconds--;
+                    $("#exam-timer").text(formatTime(timeRemainingSeconds));
+                    
+                    const $timerContainer = $("#exam-timer-container");
+                    if (timeRemainingSeconds <= 300) {
+                        $timerContainer.removeClass("bg-success-light dark:bg-success-light/10 text-success")
+                                       .addClass("bg-danger-light dark:bg-error-container/20 border-danger/20 dark:border-error/30 text-danger dark:text-error animate-pulse");
+                    }
+                    
+                    if (timeRemainingSeconds <= 0) {
+                        clearInterval(timerInterval);
+                        $("#exam-timer").text("00:00");
+                        autoSubmitExam();
+                    }
+                }
+            }, 1000);
+        }
+        
+        function autoSubmitExam() {
+            submitExamToDb();
+        }
+
+        // 7. SUBMISSION CONTROLLERS
+        function showSubmitModal() {
+            let answered = 0;
+            let unanswered = 0;
+
+            questions.forEach(q => {
+                if (q.userAnswer !== null) answered++;
+                else unanswered++;
+            });
+
+            $("#modal-answered-count").text(answered);
+            $("#modal-unanswered-count").text(unanswered);
+            
+            if (unanswered > 0) {
+                $("#unanswered-alert").removeClass("hidden");
+            } else {
+                $("#unanswered-alert").addClass("hidden");
+            }
+            
+            const $modal = $("#submit-modal");
+            $modal.removeClass("hidden").addClass("flex");
+            setTimeout(() => $modal.removeClass("opacity-0 pointer-events-none").find(".transform").removeClass("scale-95"), 50);
+        }
+        
+        function closeSubmitModal() {
+            const $modal = $("#submit-modal");
+            $modal.addClass("opacity-0 pointer-events-none").find(".transform").addClass("scale-95");
+            setTimeout(() => $modal.addClass("hidden").removeClass("flex"), 300);
+        }
+
+        function submitExamToDb() {
+            if (isExamSubmitted) return;
+            isExamSubmitted = true;
+
+            const answersData = questions.map(q => {
+                return {
+                    questionId: q.dbId,
+                    selectedOptionId: q.userAnswerId
+                };
+            });
+
+            const durationSeconds = isNoLimit ? actualDurationSeconds : (@(Model.TimeLimitMinutes * 60) - timeRemainingSeconds);
+
+            const submissionData = {
+                sessionId: sessionId,
+                actualDurationSeconds: durationSeconds,
+                answers: answersData
+            };
+
+            $("#confirm-submit-btn").text("Đang nộp...").attr("disabled", "disabled");
+
+            const submitUrl = isPracticeMode ? '/Practice/SubmitPractice' : '/Exam/SubmitExam';
+
+            $.ajax({
+                url: submitUrl,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(submissionData),
+                success: function (response) {
+                    if (response.success) {
+                        localStorage.removeItem(`quiz_set_answers_${@Model.Id}`);
+                        closeSubmitModal();
+                        
+                        // Hiển thị kết quả trong Result Modal
+                        $("#result-score-text").text(`${response.correctAnswers}/${response.totalQuestions}`);
+                        $("#result-percent-text").text(`${response.scorePercent}%`);
+                        $("#result-correct-count").text(response.correctAnswers);
+                        $("#result-incorrect-count").text(response.totalQuestions - response.correctAnswers);
+                        
+                        // Cấu hình vòng tròn điểm số
+                        const circle = document.getElementById("result-score-ring");
+                        const radius = circle.r.baseVal.value;
+                        const circumference = radius * 2 * Math.PI;
+                        const offset = circumference - (response.scorePercent / 100) * circumference;
+                        circle.style.strokeDashoffset = offset;
+
+                         const returnUrl = '@(ViewBag.ReturnUrl ?? "")';
+                         const resultUrl = isPracticeMode 
+                             ? `/Practice/Result?sessionId=${sessionId}`
+                             : `/Exam/Result?sessionId=${sessionId}` + (returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : '');
+                         $("#result-modal-detail-link").attr("href", resultUrl);
+
+                        // Hiện Result Modal
+                        const $resModal = $("#result-modal");
+                        $resModal.removeClass("hidden").addClass("flex");
+                        setTimeout(() => $resModal.removeClass("opacity-0 pointer-events-none").find(".transform").removeClass("scale-95"), 50);
+                    } else {
+                        isExamSubmitted = false;
+                        $("#confirm-submit-btn").text("Xác nhận nộp").removeAttr("disabled");
+                        alert("Nộp bài thất bại: " + response.message);
+                    }
+                },
+                error: function () {
+                    isExamSubmitted = false;
+                    $("#confirm-submit-btn").text("Xác nhận nộp").removeAttr("disabled");
+                    alert("Lỗi kết nối khi nộp bài thi thử.");
+                }
+            });
+        }
+
+        // 8. BIND INTERACTIVE EVENTS
+        $("#prev-btn").on("click", function () {
+            navigateToQuestion(currentQuestionIndex - 1);
+        });
+        
+        $("#next-btn").on("click", function () {
+            const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
+            
+            if (isLastQuestion) {
+                if (isExamSubmitted) {
+                    window.location.href = $("#result-modal-detail-link").attr("href");
+                }
+            } else {
+                navigateToQuestion(currentQuestionIndex + 1);
+            }
+        });
+        
+        $("#submit-btn").on("click", function () {
+            if (!isExamSubmitted) {
+                showSubmitModal();
+            }
+        });
+
+        $("#cancel-submit-btn").on("click", function () {
+            closeSubmitModal();
+        });
+        
+        $("#confirm-submit-btn").on("click", function () {
+            closeSubmitModal();
+            submitExamToDb();
+        });
+        
+
+
+        function closeResultModal() {
+            const $resModal = $("#result-modal");
+            $resModal.addClass("opacity-0 pointer-events-none").find(".transform").addClass("scale-95");
+            setTimeout(() => $resModal.addClass("hidden").removeClass("flex"), 300);
+        }
+
+        // 8. INITIALIZE PAGE
+        loadAnswersFromLocalStorage();
+        renderQuestion(currentQuestionIndex);
+        startSessionInDb();
+    });
+    </script>
+
+    <!-- Fullscreen Submit Loading Overlay -->
+    <div id="submit-loading-overlay"
+         class="fixed inset-0 z-[200] flex flex-col items-center justify-center gap-5 opacity-0 pointer-events-none transition-opacity duration-300"
+         style="background: rgba(10,18,40,0.82); backdrop-filter: blur(6px);">
+        <!-- Animated checkmark circle -->
+        <div class="relative w-20 h-20">
+            <svg class="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="34" stroke="rgba(255,255,255,0.15)" stroke-width="5" fill="none"/>
+                <circle cx="40" cy="40" r="34" stroke="#22c55e" stroke-width="5" fill="none"
+                        stroke-dasharray="213.6" stroke-dashoffset="213.6"
+                        id="overlay-ring" stroke-linecap="round"
+                        style="transition: stroke-dashoffset 0.7s cubic-bezier(0.4,0,0.2,1) 0.1s"/>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <span class="material-symbols-outlined text-white text-[32px]"
+                      style="font-variation-settings:'FILL' 1; opacity:0; transition: opacity 0.3s ease 0.5s"
+                      id="overlay-check">check</span>
+            </div>
+        </div>
+        <div class="text-center">
+            <p class="text-white text-[20px] font-bold tracking-tight">Đã nộp bài!</p>
+            <p class="text-white/60 text-[13px] mt-1">Đang tải kết quả của bạn...</p>
+        </div>
+        <!-- Dots loader -->
+        <div class="flex gap-1.5 mt-1">
+            <span class="w-2 h-2 rounded-full bg-white/50" style="animation: dot-bounce 1.2s ease-in-out infinite 0s"></span>
+            <span class="w-2 h-2 rounded-full bg-white/50" style="animation: dot-bounce 1.2s ease-in-out infinite 0.2s"></span>
+            <span class="w-2 h-2 rounded-full bg-white/50" style="animation: dot-bounce 1.2s ease-in-out infinite 0.4s"></span>
+        </div>
+        <style>
+            @@keyframes dot-bounce {
+                0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+                40%            { transform: scale(1.1); opacity: 1; }
+            }
+        </style>
+    </div>
+
+    <script>
+    // Animate overlay ring + checkmark when overlay becomes visible
+    const _overlay = document.getElementById('submit-loading-overlay');
+    const _observer = new MutationObserver(() => {
+        if (_overlay.classList.contains('opacity-100')) {
+            document.getElementById('overlay-ring').style.strokeDashoffset = '0';
+            document.getElementById('overlay-check').style.opacity = '1';
+        }
+    });
+    _observer.observe(_overlay, { attributes: true, attributeFilter: ['class'] });
+    </script>
+</body>
+</html>

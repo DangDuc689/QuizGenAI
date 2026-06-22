@@ -65,12 +65,12 @@ $(document).ready(function () {
         localStorage.theme = 'light';
     }
 
-    // Khởi tạo trạng thái ban đầu khi tải trang (Mặc định là Light Mode để đảm bảo giao diện sáng sủa)
+    // Khởi tạo trạng thái ban đầu khi tải trang (Đồng bộ biểu tượng dựa trên class dark đang có)
     function initializeTheme() {
-        if (localStorage.theme === 'dark') {
-            applyDarkTheme();
+        if ($('html').hasClass('dark')) {
+            $darkModeIcon.text('light_mode');
         } else {
-            applyLightTheme();
+            $darkModeIcon.text('dark_mode');
         }
     }
 
@@ -81,8 +81,59 @@ $(document).ready(function () {
         } else {
             applyDarkTheme();
         }
+        // Phát sự kiện để đồng bộ biểu đồ Chart.js và các thành phần khác
+        window.dispatchEvent(new Event('theme-change'));
     });
 
     // Chạy cấu hình ban đầu
     initializeTheme();
 });
+
+// -------------------------------------------------------------
+// 3. HÀM XÁC NHẬN TÙY CHỈNH (CUSTOM CONFIRM MODAL API)
+// -------------------------------------------------------------
+window.showConfirmModal = function (options) {
+    const { title, message, onConfirm } = options;
+    const $modal = $('#custom-confirm-modal');
+    const $overlay = $('#confirm-modal-overlay');
+    const $box = $('#confirm-modal-box');
+    const $title = $('#confirm-modal-title');
+    const $message = $('#confirm-modal-message');
+    const $btnCancel = $('#confirm-modal-cancel');
+    const $btnSubmit = $('#confirm-modal-submit');
+
+    $title.text(title || "Xác nhận");
+    $message.html(message || "Bạn có chắc chắn muốn thực hiện hành động này?");
+
+    // Hiển thị modal và backdrop với hiệu ứng transition
+    $modal.removeClass('hidden').addClass('flex');
+    setTimeout(() => {
+        $overlay.removeClass('opacity-0').addClass('opacity-100');
+        $box.removeClass('scale-95 opacity-0').addClass('scale-100 opacity-100');
+    }, 10);
+
+    // Hàm đóng modal
+    function hideModal() {
+        $overlay.removeClass('opacity-100').addClass('opacity-0');
+        $box.removeClass('scale-100 opacity-100').addClass('scale-95 opacity-0');
+        setTimeout(() => {
+            $modal.removeClass('flex').addClass('hidden');
+            // Gỡ bỏ sự kiện click để tránh rò rỉ bộ nhớ hoặc gọi trùng lặp
+            $btnSubmit.off('click');
+            $btnCancel.off('click');
+            $overlay.off('click');
+        }, 300);
+    }
+
+    // Gắn sự kiện cho các nút đóng
+    $btnCancel.on('click', hideModal);
+    $overlay.on('click', hideModal);
+
+    // Sự kiện khi bấm đồng ý
+    $btnSubmit.on('click', function () {
+        if (typeof onConfirm === 'function') {
+            onConfirm();
+        }
+        hideModal();
+    });
+};

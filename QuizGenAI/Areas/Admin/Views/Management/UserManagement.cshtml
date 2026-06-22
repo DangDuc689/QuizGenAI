@@ -1,0 +1,541 @@
+@model QuizGenAI.Models.UserManagementViewModel
+@using System.Text.Encodings.Web
+
+@functions {
+    public string GetInitials(string fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName)) return "?";
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0) return "?";
+        if (parts.Length == 1) return parts[0][0].ToString().ToUpper();
+        return (parts[0][0].ToString() + parts[parts.Length - 1][0].ToString()).ToUpper();
+    }
+}
+
+<!-- Dashboard Content -->
+<div class="mb-8">
+    <h2 class="font-h1 text-h1 text-on-background dark:text-on-primary-container">Quản lý Người dùng</h2>
+    <p class="font-body text-body text-secondary">Quản lý và phân loại tài khoản người dùng trên hệ thống.</p>
+</div>
+
+<!-- Summary Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <!-- Total Users -->
+    <div class="bg-surface dark:bg-on-secondary-fixed rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant flex items-start justify-between">
+        <div>
+            <p class="text-on-surface-variant dark:text-secondary-fixed-dim font-body text-body mb-1">Tổng người dùng</p>
+            <h3 class="font-h1 text-h1 text-on-surface dark:text-on-primary-container">@Model.TotalUsers.ToString("N0")</h3>
+        </div>
+        <div class="bg-primary-fixed p-3 rounded-lg text-primary">
+            <span class="material-symbols-outlined" data-icon="group">group</span>
+        </div>
+    </div>
+    <!-- Active Now -->
+    <div class="bg-surface dark:bg-on-secondary-fixed rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant flex items-start justify-between">
+        <div>
+            <p class="text-on-surface-variant dark:text-secondary-fixed-dim font-body text-body mb-1">Đang hoạt động</p>
+            <h3 class="font-h1 text-h1 text-on-surface dark:text-on-primary-container">@Model.ActiveUsers.ToString("N0")</h3>
+        </div>
+        <div class="bg-secondary-fixed p-3 rounded-lg text-secondary">
+            <span class="material-symbols-outlined" data-icon="bolt">bolt</span>
+        </div>
+    </div>
+    <!-- New Signups -->
+    <div class="bg-surface dark:bg-on-secondary-fixed rounded-xl p-6 shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant flex items-start justify-between">
+        <div>
+            <p class="text-on-surface-variant dark:text-secondary-fixed-dim font-body text-body mb-1">Đăng ký mới hôm nay</p>
+            <h3 class="font-h1 text-h1 text-on-surface dark:text-on-primary-container">@Model.NewUsersToday.ToString("N0")</h3>
+        </div>
+        <div class="bg-tertiary-fixed p-3 rounded-lg text-tertiary">
+            <span class="material-symbols-outlined" data-icon="person_add">person_add</span>
+        </div>
+    </div>
+</div>
+
+<!-- Table Section -->
+<div class="bg-surface dark:bg-on-secondary-fixed rounded-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border border-slate-100 dark:border-outline-variant overflow-hidden">
+    <!-- Table Header with Search & Filter Form -->
+    <form method="get" action="@Url.Action("Index", "UserManagement", new { area = "Admin" })" id="filterForm" class="p-6 border-b border-outline-variant/30 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <input type="hidden" name="role" id="selectedRole" value="@Model.SelectedRole" />
+        
+        <div class="flex flex-col lg:flex-row lg:items-center gap-4 w-full">
+            <!-- Search input next to tabs as required -->
+            <div class="relative w-full lg:max-w-md">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+                <input type="text" name="search" value="@Model.SearchQuery" placeholder="Tìm kiếm người dùng..." 
+                       class="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800/40 border-none rounded-lg text-body focus:ring-2 focus:ring-primary-container outline-none transition-all text-on-surface dark:text-on-primary-container" />
+            </div>
+
+            <!-- Tabs group & Filter button -->
+            <div class="flex flex-wrap items-center gap-3 ml-auto">
+                <div class="flex border border-slate-200 dark:border-outline-variant/30 rounded-lg overflow-hidden bg-white dark:bg-[#132337]">
+                    <button type="button" onclick="selectRoleFilter('')" 
+                            class="px-4 py-2 font-button text-button transition-colors @(string.IsNullOrEmpty(Model.SelectedRole) ? "bg-slate-100 dark:bg-secondary-container/20 text-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-secondary-container/10")">
+                        Tất cả
+                    </button>
+                    <button type="button" onclick="selectRoleFilter('Người dùng')" 
+                            class="px-4 py-2 font-button text-button transition-colors border-l border-r border-slate-200 dark:border-outline-variant/30 @(Model.SelectedRole == "Người dùng" ? "bg-slate-100 dark:bg-secondary-container/20 text-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-secondary-container/10")">
+                        Người dùng
+                    </button>
+                    <button type="button" onclick="selectRoleFilter('Quản trị viên')" 
+                            class="px-4 py-2 font-button text-button transition-colors @(Model.SelectedRole == "Quản trị viên" ? "bg-slate-100 dark:bg-secondary-container/20 text-primary" : "text-secondary dark:text-secondary-fixed-dim hover:bg-slate-50 dark:hover:bg-secondary-container/10")">
+                        Quản trị viên
+                    </button>
+                </div>
+                <button type="submit" class="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-outline-variant/30 bg-primary hover:bg-primary-container text-white rounded-lg transition-colors font-button text-button cursor-pointer">
+                    <span class="material-symbols-outlined text-lg" data-icon="filter_list">filter_list</span>
+                    Lọc
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Table Content -->
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="bg-slate-50 dark:bg-surface-dim/20 border-b border-outline-variant/30 text-on-surface-variant dark:text-secondary-fixed-dim font-label-sm text-label-sm">
+                    <th class="px-6 py-4 uppercase tracking-wider">Người dùng</th>
+                    <th class="px-6 py-4 uppercase tracking-wider">Vai trò</th>
+                    <th class="px-6 py-4 uppercase tracking-wider">Ngày tham gia</th>
+                    <th class="px-6 py-4 uppercase tracking-wider">Trạng thái</th>
+                    <th class="px-6 py-4 uppercase tracking-wider text-right">Hành động</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-outline-variant/20" id="user-table-body">
+                @if (Model.Users.Count == 0)
+                {
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-secondary">
+                            Không tìm thấy người dùng nào phù hợp với điều kiện lọc.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var user in Model.Users)
+                    {
+                        var initials = GetInitials(user.FullName);
+                        <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/10 transition-colors" id="user-row-@user.Id">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <!-- Dynamic Initials Avatar badge matching the layout style -->
+                                    <div class="w-10 h-10 rounded-full bg-primary-fixed dark:bg-primary/20 text-primary dark:text-primary-fixed-dim flex items-center justify-center font-bold select-none border border-slate-200 dark:border-outline-variant/30 shadow-sm shrink-0">
+                                        @initials
+                                    </div>
+                                    <div>
+                                        <p class="font-button text-on-surface dark:text-on-primary-container user-fullname">@user.FullName</p>
+                                        <p class="font-caption text-on-surface-variant dark:text-secondary-fixed-dim user-email">@user.Email</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="user-role-badge px-3 py-1 rounded-full font-label-sm text-label-sm uppercase inline-block @(user.Role == "Quản trị viên" ? "bg-bloom-apply/10 text-bloom-apply" : "bg-bloom-remember/10 text-bloom-remember")">
+                                    @user.Role
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 font-body text-body text-on-surface-variant dark:text-secondary-fixed-dim">
+                                @user.JoinedDate.ToString("'Ngày' dd 'thg' MM, yyyy")
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="user-status-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-label-sm text-label-sm uppercase @(user.IsActive ? "bg-success-light text-success" : "bg-danger-light text-error")">
+                                    <span class="status-dot w-1.5 h-1.5 rounded-full @(user.IsActive ? "bg-success" : "bg-error")"></span>
+                                    <span class="status-text">@(user.IsActive ? "HOẠT ĐỘNG" : "ĐÃ KHÓA")</span>
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex justify-end gap-2">
+                                    <!-- Edit Button -->
+                                    <button type="button" onclick="openEditModal('@user.Id', '@Html.Raw(JavaScriptEncoder.Default.Encode(user.FullName))', '@Html.Raw(JavaScriptEncoder.Default.Encode(user.Email))', '@user.Role')" 
+                                            class="p-2 text-on-surface-variant dark:text-secondary-fixed-dim hover:text-primary dark:hover:text-primary-fixed-dim hover:bg-primary/10 rounded-full transition-all cursor-pointer"
+                                            title="Sửa thông tin">
+                                        <span class="material-symbols-outlined text-lg" data-icon="edit">edit</span>
+                                    </button>
+                                    <!-- Lock / Unlock Button -->
+                                    <button type="button" onclick="openLockModal('@user.Id', '@Html.Raw(JavaScriptEncoder.Default.Encode(user.FullName))', @(user.IsActive ? "true" : "false"))"
+                                            class="toggle-lock-btn p-2 rounded-full transition-all cursor-pointer @(user.IsActive ? "text-on-surface-variant dark:text-secondary-fixed-dim hover:text-error hover:bg-error/10" : "text-on-surface-variant dark:text-secondary-fixed-dim hover:text-success hover:bg-success/10")" 
+                                            title="@(user.IsActive ? "Khóa tài khoản" : "Mở khóa tài khoản")">
+                                        <span class="material-symbols-outlined text-lg lock-icon">@(user.IsActive ? "block" : "lock_open")</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="px-6 py-4 bg-slate-50 dark:bg-surface-dim/20 border-t border-outline-variant/30 flex items-center justify-between flex-wrap gap-4">
+            <p class="font-caption text-caption text-on-surface-variant dark:text-secondary-fixed-dim">
+                Hiển thị @((Model.CurrentPage - 1) * Model.PageSize + 1) - @Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalUsers) trên @Model.TotalUsers.ToString("N0") người dùng
+            </p>
+            <div class="flex items-center gap-1">
+                <!-- Prev page link -->
+                @if (Model.CurrentPage > 1)
+                {
+                    <a href="@Url.Action("Index", new { search = Model.SearchQuery, role = Model.SelectedRole, page = Model.CurrentPage - 1 })" 
+                       class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-outline-variant/30 text-on-surface-variant dark:text-secondary-fixed-dim bg-white dark:bg-on-secondary-fixed hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm">
+                        <span class="material-symbols-outlined text-sm">chevron_left</span>
+                    </a>
+                }
+                else
+                {
+                    <button disabled class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-outline-variant/30 text-on-surface-variant dark:text-secondary-fixed-dim bg-white dark:bg-on-secondary-fixed opacity-50 cursor-not-allowed shadow-sm">
+                        <span class="material-symbols-outlined text-sm">chevron_left</span>
+                    </button>
+                }
+
+                <!-- Pages numbers list -->
+                @for (int i = 1; i <= Model.TotalPages; i++)
+                {
+                    if (i == Model.CurrentPage)
+                    {
+                        <button class="w-8 h-8 flex items-center justify-center rounded-lg text-on-primary font-button text-button shadow-sm bg-bloom-remember">@i</button>
+                    }
+                    else
+                    {
+                        <a href="@Url.Action("Index", new { search = Model.SearchQuery, role = Model.SelectedRole, page = i })" 
+                           class="w-8 h-8 flex items-center justify-center rounded-lg border border-transparent text-on-surface-variant dark:text-secondary-fixed-dim hover:border-slate-200 dark:hover:border-outline-variant/30 hover:bg-white dark:hover:bg-slate-800 transition-all font-button text-button">
+                            @i
+                        </a>
+                    }
+                }
+
+                <!-- Next page link -->
+                @if (Model.CurrentPage < Model.TotalPages)
+                {
+                    <a href="@Url.Action("Index", new { search = Model.SearchQuery, role = Model.SelectedRole, page = Model.CurrentPage + 1 })" 
+                       class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-outline-variant/30 text-on-surface-variant dark:text-secondary-fixed-dim bg-white dark:bg-on-secondary-fixed hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm">
+                        <span class="material-symbols-outlined text-sm">chevron_right</span>
+                    </a>
+                }
+                else
+                {
+                    <button disabled class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-outline-variant/30 text-on-surface-variant dark:text-secondary-fixed-dim bg-white dark:bg-on-secondary-fixed opacity-50 cursor-not-allowed shadow-sm">
+                        <span class="material-symbols-outlined text-sm">chevron_right</span>
+                    </button>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- ==========================================
+     MODAL CHỈNH SỬA THÔNG TIN NGƯỜI DÙNG
+     ========================================== -->
+<div id="edit-user-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <!-- Overlay backdrop -->
+    <div onclick="closeEditModal()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300"></div>
+    
+    <!-- Modal Box -->
+    <div class="bg-[#faf8ff] dark:bg-[#0d1c2f] border border-slate-200/80 dark:border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-lg relative z-10 transform scale-95 opacity-0 transition-all duration-300 flex flex-col gap-4" id="edit-modal-box">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-outline-variant pb-3">
+            <h3 class="text-[18px] font-bold text-[#131b2e] dark:text-[#b7c4ff] font-h3 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[22px]">manage_accounts</span>
+                Sửa thông tin tài khoản
+            </h3>
+            <button onclick="closeEditModal()" class="text-secondary hover:text-on-surface cursor-pointer w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center transition-colors">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
+
+        <form id="editUserForm" onsubmit="submitEditUserForm(event)" class="space-y-4">
+            <input type="hidden" id="edit-userId" name="userId" />
+            
+            <!-- Họ tên -->
+            <div class="flex flex-col gap-1.5">
+                <label for="edit-fullname" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Họ tên</label>
+                <input type="text" id="edit-fullname" name="fullName" required 
+                       class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" />
+            </div>
+
+            <!-- Email -->
+            <div class="flex flex-col gap-1.5">
+                <label for="edit-email" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Email</label>
+                <input type="email" id="edit-email" name="email" required 
+                       class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" />
+            </div>
+
+            <!-- Vai trò -->
+            <div class="flex flex-col gap-1.5">
+                <label for="edit-role" class="text-xs font-bold text-slate-500 dark:text-secondary-fixed-dim uppercase tracking-wider">Vai trò</label>
+                <select id="edit-role" name="role" required 
+                        class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-outline-variant bg-white dark:bg-[#132337] text-on-surface dark:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm cursor-pointer">
+                    <option value="Người dùng">Người dùng</option>
+                    <option value="Quản trị viên">Quản trị viên</option>
+                </select>
+            </div>
+
+            <!-- Nút thao tác -->
+            <div class="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-outline-variant">
+                <button type="button" onclick="closeEditModal()" class="px-5 py-2.5 rounded-xl text-[14px] font-semibold text-[#515f74] dark:text-[#b9c7e0] hover:bg-slate-100 dark:hover:bg-[#3a485c]/40 transition-all duration-200 cursor-pointer">
+                    Hủy bỏ
+                </button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl text-[14px] font-semibold bg-primary hover:bg-primary-container text-white shadow-sm transition-all duration-200 cursor-pointer">
+                    Lưu thay đổi
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ==========================================
+     MODAL XÁC NHẬN KHÓA/MỞ KHÓA TÀI KHOẢN
+     ========================================== -->
+<div id="lock-user-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <!-- Overlay backdrop -->
+    <div onclick="closeLockModal()" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300"></div>
+    
+    <!-- Modal Box -->
+    <div class="bg-[#faf8ff] dark:bg-[#0d1c2f] border border-slate-200/80 dark:border-outline-variant rounded-2xl p-6 max-w-md w-full shadow-lg relative z-10 transform scale-95 opacity-0 transition-all duration-300 flex flex-col gap-4" id="lock-modal-box">
+        <div class="flex items-start gap-4">
+            <div id="lock-modal-icon-container" class="w-12 h-12 rounded-full flex items-center justify-center shrink-0">
+                <span id="lock-modal-icon" class="material-symbols-outlined text-[28px]">warning</span>
+            </div>
+            <div class="flex-1">
+                <h3 id="lock-modal-title" class="text-[18px] font-semibold text-[#131b2e] dark:text-[#b7c4ff] font-h3 leading-snug">Xác nhận thay đổi</h3>
+                <p id="lock-modal-message" class="text-[14px] text-[#515f74] dark:text-[#b9c7e0] font-body mt-2 leading-relaxed">
+                    Bạn có chắc chắn muốn thực hiện hành động này?
+                </p>
+            </div>
+        </div>
+        
+        <!-- Nút thao tác -->
+        <input type="hidden" id="lock-userId" />
+        <div class="flex justify-end gap-3 mt-2">
+            <button type="button" onclick="closeLockModal()" class="px-5 py-2.5 rounded-xl text-[14px] font-semibold text-[#515f74] dark:text-[#b9c7e0] hover:bg-slate-100 dark:hover:bg-[#3a485c]/40 transition-all duration-200 cursor-pointer">
+                Hủy bỏ
+            </button>
+            <button type="button" id="lock-modal-submit-btn" onclick="submitToggleLock()" class="px-5 py-2.5 rounded-xl text-[14px] font-semibold text-white shadow-sm transition-all duration-200 cursor-pointer">
+                Xác nhận
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==========================================
+     TOAST THÔNG BÁO PHẢN HỒI (POPUP TIN NHẮN)
+     ========================================== -->
+<div id="status-toast" class="fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 transition-all duration-300 flex items-center gap-3 bg-white dark:bg-[#132337] border border-slate-200 dark:border-outline-variant rounded-xl p-4 shadow-lg max-w-sm pointer-events-none">
+    <div id="toast-icon-container" class="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0">
+        <span id="toast-icon" class="material-symbols-outlined text-[18px]">check</span>
+    </div>
+    <p id="toast-message" class="text-xs font-semibold text-on-surface dark:text-on-primary-container leading-normal"></p>
+</div>
+
+@section Scripts {
+    <script>
+        // Thiết lập bộ lọc vai trò và tự động submit
+        function selectRoleFilter(roleValue) {
+            document.getElementById('selectedRole').value = roleValue;
+            document.getElementById('filterForm').submit();
+        }
+
+        // ==========================================
+        // QUẢN LÝ TOAST THÔNG BÁO
+        // ==========================================
+        function showToast(message, isSuccess = true) {
+            const toast = document.getElementById('status-toast');
+            const toastIconContainer = document.getElementById('toast-icon-container');
+            const toastIcon = document.getElementById('toast-icon');
+            const toastMsg = document.getElementById('toast-message');
+
+            toastMsg.innerText = message;
+
+            if (isSuccess) {
+                toastIconContainer.className = "w-8 h-8 rounded-lg bg-success text-white flex items-center justify-center shrink-0 shadow-sm";
+                toastIcon.innerText = "check";
+            } else {
+                toastIconContainer.className = "w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0 shadow-sm";
+                toastIcon.innerText = "error";
+            }
+
+            // Hiển thị toast
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            // Ẩn toast sau 3.5 giây
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0');
+            }, 3500);
+        }
+
+        // ==========================================
+        // QUẢN LÝ MODAL CHỈNH SỬA THÔNG TIN
+        // ==========================================
+        function openEditModal(userId, fullName, email, role) {
+            document.getElementById('edit-userId').value = userId;
+            document.getElementById('edit-fullname').value = fullName;
+            document.getElementById('edit-email').value = email;
+            document.getElementById('edit-role').value = role;
+
+            const modal = document.getElementById('edit-user-modal');
+            const box = document.getElementById('edit-modal-box');
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                box.classList.remove('scale-95', 'opacity-0');
+                box.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('edit-user-modal');
+            const box = document.getElementById('edit-modal-box');
+
+            box.classList.remove('scale-100', 'opacity-100');
+            box.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function submitEditUserForm(event) {
+            event.preventDefault();
+
+            const userId = document.getElementById('edit-userId').value;
+            const fullName = document.getElementById('edit-fullname').value;
+            const email = document.getElementById('edit-email').value;
+            const role = document.getElementById('edit-role').value;
+
+            // Gửi dữ liệu cập nhật qua AJAX POST
+            $.post('/Admin/UserManagement/EditUser', { userId, fullName, email, role }, function (response) {
+                if (response.success) {
+                    showToast(response.message, true);
+
+                    // Cập nhật DOM trực tiếp trên bảng mà không cần load lại trang
+                    const row = document.getElementById('user-row-' + userId);
+                    if (row) {
+                        row.querySelector('.user-fullname').innerText = fullName;
+                        row.querySelector('.user-email').innerText = email;
+
+                        // Cập nhật badge vai trò
+                        const roleBadge = row.querySelector('.user-role-badge');
+                        roleBadge.innerText = role.toUpperCase();
+                        if (role === 'Quản trị viên') {
+                            roleBadge.className = 'user-role-badge px-3 py-1 bg-bloom-apply/10 text-bloom-apply rounded-full font-label-sm text-label-sm uppercase inline-block';
+                        } else {
+                            roleBadge.className = 'user-role-badge px-3 py-1 bg-bloom-remember/10 text-bloom-remember rounded-full font-label-sm text-label-sm uppercase inline-block';
+                        }
+                    }
+
+                    closeEditModal();
+                } else {
+                    showToast(response.message, false);
+                }
+            }).fail(function () {
+                showToast("Lỗi hệ thống khi chỉnh sửa tài khoản.", false);
+            });
+        }
+
+        // ==========================================
+        // QUẢN LÝ MODAL KHÓA/MỞ KHÓA TÀI KHOẢN
+        // ==========================================
+        function openLockModal(userId, fullName, isActive) {
+            document.getElementById('lock-userId').value = userId;
+
+            const modal = document.getElementById('lock-user-modal');
+            const box = document.getElementById('lock-modal-box');
+            const iconContainer = document.getElementById('lock-modal-icon-container');
+            const icon = document.getElementById('lock-modal-icon');
+            const title = document.getElementById('lock-modal-title');
+            const message = document.getElementById('lock-modal-message');
+            const submitBtn = document.getElementById('lock-modal-submit-btn');
+
+            if (isActive) {
+                // Sắp khóa tài khoản
+                iconContainer.className = "w-12 h-12 rounded-full bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0";
+                icon.innerText = "block";
+                title.innerText = "Khóa tài khoản";
+                message.innerHTML = `Bạn có chắc chắn muốn <strong>khóa tài khoản</strong> của <strong>${fullName}</strong> không? Người dùng này sẽ không thể đăng nhập vào hệ thống.`;
+                submitBtn.className = "px-5 py-2.5 rounded-xl text-[14px] font-semibold bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white shadow-sm transition-all duration-200 cursor-pointer";
+                submitBtn.innerText = "Đồng ý khóa";
+            } else {
+                // Sắp kích hoạt lại tài khoản
+                iconContainer.className = "w-12 h-12 rounded-full bg-green-100 dark:bg-green-950/30 text-success dark:text-green-400 flex items-center justify-center shrink-0";
+                icon.innerText = "lock_open";
+                title.innerText = "Mở khóa tài khoản";
+                message.innerHTML = `Bạn có chắc chắn muốn <strong>mở khóa tài khoản</strong> của <strong>${fullName}</strong> không? Tài khoản sẽ hoạt động bình thường trở lại.`;
+                submitBtn.className = "px-5 py-2.5 rounded-xl text-[14px] font-semibold bg-success hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white shadow-sm transition-all duration-200 cursor-pointer";
+                submitBtn.innerText = "Đồng ý mở khóa";
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                box.classList.remove('scale-95', 'opacity-0');
+                box.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        function closeLockModal() {
+            const modal = document.getElementById('lock-user-modal');
+            const box = document.getElementById('lock-modal-box');
+
+            box.classList.remove('scale-100', 'opacity-100');
+            box.classList.add('scale-95', 'opacity-0');
+
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        function submitToggleLock() {
+            const userId = document.getElementById('lock-userId').value;
+
+            // Gửi yêu cầu thay đổi trạng thái qua AJAX POST
+            $.post('/Admin/UserManagement/ToggleLock', { userId }, function (response) {
+                if (response.success) {
+                    showToast(response.message, true);
+
+                    // Cập nhật DOM trực tiếp trạng thái của dòng tương ứng
+                    const row = document.getElementById('user-row-' + userId);
+                    if (row) {
+                        const statusBadge = row.querySelector('.user-status-badge');
+                        const statusDot = statusBadge.querySelector('.status-dot');
+                        const statusText = statusBadge.querySelector('.status-text');
+                        const toggleBtn = row.querySelector('.toggle-lock-btn');
+                        const lockIcon = toggleBtn.querySelector('.lock-icon');
+
+                        if (response.isActive) {
+                            // Cập nhật thành Hoạt động
+                            statusText.innerText = 'HOẠT ĐỘNG';
+                            statusBadge.className = 'user-status-badge inline-flex items-center gap-1.5 px-3 py-1 bg-success-light text-success rounded-full font-label-sm text-label-sm uppercase';
+                            statusDot.className = 'status-dot w-1.5 h-1.5 rounded-full bg-success';
+                            
+                            toggleBtn.className = 'toggle-lock-btn p-2 rounded-full transition-all cursor-pointer text-on-surface-variant hover:text-error hover:bg-error/10';
+                            toggleBtn.title = 'Khóa tài khoản';
+                            lockIcon.innerText = 'block';
+                            
+                            // Cập nhật tham số truyền vào hàm onClick của nút mở khóa tương ứng
+                            toggleBtn.setAttribute('onclick', `openLockModal('${userId}', '${row.querySelector('.user-fullname').innerText}', true)`);
+                        } else {
+                            // Cập nhật thành Đã khóa
+                            statusText.innerText = 'ĐÃ KHÓA';
+                            statusBadge.className = 'user-status-badge inline-flex items-center gap-1.5 px-3 py-1 bg-danger-light text-error rounded-full font-label-sm text-label-sm uppercase';
+                            statusDot.className = 'status-dot w-1.5 h-1.5 rounded-full bg-error';
+                            
+                            toggleBtn.className = 'toggle-lock-btn p-2 rounded-full transition-all cursor-pointer text-on-surface-variant hover:text-success hover:bg-success/10';
+                            toggleBtn.title = 'Mở khóa tài khoản';
+                            lockIcon.innerText = 'lock_open';
+                            
+                            // Cập nhật tham số truyền vào hàm onClick của nút mở khóa tương ứng
+                            toggleBtn.setAttribute('onclick', `openLockModal('${userId}', '${row.querySelector('.user-fullname').innerText}', false)`);
+                        }
+                    }
+
+                    closeLockModal();
+                } else {
+                    showToast(response.message, false);
+                }
+            }).fail(function () {
+                showToast("Lỗi hệ thống khi khóa/mở khóa tài khoản.", false);
+            });
+        }
+    </script>
+}
