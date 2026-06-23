@@ -32,7 +32,7 @@ namespace QuizGenAI.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var viewModel = new DashboardViewModel();
 
-            // 1. Query completed sessions
+            // 1. Truy vấn các phiên làm bài đã hoàn thành
             var completedSessions = await _context.ExamSessions
                 .Include(es => es.QuizSet)
                 .Where(es => es.UserId == userId && es.Status == ExamSessionStatus.Completed)
@@ -44,18 +44,18 @@ namespace QuizGenAI.Controllers
                 ? completedSessions.Average(es => es.TotalQuestions > 0 ? (es.CorrectAnswers * 100.0 / es.TotalQuestions) : 0) 
                 : 0;
 
-            // 2. Query saved quiz sets
+            // 2. Truy vấn số bộ đề trắc nghiệm đã lưu
             viewModel.SavedQuizSetsCount = await _context.QuizSets
                 .CountAsync(qs => qs.UserId == userId && qs.Status == QuizSetStatus.Ready);
 
-            // 3. Calculate study hours
+            // 3. Tính toán thời gian ôn tập
             var totalStudySeconds = await _context.ExamSessions
                 .Where(es => es.UserId == userId && (es.Status == ExamSessionStatus.Completed || es.Status == ExamSessionStatus.Abandoned))
                 .SumAsync(es => es.ActualDurationSeconds ?? 0);
 
             if (totalStudySeconds < 60)
             {
-                viewModel.StudyTimeText = "Dưới 1 phút";
+                viewModel.StudyTimeText = "0 phút";
             }
             else if (totalStudySeconds < 3600)
             {
@@ -68,7 +68,6 @@ namespace QuizGenAI.Controllers
                 viewModel.StudyTimeText = minutes > 0 ? $"{hours} giờ {minutes} phút" : $"{hours} giờ";
             }
 
-            // If user has zero data, populate clean defaults but let them know
             if (completedSessions.Count == 0)
             {
                 viewModel.TrendLabels = new List<string> { "Bắt đầu" };
@@ -83,12 +82,12 @@ namespace QuizGenAI.Controllers
             }
             else
             {
-                // 4. Trend Scores (Last 7 exams)
+                // 4. Điểm số xu hướng (7 bài thi gần nhất)
                 var lastExams = completedSessions.TakeLast(7).ToList();
                 viewModel.TrendLabels = lastExams.Select((es, index) => $"Lần {index + 1}").ToList();
                 viewModel.TrendScores = lastExams.Select(es => es.TotalQuestions > 0 ? (int)Math.Round(es.CorrectAnswers * 100.0 / es.TotalQuestions) : 0).ToList();
 
-                // 5. Bloom Distribution
+                // 5. Phân bổ cấp độ Bloom
                 int remCorrect = completedSessions.Sum(es => es.RememberCorrect);
                 int remTotal = completedSessions.Sum(es => es.RememberTotal);
                 int undCorrect = completedSessions.Sum(es => es.UnderstandCorrect);
@@ -100,7 +99,7 @@ namespace QuizGenAI.Controllers
                 viewModel.BloomUnderstandPercent = undTotal > 0 ? (int)Math.Round(undCorrect * 100.0 / undTotal) : 0;
                 viewModel.BloomApplyPercent = appTotal > 0 ? (int)Math.Round(appCorrect * 100.0 / appTotal) : 0;
 
-                // 6. AI Feedback logic
+                // 6. Logic đưa ra đánh giá và lời khuyên từ AI
                 int minScore = Math.Min(viewModel.BloomRememberPercent, Math.Min(viewModel.BloomUnderstandPercent, viewModel.BloomApplyPercent));
                 if (minScore == viewModel.BloomApplyPercent && viewModel.BloomApplyPercent < 70)
                 {
@@ -124,7 +123,7 @@ namespace QuizGenAI.Controllers
                 }
             }
 
-            // 7. Query Weak Topics from Db
+            // 7. Truy vấn các chủ đề yếu từ cơ sở dữ liệu
             var weakTopicsDb = await _context.WeakTopics
                 .Where(wt => wt.UserId == userId)
                 .OrderBy(wt => wt.AccuracyRate)
@@ -159,7 +158,7 @@ namespace QuizGenAI.Controllers
                 }
             }
 
-            // 8. Query In Progress session
+            // 8. Truy vấn phiên làm bài đang thực hiện dở dang (nếu có)
             var inProgress = await _context.ExamSessions
                 .Include(es => es.QuizSet)
                 .Where(es => es.UserId == userId && es.Status == ExamSessionStatus.InProgress)
@@ -179,7 +178,7 @@ namespace QuizGenAI.Controllers
                 };
             }
 
-            // 9. Query Recent completed sessions
+            // 9. Truy vấn các phiên làm bài hoàn thành gần đây nhất
             viewModel.RecentExams = completedSessions
                 .OrderByDescending(es => es.FinishedAt ?? es.StartedAt)
                 .Take(3)

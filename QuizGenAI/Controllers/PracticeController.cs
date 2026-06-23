@@ -24,9 +24,7 @@ namespace QuizGenAI.Controllers
             _practiceService = practiceService;
         }
 
-        /// <summary>
-        /// Trang chính hiển thị danh sách các chủ đề còn yếu của người dùng.
-        /// </summary>
+        // Trang chính hiển thị danh sách các chủ đề còn yếu của người dùng.
         [HttpGet]
         public async Task<IActionResult> Index()
         {
@@ -46,9 +44,7 @@ namespace QuizGenAI.Controllers
             return View(weakTopics);
         }
 
-        /// <summary>
-        /// API tạo bộ đề luyện tập ngẫu nhiên từ câu hỏi cũ dựa trên Bloom Level.
-        /// </summary>
+        // API tạo bộ đề luyện tập ngẫu nhiên từ câu hỏi cũ dựa trên Bloom Level.
         [HttpPost]
         public async Task<IActionResult> CreatePracticeQuiz(BloomLevel targetLevel, int questionCount)
         {
@@ -84,9 +80,7 @@ namespace QuizGenAI.Controllers
             }
         }
 
-        /// <summary>
-        /// API khởi tạo session làm bài luyện tập.
-        /// </summary>
+        // API khởi tạo session làm bài luyện tập.
         [HttpPost]
         public async Task<IActionResult> StartPracticeSession(int quizSetId)
         {
@@ -105,7 +99,6 @@ namespace QuizGenAI.Controllers
                 return Json(new { success = false, message = "Không tìm thấy đề luyện tập yêu cầu hoặc bạn không có quyền sở hữu." });
             }
 
-            // Hủy bỏ các session InProgress cũ của bộ đề này nếu có
             var oldSessions = await _context.ExamSessions
                 .Where(es => es.UserId == userId && es.QuizSetId == quizSetId && es.Status == ExamSessionStatus.InProgress)
                 .ToListAsync();
@@ -131,9 +124,7 @@ namespace QuizGenAI.Controllers
             return Json(new { success = true, sessionId = session.Id });
         }
 
-        /// <summary>
-        /// API nộp bài thi luyện tập.
-        /// </summary>
+        // API nộp bài thi luyện tập.
         [HttpPost]
         public async Task<IActionResult> SubmitPractice([FromBody] ExamSubmissionModel model)
         {
@@ -241,7 +232,6 @@ namespace QuizGenAI.Controllers
             session.ApplyCorrect = appCorrect;
             session.ApplyTotal = appTotal;
 
-            // Nghiệp vụ cập nhật điểm yếu
             await _practiceService.UpdateWeakTopicAfterPractice(userId, session);
 
             await _context.SaveChangesAsync();
@@ -255,9 +245,7 @@ namespace QuizGenAI.Controllers
             });
         }
 
-        /// <summary>
-        /// Xem kết quả bài luyện tập.
-        /// </summary>
+        // Xem kết quả bài luyện tập.
         [HttpGet]
         public async Task<IActionResult> Result(int sessionId)
         {

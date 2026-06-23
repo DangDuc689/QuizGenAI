@@ -15,7 +15,7 @@ public class CloudinaryService : ICloudinaryService
     {
         _logger = logger;
 
-        // Đọc thông số cấu hình Cloudinary từ appsettings hoặc User Secrets
+        // Đọc thông số cấu hình Cloudinary từ appsettings
         var cloudName = configuration["Cloudinary:CloudName"];
         var apiKey = configuration["Cloudinary:ApiKey"];
         var apiSecret = configuration["Cloudinary:ApiSecret"];
@@ -28,7 +28,7 @@ public class CloudinaryService : ICloudinaryService
 
         var account = new Account(cloudName, apiKey, apiSecret);
         _cloudinary = new Cloudinary(account);
-        _cloudinary.Api.Secure = true; // Luôn sử dụng HTTPS
+        _cloudinary.Api.Secure = true; 
     }
 
     public async Task<string?> UploadImageAsync(IFormFile file, string folderName)
@@ -40,14 +40,12 @@ public class CloudinaryService : ICloudinaryService
 
         try
         {
-            // Mở stream của file tải lên
             await using var stream = file.OpenReadStream();
             
             var uploadParams = new ImageUploadParams
             {
                 File = new FileDescription(file.FileName, stream),
                 Folder = folderName,
-                // Thực hiện biến đổi ảnh thông minh: Tự động crop nhận diện khuôn mặt
                 Transformation = new Transformation()
                     .Width(500)
                     .Height(500)
@@ -63,7 +61,6 @@ public class CloudinaryService : ICloudinaryService
                 return null;
             }
 
-            // Trả về URL bảo mật dạng HTTPS
             return uploadResult.SecureUrl?.ToString();
         }
         catch (Exception ex)
@@ -112,16 +109,13 @@ public class CloudinaryService : ICloudinaryService
         }
     }
 
-    /// <summary>
-    /// Trích xuất public id từ URL Cloudinary dạng:
-    /// https://res.cloudinary.com/[cloud_name]/image/upload/v[version]/[folder]/[public_id].[extension]
-    /// </summary>
+   
     private string? ExtractPublicIdFromUrl(string imageUrl)
     {
         try
         {
             var uri = new Uri(imageUrl);
-            var path = uri.AbsolutePath; // /<cloud_name>/image/upload/v<version>/<folder>/<public_id>.<extension>
+            var path = uri.AbsolutePath; 
             
             var uploadKeyword = "/upload/";
             var uploadIndex = path.IndexOf(uploadKeyword, StringComparison.OrdinalIgnoreCase);
@@ -130,24 +124,21 @@ public class CloudinaryService : ICloudinaryService
                 return null;
             }
 
-            // Lấy phần phía sau chữ "/upload/"
-            var segmentAfterUpload = path[(uploadIndex + uploadKeyword.Length)..]; // v<version>/<folder>/<public_id>.<extension>
+            var segmentAfterUpload = path[(uploadIndex + uploadKeyword.Length)..]; 
             
-            // Bỏ phần version nếu có (ví dụ "v1570975264/")
             var firstSlashIndex = segmentAfterUpload.IndexOf('/');
             if (firstSlashIndex != -1 && segmentAfterUpload.StartsWith('v') && char.IsDigit(segmentAfterUpload[1]))
             {
-                segmentAfterUpload = segmentAfterUpload[(firstSlashIndex + 1)..]; // <folder>/<public_id>.<extension>
+                segmentAfterUpload = segmentAfterUpload[(firstSlashIndex + 1)..]; 
             }
 
-            // Bỏ phần mở rộng file (ví dụ ".jpg")
             var lastDotIndex = segmentAfterUpload.LastIndexOf('.');
             if (lastDotIndex != -1)
             {
                 segmentAfterUpload = segmentAfterUpload[..lastDotIndex];
             }
 
-            return segmentAfterUpload; // Trả về dạng: <folder>/<public_id>
+            return segmentAfterUpload; 
         }
         catch (Exception ex)
         {

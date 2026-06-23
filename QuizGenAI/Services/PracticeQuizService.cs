@@ -16,13 +16,9 @@ namespace QuizGenAI.Services
             _context = context;
         }
 
-        /// <summary>
-        /// Tạo bộ đề luyện tập ngẫu nhiên từ câu hỏi cũ của user theo BloomLevel.
-        /// </summary>
+        // Tạo bộ đề luyện tập ngẫu nhiên từ câu hỏi cũ của user theo BloomLevel.
         public async Task<QuizSet?> GeneratePracticeQuizAsync(string userId, BloomLevel targetBloomLevel, int questionCount)
         {
-            // Lấy toàn bộ Questions thuộc các QuizSet của user có BloomLevel tương ứng
-            // Tránh lấy câu hỏi từ chính các đề Practice khác để không bị lặp đi lặp lại
             var questions = await _context.Questions
                 .Include(q => q.AnswerOptions)
                 .Where(q => q.QuizSet!.UserId == userId && q.BloomLevel == targetBloomLevel && q.QuizSet.Status != QuizSetStatus.Practice)
@@ -33,11 +29,9 @@ namespace QuizGenAI.Services
                 return null;
             }
 
-            // Shuffle ngẫu nhiên và lấy N câu
             var random = new Random();
             var shuffledQuestions = questions.OrderBy(q => random.Next()).Take(questionCount).ToList();
 
-            // Khởi tạo QuizSet luyện tập mới
             var levelName = targetBloomLevel == BloomLevel.Remember ? "Nhận biết" :
                             targetBloomLevel == BloomLevel.Understand ? "Thông hiểu" : "Vận dụng";
 
@@ -48,7 +42,7 @@ namespace QuizGenAI.Services
                 BloomRememberPercent = targetBloomLevel == BloomLevel.Remember ? 100 : 0,
                 BloomUnderstandPercent = targetBloomLevel == BloomLevel.Understand ? 100 : 0,
                 BloomApplyPercent = targetBloomLevel == BloomLevel.Apply ? 100 : 0,
-                TimeLimitMinutes = Math.Max(5, shuffledQuestions.Count * 2), // Tối thiểu 5 phút, trung bình 2 phút/câu
+                TimeLimitMinutes = Math.Max(5, shuffledQuestions.Count * 2),
                 Status = QuizSetStatus.Practice,
                 TargetBloomLevel = targetBloomLevel,
                 UserId = userId,
@@ -88,12 +82,9 @@ namespace QuizGenAI.Services
             return practiceQuizSet;
         }
 
-        /// <summary>
-        /// Cập nhật hoặc xóa WeakTopic sau khi user hoàn thành bài luyện tập.
-        /// </summary>
+        // Cập nhật hoặc xóa WeakTopic sau khi user hoàn thành bài luyện tập.
         public async Task UpdateWeakTopicAfterPractice(string userId, ExamSession session)
         {
-            // Load thông tin QuizSet để lấy TargetBloomLevel
             if (session.QuizSet == null)
             {
                 session.QuizSet = await _context.QuizSets.FindAsync(session.QuizSetId);
@@ -118,7 +109,6 @@ namespace QuizGenAI.Services
 
             if (existingWeakTopic != null)
             {
-                // Cộng dồn kết quả mới
                 existingWeakTopic.TotalAttempts += totalAttempts;
                 existingWeakTopic.CorrectAttempts += correctAttempts;
                 existingWeakTopic.AccuracyRate = existingWeakTopic.TotalAttempts > 0
@@ -128,7 +118,6 @@ namespace QuizGenAI.Services
 
                 if (existingWeakTopic.AccuracyRate >= 80)
                 {
-                    // Đạt độ chính xác từ 80% trở lên -> xóa topic yếu
                     _context.WeakTopics.Remove(existingWeakTopic);
                 }
                 else

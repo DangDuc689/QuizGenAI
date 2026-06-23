@@ -49,7 +49,7 @@ namespace QuizGenAI.Services
             var structuredText = await _geminiService.ExtractStructuredTextFromPdfAsync(pdfBytes, cancellationToken);
 
             var textLength = structuredText.Length;
-            var hasEnoughText = textLength >= 100; // Ước lượng thô dựa trên ký tự
+            var hasEnoughText = textLength >= 100;
 
             var result = new PdfExtractionResult
             {
@@ -97,7 +97,6 @@ namespace QuizGenAI.Services
                 using var reader = new StreamReader(fs, Encoding.ASCII);
                 var content = reader.ReadToEnd();
                 
-                // Tìm kiếm mẫu /Type /Pages /Count X hoặc /Count X
                 var matches = Regex.Matches(content, @"/Type\s*/Pages\s*/Count\s+(\d+)");
                 if (matches.Count > 0)
                 {
@@ -137,11 +136,10 @@ namespace QuizGenAI.Services
             }
             catch (Exception ex)
             {
-                // Chỉ log cảnh báo, không gây lỗi hệ thống
                 System.Diagnostics.Debug.WriteLine($"Error counting PDF pages: {ex.Message}");
             }
 
-            return 1; // Mặc định nếu không phân tích được
+            return 1; 
         }
 
         private static string AppendMetadataBlock(string? text, PdfExtractionResult result)

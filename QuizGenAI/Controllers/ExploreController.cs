@@ -20,7 +20,6 @@ namespace QuizGenAI.Controllers
             ViewData["ActivePage"] = "Explore";
             ViewBag.SearchTerm = search;
 
-            // Query cho danh sách các bộ đề công khai
             var query = _context.QuizSets
                 .Include(qs => qs.User)
                 .Include(qs => qs.Questions)
@@ -37,7 +36,7 @@ namespace QuizGenAI.Controllers
                 .OrderByDescending(qs => qs.CreatedAt)
                 .ToListAsync();
 
-            // Featured (Nổi bật): Top 3 bộ đề công khai có lượt xem nhiều nhất
+            // Top 3 bộ đề công khai có lượt xem nhiều nhất
             var featured = await _context.QuizSets
                 .Include(qs => qs.User)
                 .Include(qs => qs.Questions)

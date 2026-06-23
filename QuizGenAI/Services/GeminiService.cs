@@ -15,12 +15,11 @@ namespace QuizGenAI.Services
         private readonly ILogger<GeminiService> _logger;
         private readonly List<string> _apiKeys = new();
         private static int _currentKeyIndex = 0;
-        private readonly string _apiKey; // Lưu key mặc định đầu tiên để tương thích ngược
         private readonly string _modelName;
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, List<DateTime>> KeyUsageHistory = new();
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> KeyCooldowns = new();
-        private const int SafeRequestsPerMinute = 14; // Ngưỡng an toàn chủ động (dưới 15 RPM)
+        private const int SafeRequestsPerMinute = 14; 
 
         public GeminiService(
             HttpClient httpClient,
@@ -31,7 +30,7 @@ namespace QuizGenAI.Services
             _logger = logger;
             _modelName = configuration["Gemini:ModelName"] ?? "gemini-2.5-flash";
 
-            // 1. Đọc danh sách ApiKeys
+            // Đọc danh sách ApiKeys
             var apiKeysSection = configuration.GetSection("Gemini:ApiKeys");
             if (apiKeysSection.Exists())
             {
@@ -41,15 +40,6 @@ namespace QuizGenAI.Services
                     _apiKeys.AddRange(keys.Where(k => !string.IsNullOrWhiteSpace(k)));
                 }
             }
-
-            // 2. Fallback sang ApiKey đơn lẻ nếu chưa có key nào trong danh sách
-            var singleKey = configuration["Gemini:ApiKey"];
-            if (!string.IsNullOrWhiteSpace(singleKey) && !_apiKeys.Contains(singleKey))
-            {
-                _apiKeys.Add(singleKey);
-            }
-
-            _apiKey = _apiKeys.Count > 0 ? _apiKeys[0] : string.Empty;
 
             // Log danh sách fingerprints an toàn khi khởi tạo
             var keyFingerprints = _apiKeys.Select(k => k.Length >= 4 ? "..." + k[^4..] : "(empty)");
@@ -69,20 +59,17 @@ namespace QuizGenAI.Services
 
             var now = DateTime.UtcNow;
 
-            // Lọc ra các key chưa bị cooldown (hoặc đã hết cooldown)
             var activeKeys = _apiKeys
                 .Where(k => !KeyCooldowns.TryGetValue(k, out var cooldown) || cooldown < now)
                 .ToList();
 
             if (activeKeys.Count == 0)
             {
-                // Nếu tất cả các key đều bị cooldown, lấy key có thời gian cooldown ngắn nhất để tiếp tục
                 return _apiKeys
                     .OrderBy(k => KeyCooldowns.TryGetValue(k, out var c) ? c : DateTime.MinValue)
                     .First();
             }
 
-            // Tìm key trong danh sách hoạt động chưa vượt quá SafeRequestsPerMinute trong 60 giây qua
             foreach (var key in activeKeys)
             {
                 var history = KeyUsageHistory.GetOrAdd(key, _ => new List<DateTime>());
@@ -119,79 +106,10 @@ namespace QuizGenAI.Services
 
         private void MarkKeyAsCooldown(string key)
         {
-            // Tạm dừng sử dụng key này trong 1 phút để tránh bị ghim/ban
             KeyCooldowns[key] = DateTime.UtcNow.AddMinutes(1);
             RotateToNextKey();
         }
 
-        /// <summary>
-        /// Test nhỏ: gọi Gemini với prompt cực ngắn để kiểm tra quota/rate limit.
-        /// </summary>
-        public async Task<(bool Success, int StatusCode, string Message)> PingAsync()
-        {
-            EnsureApiKeyConfigured();
-
-            var activeKey = GetCurrentApiKey();
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_modelName}:generateContent?key={activeKey}";
-            var requestBody = new
-            {
-                contents = new[]
-                {
-                    new
-                    {
-                        parts = new[]
-                        {
-                            new { text = "Trả lời đúng chữ OK" }
-                        }
-                    }
-                },
-                generationConfig = new
-                {
-                    maxOutputTokens = 32
-                }
-            };
-
-            var jsonContent = JsonSerializer.Serialize(requestBody);
-
-            try
-            {
-                using var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-                using var response = await _httpClient.PostAsync(url, httpContent);
-                var responseText = await response.Content.ReadAsStringAsync();
-                var statusCode = (int)response.StatusCode;
-
-                var keyFingerprint = activeKey.Length >= 4 ? "..." + activeKey[^4..] : "(empty)";
-                _logger.LogInformation(
-                    "[GEMINI_PING] StatusCode={StatusCode}, Key={Key}, Model={ModelName}, ResponseLength={ResponseLength}",
-                    statusCode,
-                    keyFingerprint,
-                    _modelName,
-                    responseText.Length);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var text = ExtractTextFromGeminiResponse(responseText);
-                    RotateToNextKey(); // Xoay sang key khác cho request sau
-                    return (true, statusCode, $"OK - Gemini trả lời: {text?.Trim() ?? "(empty)"}");
-                }
-
-                if (IsGeminiRateLimited(response.StatusCode, responseText) || (int)response.StatusCode == 403)
-                {
-                    MarkKeyAsCooldown(activeKey);
-                }
-                else
-                {
-                    RotateToNextKey();
-                }
-                return (false, statusCode, $"Gemini lỗi {statusCode} (Key: {keyFingerprint}): {SanitizeForLog(responseText[..Math.Min(300, responseText.Length)])}");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("[GEMINI_PING] Exception: {Error}", ex.Message);
-                RotateToNextKey();
-                return (false, 0, $"Exception: {ex.Message}");
-            }
-        }
 
         public async Task<string> ExtractTextFromImageBytesAsync(
             byte[] imageBytes,
@@ -502,7 +420,6 @@ namespace QuizGenAI.Services
 
             var promptText = promptBuilder.ToString();
 
-            // maxOutputTokens cao hơn: gemini-2.5-flash/3.1 dùng thinking tokens trong output budget
             var maxOutputTokens = totalQuestions switch
             {
                 <= 5 => 4096,
@@ -583,7 +500,6 @@ namespace QuizGenAI.Services
                 throw new InvalidOperationException("Gemini API trả về nội dung trống.");
             }
 
-            // Strip markdown code fence nếu Gemini wrap JSON trong ```json...```
             var jsonToParse = StripMarkdownCodeFence(rawJsonText.Trim());
 
             _logger.LogInformation(
@@ -601,17 +517,14 @@ namespace QuizGenAI.Services
 
             try
             {
-                // Parse: hỗ trợ cả object {"questions":[...]} lẫn array [...] thuần
                 return ParseQuestionsFromJson(jsonToParse, jsonOptions);
             }
             catch (JsonException ex)
             {
-                // Detect JSON bị cụt do output token limit
                 var trimmedEnd = jsonToParse.TrimEnd();
                 var isTruncated = !trimmedEnd.EndsWith("]", StringComparison.Ordinal)
                     && !trimmedEnd.EndsWith("}", StringComparison.Ordinal);
 
-                // Log 3000 ký tự cuối để thấy chỗ cụt
                 var tailPreview = jsonToParse.Length > 3000
                     ? "..." + jsonToParse[^3000..]
                     : jsonToParse;
@@ -636,16 +549,13 @@ namespace QuizGenAI.Services
             }
         }
 
-        /// <summary>
-        /// Parse JSON từ Gemini: hỗ trợ cả object {"questions":[...]} lẫn array [...] thuần.
-        /// </summary>
+        // Parse JSON từ Gemini: hỗ trợ cả object {"questions":[...]} lẫn array [...] thuần.
         private static List<GeneratedQuestionDto> ParseQuestionsFromJson(
             string json,
             JsonSerializerOptions options)
         {
             var trimmed = json.TrimStart();
 
-            // Format object: {"questions": [...]}
             if (trimmed.StartsWith("{", StringComparison.Ordinal))
             {
                 var wrapper = JsonSerializer.Deserialize<QuizResponseWrapper>(trimmed, options);
@@ -657,7 +567,6 @@ namespace QuizGenAI.Services
                 throw new JsonException("JSON object không chứa field 'questions' hợp lệ.");
             }
 
-            // Format array thuần: [...]
             if (trimmed.StartsWith("[", StringComparison.Ordinal))
             {
                 return JsonSerializer.Deserialize<List<GeneratedQuestionDto>>(trimmed, options)
@@ -667,9 +576,7 @@ namespace QuizGenAI.Services
             throw new JsonException($"JSON không bắt đầu bằng {{ hoặc [. Preview: {trimmed[..Math.Min(100, trimmed.Length)]}");
         }
 
-        /// <summary>
-        /// Convert từ format mới (questionText, options string[], correctAnswerIndex) sang DTO cũ.
-        /// </summary>
+        // Convert từ format mới (questionText, options string[], correctAnswerIndex) sang DTO cũ.
         private static List<GeneratedQuestionDto> ConvertWrappedQuestions(
             List<WrappedQuestionDto> wrappedQuestions)
         {
@@ -705,14 +612,10 @@ namespace QuizGenAI.Services
             return result;
         }
 
-        /// <summary>
-        /// Convert bloom level text "Nhận biết"/"Thông hiểu"/"Vận dụng" sang int 0/1/2.
-        /// </summary>
+        // Convert bloom level text "Nhận biết"/"Thông hiểu"/"Vận dụng" sang int 0/1/2.
         private static int ConvertBloomLevelText(string? bloomLevel)
         {
             if (string.IsNullOrWhiteSpace(bloomLevel)) return 1;
-
-            // Nếu là số
             if (int.TryParse(bloomLevel, out var intLevel))
             {
                 return intLevel is >= 0 and <= 2 ? intLevel : 1;
@@ -727,9 +630,7 @@ namespace QuizGenAI.Services
             };
         }
 
-        /// <summary>
-        /// Lấy số lượng output token tối đa được hỗ trợ bởi model hiện tại để tránh lỗi API.
-        /// </summary>
+        // Lấy số lượng output token tối đa được hỗ trợ bởi model hiện tại để tránh lỗi API.
         private int GetMaxAllowedOutputTokens(int requestedTokens)
         {
             if (!string.IsNullOrEmpty(_modelName) && (_modelName.Contains("1.5") || _modelName.Contains("flash-8b")))
@@ -768,7 +669,7 @@ namespace QuizGenAI.Services
 
                 if (response.IsSuccessStatusCode)
                 {
-                    RotateToNextKey(); // Xoay key cho request tiếp theo
+                    RotateToNextKey();
                     return responseText;
                 }
 
@@ -924,10 +825,7 @@ namespace QuizGenAI.Services
             return null;
         }
 
-        /// <summary>
-        /// Strip markdown code fence (```json...``` hoặc ```...```) khỏi text.
-        /// Khi không dùng responseMimeType, Gemini thường bọc JSON trong code block.
-        /// </summary>
+        // Strip markdown code fence (```json...``` hoặc ```...```) khỏi text.
         private static string StripMarkdownCodeFence(string text)
         {
             if (string.IsNullOrWhiteSpace(text))
@@ -944,7 +842,6 @@ namespace QuizGenAI.Services
                     text = text[(firstNewLine + 1)..];
                 }
 
-                // Xóa phần đóng ``` ở cuối
                 var lastFence = text.LastIndexOf("```", StringComparison.Ordinal);
                 if (lastFence >= 0)
                 {
@@ -1022,24 +919,17 @@ namespace QuizGenAI.Services
         public bool IsCorrect { get; set; }
     }
 
-    /// <summary>
-    /// Wrapper cho format object {"questions": [...]}
-    /// </summary>
     public class QuizResponseWrapper
     {
         [JsonPropertyName("questions")]
         public List<WrappedQuestionDto> Questions { get; set; } = new();
     }
 
-    /// <summary>
-    /// DTO cho format câu hỏi mới: questionText, options string[], correctAnswerIndex.
-    /// </summary>
     public class WrappedQuestionDto
     {
         [JsonPropertyName("questionText")]
         public string? QuestionText { get; set; }
 
-        /// <summary>Fallback nếu Gemini dùng "content" thay vì "questionText"</summary>
         [JsonPropertyName("content")]
         public string? Content { get; set; }
 
